@@ -3,38 +3,141 @@ document.addEventListener('DOMContentLoaded', () => {
     const clientListBody = document.getElementById('client-list-body');
     const panelPlaceholder = document.getElementById('panel-placeholder');
     const panelDetails = document.getElementById('panel-details');
-    const addClientForm = document.getElementById('add-client-form');
     const markPaidBtn = document.getElementById('mark-paid-btn');
     const calendar = document.getElementById('payment-calendar');
     const editClientBtn = document.getElementById('edit-client-btn');
     const deleteClientBtn = document.getElementById('delete-client-btn');
-    const editClientForm = document.getElementById('edit-client-form');
     const syncClientsForm = document.getElementById('sync-clients-form');
+    // ELEMENTOS DO PAINEL DE DETALHES (UPLOAD)
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
     const fileInput = document.getElementById('file-input');
     const uploadBtn = document.getElementById('upload-btn');
     const uploadProgressBarContainer = document.getElementById('upload-progress-bar-container');
     const uploadProgressBar = document.getElementById('upload-progress-bar');
-    // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
+
+    // --- ELEMENTOS DO MODAL DE ADIÇÃO (ATUALIZADO) ---
     const addClientModalEl = document.getElementById('addClientModal');
+    const addClientForm = document.getElementById('add-client-form');
+    const clientCPFInput = document.getElementById('clientCPF');
+    const clientPhoneInput = document.getElementById('clientPhone');
+    const loanValueInput = document.getElementById('loanValue');
+    const installmentsInput = document.getElementById('installments');
+    const installmentValueInput = document.getElementById('installmentValue');
+    const freqDailyRadio = document.getElementById('freqDaily');
+    const freqWeeklyRadio = document.getElementById('freqWeekly');
     const newClientDropZone = document.getElementById('new-client-drop-zone');
     const newClientFileInput = document.getElementById('new-client-file-input');
     const newClientFileList = document.getElementById('new-client-file-list');
     const saveClientBtn = document.getElementById('save-client-btn');
-    // --- ELEMENTOS DOS NOVOS CAMPOS DINÂMICOS ---
-    const clientCPFInput = document.getElementById('clientCPF');
-    const clientPhoneInput = document.getElementById('clientPhone');
-    const loanValueInput = document.getElementById('loanValue');
-    const installmentValueInput = document.getElementById('installmentValue');
-    const installmentsInput = document.getElementById('installments');
-    const frequencyWeeklyRadio = document.getElementById('frequency-weekly');
-    const frequencyDailyRadio = document.getElementById('frequency-daily');
+
+    // --- ELEMENTOS DO MODAL DE EDIÇÃO ---
+    const editClientForm = document.getElementById('edit-client-form');
+    const editClientCPFInput = document.getElementById('editClientCPF');
+    const editClientPhoneInput = document.getElementById('editClientPhone');
+    const editLoanValueInput = document.getElementById('editLoanValue');
+    const editInstallmentsInput = document.getElementById('editInstallments');
+    const editInstallmentValueInput = document.getElementById('editInstallmentValue');
+    const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
     let selectedClientId = null;
     let newClientFiles = [];
+
+    // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
+    const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    const formatPhone = (value) => {
+        let r = value.replace(/\D/g, '');
+        r = r.replace(/^0/, '');
+        if (r.length > 10) r = r.replace(/^(\d\d)(\d{5})(\d{4}).*/, '($1) $2-$3');
+        else if (r.length > 5) r = r.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        else if (r.length > 2) r = r.replace(/^(\d\d)(\d{0,5}).*/, '($1) $2');
+        else r = r.replace(/^(\d*)/, '($1');
+        return r;
+    };
+    const formatCurrency = (value) => {
+        if (isNaN(value)) return "";
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    };
+    const parseCurrency = (value) => {
+        return Number(value.replace(/[^0-9,-]+/g, "").replace(",", "."));
+    };
+
+    // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
+    function updateInstallmentValue() {
+        const loanValue = parseCurrency(loanValueInput.value);
+        const installments = parseInt(installmentsInput.value, 10);
+        if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
+            const totalLoan = loanValue * 1.20;
+            const installmentValue = totalLoan / installments;
+            installmentValueInput.value = formatCurrency(installmentValue);
+        } else {
+            installmentValueInput.value = "";
+        }
+    }
+
+    function togglePaymentFrequency() {
+        const installments = parseInt(installmentsInput.value, 10);
+        if (installments <= 9) {
+            freqWeeklyRadio.disabled = false;
+        } else {
+            freqWeeklyRadio.disabled = true;
+            freqWeeklyRadio.checked = false;
+            freqDailyRadio.checked = true;
+        }
+    }
+
+    // Versão para o Modal de Edição
+    function updateEditInstallmentValue() {
+        const loanValue = parseCurrency(editLoanValueInput.value);
+        const installments = parseInt(editInstallmentsInput.value, 10);
+        if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
+            const totalLoan = loanValue * 1.20;
+            const installmentValue = totalLoan / installments;
+            editInstallmentValueInput.value = formatCurrency(installmentValue);
+        } else {
+            editInstallmentValueInput.value = "";
+        }
+    }
+
+    function toggleEditPaymentFrequency() {
+        const installments = parseInt(editInstallmentsInput.value, 10);
+        if (installments <= 9) {
+            editFreqWeeklyRadio.disabled = false;
+        } else {
+            editFreqWeeklyRadio.disabled = true;
+            editFreqWeeklyRadio.checked = false;
+            document.getElementById('editFreqDaily').checked = true;
+        }
+    }
+
+
+    // --- FUNÇÃO DE CALENDÁRIO ATUALIZADA ---
+    function generatePaymentDates(startDateStr, installments, frequency) {
+        if (!startDateStr || !installments || !frequency) return [];
+        const paymentDates = [];
+        let currentDate = new Date(startDateStr + 'T00:00:00Z');
+
+        if (frequency === 'daily') {
+            let businessDaysCount = 0;
+            while (businessDaysCount < installments) {
+                const dayOfWeek = currentDate.getUTCDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    businessDaysCount++;
+                    paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
+                }
+                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+            }
+        } else if (frequency === 'weekly') {
+            for (let i = 0; i < installments; i++) {
+                paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
+                currentDate.setUTCDate(currentDate.getUTCDate() + 7);
+            }
+        }
+        return paymentDates;
+    }
+
 
     // --- FUNÇÕES DE API ---
     async function loadClients() {
@@ -57,8 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(clientData),
             });
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Falha ao atualizar cliente.');
+                const err = await response.json();
+                throw new Error(err.error || 'Falha ao atualizar cliente.');
             }
             return await response.json();
         } catch (error) {
@@ -66,59 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Não foi possível salvar as alterações do cliente.');
         }
     }
-
-    // --- FUNÇÕES DE FORMATAÇÃO E MÁSCARA (NOVO) ---
-    const formatCurrency = (value) => {
-        if (!value && value !== 0) return '';
-        const number = parseFloat(value);
-        if (isNaN(number)) return '';
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(number);
-    };
-
-    const parseCurrency = (value) => {
-        if (typeof value !== 'string') return 0;
-        return parseFloat(value.replace(/[^0-9,-]+/g, "").replace(",", ".")) || 0;
-    };
-
-    const applyInputMasks = (input, maskFunction) => {
-        const handler = (event) => {
-            const value = event.target.value;
-            event.target.value = maskFunction(value);
-        };
-        input.addEventListener('input', handler);
-    };
-
-    const formatCPF = (value) => value.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    const formatPhone = (value) => {
-        let r = value.replace(/\D/g, '').slice(0, 11);
-        if (r.length > 10) r = r.replace(/^(\d\d)(\d{5})(\d{4}).*/, '($1) $2-$3');
-        else if (r.length > 5) r = r.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-        else if (r.length > 2) r = r.replace(/^(\d\d)(\d{0,5}).*/, '($1) $2');
-        else r = r.replace(/^(\d*)/, '($1');
-        return r;
-    };
-
-    // --- FUNÇÕES DE CÁLCULO (NOVO) ---
-    function updateInstallmentLogic() {
-        const loanValue = parseCurrency(loanValueInput.value);
-        const installments = parseInt(installmentsInput.value, 10) || 1;
-
-        if (installments <= 9) {
-            frequencyWeeklyRadio.disabled = false;
-        } else {
-            frequencyWeeklyRadio.disabled = true;
-            frequencyDailyRadio.checked = true;
-        }
-
-        if (loanValue > 0 && installments > 0) {
-            const totalLoan = loanValue * 1.20;
-            const installmentValue = totalLoan / installments;
-            installmentValueInput.value = formatCurrency(installmentValue);
-        } else {
-            installmentValueInput.value = formatCurrency(0);
-        }
-    }
-
 
     // --- FUNÇÕES DE RENDERIZAÇÃO ---
     function renderClientList() {
@@ -154,58 +204,65 @@ document.addEventListener('DOMContentLoaded', () => {
         panelDetails.classList.remove('d-none');
         document.getElementById('panel-id').textContent = `#${client.id}`;
         document.getElementById('panel-name').textContent = client.name;
-        document.getElementById('panel-cpf-phone').textContent = `CPF: ${client.cpf || 'N/A'} | Tel: ${client.phone || 'N/A'}`;
+        const formattedCPF = client.cpf ? formatCPF(client.cpf) : 'N/A';
+        const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
+        document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
         const today = new Date().setHours(0, 0, 0, 0);
-        const paymentsDue = (client.paymentdates || []).filter(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid').length;
+        const paymentsDue = (client.paymentDates || []).filter(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid').length;
         document.getElementById('panel-status').innerHTML = paymentsDue > 0 ? '<span class="badge bg-danger">Atrasado</span>' : '<span class="badge bg-success">Em Dia</span>';
+        document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
+        document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
+        document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'A preencher';
 
-        document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanvalue);
-        document.getElementById('panel-installment-value').textContent = formatCurrency(client.installmentvalue);
-        document.getElementById('panel-installments').textContent = `${client.installments || 'N/A'}x`;
-        document.getElementById('panel-frequency').textContent = client.frequency === 'daily' ? 'Diário' : (client.frequency === 'weekly' ? 'Semanal' : 'N/A');
-        document.getElementById('panel-start-date').textContent = client.startdate ? new Date(client.startdate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'A preencher';
+        const calendarTitle = document.querySelector('#panel-details h6:nth-of-type(3)');
+        calendarTitle.textContent = `Calendário de Pagamentos (${client.installments || ''}x ${client.frequency === 'weekly' ? 'Semanal' : 'Diário'})`;
 
         calendar.innerHTML = '';
-        if (!client.startdate || !client.paymentdates || client.paymentdates.length === 0) {
+        if (!client.startDate || !client.paymentDates || client.paymentDates.length === 0) {
             document.getElementById('panel-end-date').textContent = 'N/A';
-            calendar.innerHTML = '<p class="text-center text-muted">Não foi possível gerar o calendário.</p>';
+            calendar.innerHTML = '<p class="text-center text-muted">Preencha os dados financeiros para gerar o calendário.</p>';
         } else {
-            const paymentDates = client.paymentdates.map(p => ({ ...p, date: new Date(p.date) }));
-            const allCalendarDates = [];
-            let currentDate = new Date(paymentDates[0].date);
-            const lastPaymentDate = new Date(paymentDates[paymentDates.length - 1].date);
+            const paymentDates = client.paymentDates.map(p => new Date(p.date));
+            const firstPaymentDate = paymentDates[0];
+            const lastPaymentDate = paymentDates[paymentDates.length - 1];
             document.getElementById('panel-end-date').textContent = lastPaymentDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
-            while (currentDate <= lastPaymentDate) {
-                allCalendarDates.push(new Date(currentDate));
-                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+            let currentDate = new Date(firstPaymentDate);
+            while (currentDate.getUTCDay() !== 1) { // Inicia o grid na Segunda-Feira
+                currentDate.setUTCDate(currentDate.getUTCDate() - 1);
             }
 
-            const firstDayOfWeek = allCalendarDates[0].getUTCDay();
-            for (let i = 0; i < firstDayOfWeek; i++) {
-                calendar.appendChild(document.createElement('div'));
+            let calendarEndDate = new Date(lastPaymentDate);
+            while (calendarEndDate.getUTCDay() !== 0) { // Termina o grid no Domingo
+                calendarEndDate.setUTCDate(calendarEndDate.getUTCDate() + 1);
             }
 
-            allCalendarDates.forEach(date => {
+            while (currentDate <= calendarEndDate) {
                 const dayDiv = document.createElement('div');
-                dayDiv.textContent = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+                const dayOfWeek = currentDate.getUTCDay();
+                dayDiv.textContent = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
                 dayDiv.classList.add('calendar-day');
 
-                const payment = paymentDates.find(p => p.date.getTime() === date.getTime());
+                const payment = client.paymentDates.find(p => new Date(p.date).setUTCHours(0, 0, 0, 0) === new Date(currentDate).setUTCHours(0, 0, 0, 0));
+
                 if (payment) {
-                    dayDiv.dataset.date = payment.date.toISOString();
+                    dayDiv.dataset.date = payment.date;
                     const paymentDateMidnight = new Date(payment.date).setUTCHours(0, 0, 0, 0);
                     const todayUTC = new Date(new Date().toISOString().split('T')[0]).getTime();
+
                     if (payment.status === 'paid') dayDiv.classList.add('status-paid');
-                    else if (paymentDateMidnight < todayUTC) dayDiv.classList.add('status-late');
-                    else dayDiv.classList.add('status-pending');
+                    else if (paymentDateMidnight < todayUTC) {
+                        dayDiv.classList.add('status-late');
+                        payment.status = 'late';
+                    } else dayDiv.classList.add('status-pending');
+                } else if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    dayDiv.classList.add('status-weekend');
                 } else {
-                    const dayOfWeek = date.getUTCDay();
-                    if (dayOfWeek === 0 || dayOfWeek === 6) dayDiv.classList.add('status-weekend');
-                    else dayDiv.classList.add('status-future');
+                    dayDiv.classList.add('status-future');
                 }
                 calendar.appendChild(dayDiv);
-            });
+                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+            }
         }
         fileList.innerHTML = '';
         if (client.files && client.files.length > 0) {
@@ -221,35 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renderClientList();
     }
 
-    function generatePaymentDates(startDateStr, installments, frequency) {
-        if (!startDateStr || !installments || !frequency) return [];
-        const paymentDates = [];
-        let currentDate = new Date(startDateStr + 'T00:00:00Z');
-
-        for (let i = 0; i < installments; i++) {
-            if (frequency === 'daily') {
-                let dayOfWeek = currentDate.getUTCDay();
-                while (dayOfWeek === 0 || dayOfWeek === 6) {
-                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-                    dayOfWeek = currentDate.getUTCDay();
-                }
-            }
-            paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
-
-            if (frequency === 'daily') {
-                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-            } else {
-                currentDate.setUTCDate(currentDate.getUTCDate() + 7);
-            }
-        }
-        return paymentDates;
-    }
-
+    // --- LÓGICA DE UPLOAD NO MODAL DE NOVO CLIENTE ---
     function handleNewFiles(files) {
         for (const file of files) {
-            if (!newClientFiles.some(f => f.name === file.name && f.size === file.size)) {
-                newClientFiles.push(file);
-            }
+            if (!newClientFiles.some(f => f.name === file.name && f.size === file.size)) newClientFiles.push(file);
         }
         renderNewClientFileList();
     }
@@ -266,16 +298,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT LISTENERS ---
-    applyInputMasks(clientCPFInput, formatCPF);
-    applyInputMasks(clientPhoneInput, formatPhone);
-    loanValueInput.addEventListener('input', (e) => {
-        const value = parseCurrency(e.target.value);
-        e.target.value = formatCurrency(value);
-        updateInstallmentLogic();
-    });
-    installmentsInput.addEventListener('input', updateInstallmentLogic);
-    document.querySelectorAll('input[name="frequency"]').forEach(radio => radio.addEventListener('change', updateInstallmentLogic));
 
+    // Máscaras e Cálculos no Modal de Adicionar
+    clientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
+    clientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
+    loanValueInput.addEventListener('input', (e) => {
+        e.target.value = formatCurrency(parseCurrency(e.target.value));
+        updateInstallmentValue();
+    });
+    installmentsInput.addEventListener('input', () => {
+        updateInstallmentValue();
+        togglePaymentFrequency();
+    });
+
+    // Máscaras e Cálculos no Modal de Editar
+    editClientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
+    editClientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
+    editLoanValueInput.addEventListener('input', (e) => {
+        e.target.value = formatCurrency(parseCurrency(e.target.value));
+        updateEditInstallmentValue();
+    });
+    editInstallmentsInput.addEventListener('input', () => {
+        updateEditInstallmentValue();
+        toggleEditPaymentFrequency();
+    });
+
+
+    // Lógica de Drag & Drop para o novo cliente
     newClientDropZone.addEventListener('click', () => newClientFileInput.click());
     newClientFileInput.addEventListener('change', (e) => handleNewFiles(e.target.files));
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => newClientDropZone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false));
@@ -285,7 +334,6 @@ document.addEventListener('DOMContentLoaded', () => {
         newClientDropZone.classList.remove('dragover');
         handleNewFiles(e.dataTransfer.files);
     });
-
     newClientFileList.addEventListener('click', (e) => {
         if (e.target.matches('.btn-close')) {
             const index = parseInt(e.target.dataset.index, 10);
@@ -293,14 +341,14 @@ document.addEventListener('DOMContentLoaded', () => {
             renderNewClientFileList();
         }
     });
-
     addClientModalEl.addEventListener('hidden.bs.modal', () => {
         addClientForm.reset();
         newClientFiles = [];
         renderNewClientFileList();
-        updateInstallmentLogic();
+        togglePaymentFrequency(); // Reseta o estado dos radios
     });
 
+    // Event listener para adicionar novo cliente
     addClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const saveBtnSpinner = saveClientBtn.querySelector('.spinner-border');
@@ -308,16 +356,16 @@ document.addEventListener('DOMContentLoaded', () => {
         saveBtnSpinner.style.display = 'inline-block';
 
         const installments = parseInt(installmentsInput.value);
-        const frequency = document.querySelector('input[name="frequency"]:checked').value;
+        const frequency = document.querySelector('input[name="paymentFrequency"]:checked').value;
         const startDate = document.getElementById('startDate').value || null;
 
         const clientData = {
             name: document.getElementById('clientName').value,
             startDate: startDate,
-            cpf: clientCPFInput.value,
-            phone: clientPhoneInput.value,
+            cpf: clientCPFInput.value.replace(/\D/g, ''),
+            phone: clientPhoneInput.value.replace(/\D/g, ''),
             loanValue: parseCurrency(loanValueInput.value),
-            installmentValue: parseCurrency(installmentValueInput.value),
+            dailyValue: parseCurrency(installmentValueInput.value),
             installments: installments,
             frequency: frequency,
             paymentDates: generatePaymentDates(startDate, installments, frequency)
@@ -331,20 +379,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (!response.ok) throw new Error('Falha ao criar o registro do cliente.');
             const newClient = await response.json();
-            const newClientId = newClient.id;
-
             if (newClientFiles.length > 0) {
                 const uploadPromises = newClientFiles.map(file => {
                     const formData = new FormData();
                     formData.append('file', file);
-                    formData.append('clientId', newClientId);
+                    formData.append('clientId', newClient.id);
                     return fetch('/api/upload', { method: 'POST', body: formData });
                 });
                 await Promise.all(uploadPromises);
             }
             await loadClients();
-            const modal = bootstrap.Modal.getInstance(addClientModalEl);
-            modal.hide();
+            bootstrap.Modal.getInstance(addClientModalEl).hide();
         } catch (error) {
             console.error('Erro ao adicionar cliente:', error);
             alert(`Não foi possível adicionar o novo cliente. Erro: ${error.message}`);
@@ -356,10 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     clientListBody.addEventListener('click', (e) => {
         const row = e.target.closest('tr');
-        if (row && row.dataset.clientId) {
-            const clientId = parseInt(row.dataset.clientId);
-            renderClientPanel(clientId);
-        }
+        if (row && row.dataset.clientId) renderClientPanel(parseInt(row.dataset.clientId));
     });
 
     markPaidBtn.addEventListener('click', async () => {
@@ -368,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clientIndex === -1) return;
         const client = clients[clientIndex];
         const todayStr = new Date().toISOString().split('T')[0];
-        const todayPayment = client.paymentdates.find(p => p.date.startsWith(todayStr));
+        const todayPayment = client.paymentDates.find(p => p.date.startsWith(todayStr));
         if (todayPayment) {
             if (todayPayment.status !== 'paid') {
                 todayPayment.status = 'paid';
@@ -378,12 +420,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderClientPanel(selectedClientId);
                     alert('Pagamento de hoje marcado como recebido!');
                 }
-            } else {
-                alert('O pagamento de hoje já foi marcado como recebido.');
-            }
-        } else {
-            alert('Não há uma parcela de pagamento agendada para hoje.');
-        }
+            } else alert('O pagamento de hoje já foi marcado como recebido.');
+        } else alert('Não há uma parcela de pagamento agendada para hoje.');
     });
 
     calendar.addEventListener('click', async (e) => {
@@ -391,8 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!dayDiv || !dayDiv.dataset.date || selectedClientId === null) return;
         const clientIndex = clients.findIndex(c => c.id === selectedClientId);
         const client = clients[clientIndex];
-        const paymentDateStr = dayDiv.dataset.date;
-        const payment = client.paymentdates.find(p => p.date === paymentDateStr);
+        const payment = client.paymentDates.find(p => p.date === dayDiv.dataset.date);
         if (!payment) return;
         const newStatus = prompt(`Alterar status para o dia ${new Date(payment.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}.\n\nDigite "pago" ou "pendente":`, payment.status);
         if (newStatus) {
@@ -404,54 +441,65 @@ document.addEventListener('DOMContentLoaded', () => {
                     clients[clientIndex] = updatedClient;
                     renderClientPanel(selectedClientId);
                 }
-            } else {
-                alert('Status inválido. Por favor, use "pago" ou "pendente".');
-            }
+            } else alert('Status inválido. Por favor, use "pago" ou "pendente".');
         }
     });
 
+    // Event Listener para popular o Modal de Edição
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
         document.getElementById('editClientId').value = client.id;
         document.getElementById('editClientName').value = client.name;
-        document.getElementById('editStartDate').value = client.startdate ? client.startdate.split('T')[0] : '';
-        document.getElementById('editClientCPF').value = client.cpf || '';
-        document.getElementById('editClientPhone').value = client.phone || '';
-        document.getElementById('editLoanValue').value = formatCurrency(client.loanvalue);
-        document.getElementById('editInstallmentValue').value = formatCurrency(client.installmentvalue);
+        document.getElementById('editStartDate').value = client.startDate || '';
+        editClientCPFInput.value = client.cpf ? formatCPF(client.cpf) : '';
+        editClientPhoneInput.value = client.phone ? formatPhone(client.phone) : '';
+        editLoanValueInput.value = formatCurrency(client.loanValue || 0);
+        editInstallmentsInput.value = client.installments || 20;
+        editInstallmentValueInput.value = formatCurrency(client.dailyValue || 0);
 
-        const modal = new bootstrap.Modal(document.getElementById('editClientModal'));
-        modal.show();
+        // Lógica dos radios de frequência
+        toggleEditPaymentFrequency();
+        if (client.frequency === 'weekly') {
+            document.getElementById('editFreqWeekly').checked = true;
+        } else {
+            document.getElementById('editFreqDaily').checked = true;
+        }
+
+        new bootstrap.Modal(document.getElementById('editClientModal')).show();
     });
 
+    // Event listener para salvar edição
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const clientId = parseInt(document.getElementById('editClientId').value);
         const clientIndex = clients.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
-        const currentClient = clients[clientIndex];
 
-        // A lógica de edição precisará ser expandida para incluir os novos campos
-        // Por agora, estamos apenas salvando os campos existentes
+        const installments = parseInt(editInstallmentsInput.value);
+        const frequency = document.querySelector('input[name="editPaymentFrequency"]:checked').value;
+        const startDate = document.getElementById('editStartDate').value || null;
+
         const updatedClientData = {
-            ...currentClient, // Mantém os campos não editados como installments, frequency, etc.
             id: clientId,
             name: document.getElementById('editClientName').value,
-            startDate: document.getElementById('editStartDate').value || null,
-            cpf: document.getElementById('editClientCPF').value,
-            phone: document.getElementById('editClientPhone').value,
-            loanValue: parseCurrency(document.getElementById('editLoanValue').value),
-            // NOTE: A edição de parcelas e frequência precisaria de uma UI dedicada no modal de edição
+            startDate: startDate,
+            cpf: editClientCPFInput.value.replace(/\D/g, ''),
+            phone: editClientPhoneInput.value.replace(/\D/g, ''),
+            loanValue: parseCurrency(editLoanValueInput.value),
+            dailyValue: parseCurrency(editInstallmentValueInput.value),
+            installments: installments,
+            frequency: frequency,
+            paymentDates: generatePaymentDates(startDate, installments, frequency),
+            files: clients[clientIndex].files || []
         };
         const updatedClient = await updateClient(updatedClientData);
         if (updatedClient) {
             clients[clientIndex] = updatedClient;
             renderClientPanel(clientId);
         }
-        const modal = bootstrap.Modal.getInstance(document.getElementById('editClientModal'));
-        modal.hide();
+        bootstrap.Modal.getInstance(document.getElementById('editClientModal')).hide();
     });
 
     deleteClientBtn.addEventListener('click', async () => {
@@ -483,30 +531,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const existingNames = clients.map(c => c.name.toLowerCase());
         for (const name of names) {
             if (!existingNames.includes(name.toLowerCase())) {
-                const newClient = { name: name, startDate: null, cpf: '', phone: '', loanValue: 0, installmentValue: 0, paymentDates: [], installments: 0, frequency: 'daily' };
+                const newClient = { name: name, startDate: null, cpf: '', phone: '', loanValue: 0, dailyValue: 0, paymentDates: [] };
                 try {
-                    const response = await fetch('/api/clients', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newClient),
-                    });
+                    const response = await fetch('/api/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newClient) });
                     if (response.ok) newClientsAddedCount++;
-                } catch (error) {
-                    console.error(`Erro ao adicionar ${name}:`, error);
-                }
+                } catch (error) { console.error(`Erro ao adicionar ${name}:`, error); }
             }
         }
         if (newClientsAddedCount > 0) {
             await loadClients();
             alert(`${newClientsAddedCount} novo(s) cliente(s) foram adicionado(s) com sucesso!`);
-        } else {
-            alert('Nenhum cliente novo foi encontrado na lista para adicionar.');
-        }
-        const modal = bootstrap.Modal.getInstance(document.getElementById('syncClientsModal'));
-        modal.hide();
+        } else alert('Nenhum cliente novo foi encontrado na lista para adicionar.');
+        bootstrap.Modal.getInstance(document.getElementById('syncClientsModal')).hide();
         syncClientsForm.reset();
     });
 
+    // UPLOAD DE ARQUIVOS NO PAINEL DE DETALHES
     uploadFileForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedClientId || fileInput.files.length === 0) return;
@@ -520,14 +560,8 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadProgressBarContainer.style.display = 'block';
         uploadBtn.disabled = true;
         try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Falha no upload.');
-            }
+            const response = await fetch('/api/upload', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error((await response.json()).error || 'Falha no upload.');
             const updatedClient = await response.json();
             const clientIndex = clients.findIndex(c => c.id === selectedClientId);
             clients[clientIndex] = updatedClient;
@@ -535,9 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadProgressBar.style.width = '100%';
             uploadProgressBar.textContent = 'Concluído!';
             uploadProgressBar.classList.add('bg-success');
-            setTimeout(() => {
-                uploadProgressBarContainer.style.display = 'none';
-            }, 2000);
+            setTimeout(() => { uploadProgressBarContainer.style.display = 'none'; }, 2000);
         } catch (error) {
             console.error('Erro no upload:', error);
             alert(`Erro: ${error.message}`);
@@ -549,27 +581,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // EXCLUSÃO DE ARQUIVOS NO PAINEL DE DETALHES
     fileList.addEventListener('click', async (e) => {
         const deleteBtn = e.target.closest('.delete-file-btn');
         if (!deleteBtn) return;
         const fileName = deleteBtn.dataset.filename;
-        if (!selectedClientId || !fileName) return;
-        if (!confirm(`Tem certeza que deseja excluir o arquivo "${fileName}"?`)) {
-            return;
-        }
+        if (!selectedClientId || !fileName || !confirm(`Tem certeza que deseja excluir o arquivo "${fileName}"?`)) return;
         try {
             const response = await fetch('/api/upload', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    clientId: selectedClientId,
-                    fileName: fileName
-                })
+                body: JSON.stringify({ clientId: selectedClientId, fileName: fileName })
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Falha ao excluir arquivo.');
-            }
+            if (!response.ok) throw new Error((await response.json()).error || 'Falha ao excluir arquivo.');
             const updatedClient = await response.json();
             const clientIndex = clients.findIndex(c => c.id === selectedClientId);
             clients[clientIndex] = updatedClient;
