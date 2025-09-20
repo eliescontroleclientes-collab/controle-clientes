@@ -420,7 +420,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- NOVO: EVENT LISTENERS PARA ARQUIVOS ---
 
     uploadFileForm.addEventListener('submit', async (e) => {
-        console.log("O botão de upload FOI CLICADO e o JavaScript interceptou!"); // <-- ADICIONE ESTA LINHA
         e.preventDefault();
         if (!selectedClientId || fileInput.files.length === 0) return;
 
