@@ -10,22 +10,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteClientBtn = document.getElementById('delete-client-btn');
     const editClientForm = document.getElementById('edit-client-form');
     const syncClientsForm = document.getElementById('sync-clients-form');
-    // NOVOS ELEMENTOS DO DOM PARA ARQUIVOS
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
     const fileInput = document.getElementById('file-input');
     const uploadBtn = document.getElementById('upload-btn');
     const uploadProgressBarContainer = document.getElementById('upload-progress-bar-container');
     const uploadProgressBar = document.getElementById('upload-progress-bar');
+    // --- NOVOS ELEMENTOS DO MODAL DE ADIÇÃO ---
+    const addClientModalEl = document.getElementById('addClientModal');
+    const newClientDropZone = document.getElementById('new-client-drop-zone');
+    const newClientFileInput = document.getElementById('new-client-file-input');
+    const newClientFileList = document.getElementById('new-client-file-list');
+    const saveClientBtn = document.getElementById('save-client-btn');
 
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
     let selectedClientId = null;
+    let newClientFiles = []; // Array para guardar os arquivos do novo cliente
+
 
     // --- FUNÇÕES DE API (COMUNICAÇÃO COM O BACK-END) ---
-
-    // Carrega clientes do banco de dados
     async function loadClients() {
         try {
             const response = await fetch('/api/clients');
@@ -38,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Atualiza um cliente no banco de dados
     async function updateClient(clientData) {
         try {
             const response = await fetch('/api/clients', {
@@ -55,27 +59,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- FUNÇÕES DE RENDERIZAÇÃO (PRATICAMENTE INALTERADAS) ---
+    // --- FUNÇÕES DE RENDERIZAÇÃO ---
     function renderClientList() {
         clientListBody.innerHTML = '';
         if (clients.length === 0) {
             clientListBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
             return;
         }
-
-        // Não precisa mais ordenar aqui, o back-end já faz isso (ORDER BY id DESC)
         clients.forEach(client => {
             const tr = document.createElement('tr');
             tr.dataset.clientId = client.id;
             tr.className = client.id === selectedClientId ? 'table-active' : '';
-
             const today = new Date().setHours(0, 0, 0, 0);
             const paymentsDue = (client.paymentDates || []).filter(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid').length;
             const status = paymentsDue > 0 ? '<span class="badge bg-danger">Atrasado</span>' : '<span class="badge bg-success">Em Dia</span>';
-            // Correção para datas que podem ser nulas
             const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
-
-
             tr.innerHTML = `
                 <td>#${client.id}</td>
                 <td>${client.name}</td>
@@ -95,25 +93,19 @@ document.addEventListener('DOMContentLoaded', () => {
             renderClientList();
             return;
         }
-
         selectedClientId = clientId;
-
         panelPlaceholder.classList.add('d-none');
         panelDetails.classList.remove('d-none');
-
         document.getElementById('panel-id').textContent = `#${client.id}`;
         document.getElementById('panel-name').textContent = client.name;
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${client.cpf || 'N/A'} | Tel: ${client.phone || 'N/A'}`;
-
         const today = new Date().setHours(0, 0, 0, 0);
         const paymentsDue = (client.paymentDates || []).filter(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid').length;
         document.getElementById('panel-status').innerHTML = paymentsDue > 0 ? '<span class="badge bg-danger">Atrasado</span>' : '<span class="badge bg-success">Em Dia</span>';
-
         const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
         document.getElementById('panel-loan-value').textContent = currencyFormatter.format(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = currencyFormatter.format(client.dailyValue || 0);
         document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'A preencher';
-
         calendar.innerHTML = '';
         if (!client.startDate || !client.paymentDates || client.paymentDates.length === 0) {
             document.getElementById('panel-end-date').textContent = 'N/A';
@@ -122,20 +114,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const firstPaymentDate = new Date(client.paymentDates[0].date);
             const lastPaymentDate = new Date(client.paymentDates[client.paymentDates.length - 1].date);
             document.getElementById('panel-end-date').textContent = lastPaymentDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-
             let currentDate = new Date(firstPaymentDate);
             const firstDayOfWeek = new Date(currentDate.toLocaleString('en-US', { timeZone: 'UTC' })).getDay();
-
             for (let i = 0; i < (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1); i++) {
                 calendar.appendChild(document.createElement('div'));
             }
-
             while (currentDate <= lastPaymentDate) {
                 const dayDiv = document.createElement('div');
                 const dayOfWeek = currentDate.getUTCDay();
                 dayDiv.textContent = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
                 dayDiv.classList.add('calendar-day');
-
                 if (dayOfWeek === 0 || dayOfWeek === 6) {
                     dayDiv.classList.add('status-weekend');
                 } else {
@@ -144,7 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         dayDiv.dataset.date = payment.date;
                         const paymentDateMidnight = new Date(payment.date).setUTCHours(0, 0, 0, 0);
                         const todayUTC = new Date(new Date().toISOString().split('T')[0]).getTime();
-
                         if (payment.status === 'paid') {
                             dayDiv.classList.add('status-paid');
                         } else if (paymentDateMidnight < todayUTC) {
@@ -161,40 +148,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentDate.setUTCDate(currentDate.getUTCDate() + 1);
             }
         }
-
-        // NOVO: Renderizar a lista de arquivos
-        fileList.innerHTML = ''; // Limpa a lista anterior
+        fileList.innerHTML = '';
         if (client.files && client.files.length > 0) {
             client.files.forEach(file => {
                 const li = document.createElement('li');
                 li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                li.innerHTML = `
-                    <span>
-                        <i class="bi bi-file-earmark-text"></i> ${file.name}
-                    </span>
-                    <div>
-                        <a href="${file.url}" target="_blank" class="btn btn-outline-primary btn-sm" title="Ver Arquivo">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                        <button class="btn btn-outline-danger btn-sm delete-file-btn" data-filename="${file.name}" title="Excluir Arquivo">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                `;
+                li.innerHTML = `<span><i class="bi bi-file-earmark-text"></i> ${file.name}</span><div><a href="${file.url}" target="_blank" class="btn btn-outline-primary btn-sm" title="Ver Arquivo"><i class="bi bi-eye"></i></a> <button class="btn btn-outline-danger btn-sm delete-file-btn" data-filename="${file.name}" title="Excluir Arquivo"><i class="bi bi-trash"></i></button></div>`;
                 fileList.appendChild(li);
             });
         } else {
             fileList.innerHTML = '<li class="list-group-item text-muted">Nenhum arquivo encontrado.</li>';
         }
-
         renderClientList();
     }
 
-    // Gera datas de pagamento (função auxiliar, sem alterações)
     function generatePaymentDates(startDateStr) {
         if (!startDateStr) return [];
         const paymentDates = [];
-        let currentDate = new Date(startDateStr + 'T00:00:00Z'); // Usar UTC
+        let currentDate = new Date(startDateStr + 'T00:00:00Z');
         let businessDaysCount = 0;
         while (businessDaysCount < 20) {
             const dayOfWeek = currentDate.getUTCDay();
@@ -207,11 +178,76 @@ document.addEventListener('DOMContentLoaded', () => {
         return paymentDates;
     }
 
-    // --- EVENT LISTENERS (AGORA USAM FUNÇÕES DE API) ---
+    // --- LÓGICA DE UPLOAD NO MODAL DE NOVO CLIENTE ---
 
+    function handleNewFiles(files) {
+        for (const file of files) {
+            // Evita adicionar duplicados
+            if (!newClientFiles.some(f => f.name === file.name && f.size === file.size)) {
+                newClientFiles.push(file);
+            }
+        }
+        renderNewClientFileList();
+    }
+
+    function renderNewClientFileList() {
+        newClientFileList.innerHTML = '';
+        if (newClientFiles.length === 0) {
+            return;
+        }
+        newClientFiles.forEach((file, index) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `
+                <span><i class="bi bi-file-earmark-zip"></i> ${file.name}</span>
+                <button type="button" class="btn-close" aria-label="Remover" data-index="${index}"></button>
+            `;
+            newClientFileList.appendChild(li);
+        });
+    }
+
+    // --- EVENT LISTENERS ---
+
+    // Lógica de Drag & Drop para o novo cliente
+    newClientDropZone.addEventListener('click', () => newClientFileInput.click());
+    newClientFileInput.addEventListener('change', (e) => handleNewFiles(e.target.files));
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        newClientDropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+    newClientDropZone.addEventListener('dragenter', () => newClientDropZone.classList.add('dragover'));
+    newClientDropZone.addEventListener('dragleave', () => newClientDropZone.classList.remove('dragover'));
+    newClientDropZone.addEventListener('drop', (e) => {
+        newClientDropZone.classList.remove('dragover');
+        handleNewFiles(e.dataTransfer.files);
+    });
+
+    // Remover arquivo da lista de pré-upload
+    newClientFileList.addEventListener('click', (e) => {
+        if (e.target.matches('.btn-close')) {
+            const index = parseInt(e.target.dataset.index, 10);
+            newClientFiles.splice(index, 1);
+            renderNewClientFileList();
+        }
+    });
+
+    // Limpar lista de arquivos quando o modal for fechado
+    addClientModalEl.addEventListener('hidden.bs.modal', () => {
+        addClientForm.reset();
+        newClientFiles = [];
+        renderNewClientFileList();
+    });
+
+    // ATUALIZADO: Event listener para adicionar novo cliente
     addClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newClient = {
+        const saveBtnSpinner = saveClientBtn.querySelector('.spinner-border');
+        saveClientBtn.disabled = true;
+        saveBtnSpinner.style.display = 'inline-block';
+
+        const clientData = {
             name: document.getElementById('clientName').value,
             startDate: document.getElementById('startDate').value || null,
             cpf: document.getElementById('clientCPF').value,
@@ -222,20 +258,38 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
+            // ETAPA 1: Criar o cliente com os dados de texto
             const response = await fetch('/api/clients', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newClient),
+                body: JSON.stringify(clientData),
             });
-            if (!response.ok) throw new Error('Falha ao adicionar cliente.');
+            if (!response.ok) throw new Error('Falha ao criar o registro do cliente.');
 
-            await loadClients(); // Recarrega a lista do servidor
-            addClientForm.reset();
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addClientModal'));
+            const newClient = await response.json();
+            const newClientId = newClient.id;
+
+            // ETAPA 2: Fazer o upload dos arquivos, se houver
+            if (newClientFiles.length > 0) {
+                const uploadPromises = newClientFiles.map(file => {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('clientId', newClientId);
+                    return fetch('/api/upload', { method: 'POST', body: formData });
+                });
+                await Promise.all(uploadPromises); // Espera todos os uploads terminarem
+            }
+
+            await loadClients();
+            const modal = bootstrap.Modal.getInstance(addClientModalEl);
             modal.hide();
+
         } catch (error) {
             console.error('Erro ao adicionar cliente:', error);
-            alert('Não foi possível adicionar o novo cliente.');
+            alert(`Não foi possível adicionar o novo cliente. Erro: ${error.message}`);
+        } finally {
+            saveClientBtn.disabled = false;
+            saveBtnSpinner.style.display = 'none';
         }
     });
 
@@ -251,11 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedClientId === null) return;
         const clientIndex = clients.findIndex(c => c.id === selectedClientId);
         if (clientIndex === -1) return;
-
         const client = clients[clientIndex];
         const todayStr = new Date().toISOString().split('T')[0];
         const todayPayment = client.paymentDates.find(p => p.date.startsWith(todayStr));
-
         if (todayPayment) {
             if (todayPayment.status !== 'paid') {
                 todayPayment.status = 'paid';
@@ -276,13 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
     calendar.addEventListener('click', async (e) => {
         const dayDiv = e.target.closest('.calendar-day:not(.status-weekend)');
         if (!dayDiv || !dayDiv.dataset.date || selectedClientId === null) return;
-
         const clientIndex = clients.findIndex(c => c.id === selectedClientId);
         const client = clients[clientIndex];
         const paymentDateStr = dayDiv.dataset.date;
         const payment = client.paymentDates.find(p => p.date === paymentDateStr);
         if (!payment) return;
-
         const newStatus = prompt(`Alterar status para o dia ${new Date(payment.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}.\n\nDigite "pago" ou "pendente":`, payment.status);
         if (newStatus) {
             const statusCleaned = newStatus.toLowerCase().trim();
@@ -303,7 +353,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
-
         document.getElementById('editClientId').value = client.id;
         document.getElementById('editClientName').value = client.name;
         document.getElementById('editStartDate').value = client.startDate || '';
@@ -311,7 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editClientPhone').value = client.phone || '';
         document.getElementById('editLoanValue').value = client.loanValue || '';
         document.getElementById('editDailyValue').value = client.dailyValue || '';
-
         const modal = new bootstrap.Modal(document.getElementById('editClientModal'));
         modal.show();
     });
@@ -321,8 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientId = parseInt(document.getElementById('editClientId').value);
         const clientIndex = clients.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
-
-        // Manter arquivos existentes ao editar
         const currentClient = clients[clientIndex];
         const updatedClientData = {
             id: clientId,
@@ -333,15 +379,13 @@ document.addEventListener('DOMContentLoaded', () => {
             loanValue: parseFloat(document.getElementById('editLoanValue').value),
             dailyValue: parseFloat(document.getElementById('editDailyValue').value),
             paymentDates: generatePaymentDates(document.getElementById('editStartDate').value),
-            files: currentClient.files || [] // Mantém os arquivos
+            files: currentClient.files || []
         };
-
         const updatedClient = await updateClient(updatedClientData);
         if (updatedClient) {
             clients[clientIndex] = updatedClient;
             renderClientPanel(clientId);
         }
-
         const modal = bootstrap.Modal.getInstance(document.getElementById('editClientModal'));
         modal.hide();
     });
@@ -350,14 +394,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
-
         if (confirm(`Tem certeza que deseja excluir o cliente "${client.name}"? Esta ação não pode ser desfeita.`)) {
             try {
                 const response = await fetch(`/api/clients?id=${selectedClientId}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error('Falha ao excluir cliente.');
-
-                await loadClients(); // Recarrega a lista
-                renderClientPanel(null); // Reseta o painel
+                await loadClients();
+                renderClientPanel(null);
             } catch (error) {
                 console.error("Erro ao deletar:", error);
                 alert("Não foi possível excluir o cliente.");
@@ -369,27 +411,15 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const nameList = document.getElementById('clientNameList').value;
         const names = nameList.split('\n').map(name => name.trim()).filter(name => name.length > 0);
-
         if (names.length === 0) {
             alert('Por favor, insira pelo menos um nome.');
             return;
         }
-
         let newClientsAddedCount = 0;
         const existingNames = clients.map(c => c.name.toLowerCase());
-
         for (const name of names) {
             if (!existingNames.includes(name.toLowerCase())) {
-                const newClient = {
-                    name: name,
-                    startDate: null,
-                    cpf: '',
-                    phone: '',
-                    loanValue: 0,
-                    dailyValue: 0,
-                    paymentDates: []
-                };
-
+                const newClient = { name: name, startDate: null, cpf: '', phone: '', loanValue: 0, dailyValue: 0, paymentDates: [] };
                 try {
                     const response = await fetch('/api/clients', {
                         method: 'POST',
@@ -404,61 +434,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-
         if (newClientsAddedCount > 0) {
             await loadClients();
             alert(`${newClientsAddedCount} novo(s) cliente(s) foram adicionado(s) com sucesso!`);
         } else {
             alert('Nenhum cliente novo foi encontrado na lista para adicionar.');
         }
-
         const modal = bootstrap.Modal.getInstance(document.getElementById('syncClientsModal'));
         modal.hide();
         syncClientsForm.reset();
     });
 
-    // --- NOVO: EVENT LISTENERS PARA ARQUIVOS ---
-
+    // UPLOAD DE ARQUIVOS NO PAINEL DE DETALHES
     uploadFileForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedClientId || fileInput.files.length === 0) return;
-
         const file = fileInput.files[0];
-
         const formData = new FormData();
         formData.append('file', file);
         formData.append('clientId', selectedClientId);
-
         uploadProgressBar.style.width = '0%';
         uploadProgressBar.textContent = '0%';
         uploadProgressBar.classList.remove('bg-danger', 'bg-success');
         uploadProgressBarContainer.style.display = 'block';
         uploadBtn.disabled = true;
-
         try {
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
             });
-
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Falha no upload.');
             }
-
             const updatedClient = await response.json();
-
             const clientIndex = clients.findIndex(c => c.id === selectedClientId);
             clients[clientIndex] = updatedClient;
             renderClientPanel(selectedClientId);
-
             uploadProgressBar.style.width = '100%';
             uploadProgressBar.textContent = 'Concluído!';
             uploadProgressBar.classList.add('bg-success');
             setTimeout(() => {
                 uploadProgressBarContainer.style.display = 'none';
             }, 2000);
-
         } catch (error) {
             console.error('Erro no upload:', error);
             alert(`Erro: ${error.message}`);
@@ -470,17 +488,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // EXCLUSÃO DE ARQUIVOS NO PAINEL DE DETALHES
     fileList.addEventListener('click', async (e) => {
         const deleteBtn = e.target.closest('.delete-file-btn');
         if (!deleteBtn) return;
-
         const fileName = deleteBtn.dataset.filename;
         if (!selectedClientId || !fileName) return;
-
         if (!confirm(`Tem certeza que deseja excluir o arquivo "${fileName}"?`)) {
             return;
         }
-
         try {
             const response = await fetch('/api/upload', {
                 method: 'DELETE',
@@ -490,24 +506,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     fileName: fileName
                 })
             });
-
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Falha ao excluir arquivo.');
             }
-
             const updatedClient = await response.json();
             const clientIndex = clients.findIndex(c => c.id === selectedClientId);
             clients[clientIndex] = updatedClient;
             renderClientPanel(selectedClientId);
-
         } catch (error) {
             console.error('Erro ao excluir:', error);
             alert(`Erro: ${error.message}`);
         }
     });
 
-
     // --- INICIALIZAÇÃO ---
-    loadClients(); // Carrega os dados do servidor ao iniciar a página
+    loadClients();
 });
