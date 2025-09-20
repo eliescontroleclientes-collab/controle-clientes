@@ -6,7 +6,7 @@ import { Pool } from 'pg';
 // Configuração do S3 Client para apontar para o Cloudflare R2
 const s3Client = new S3Client({
     region: "auto",
-    endpoint: `https://674bc78420777b3b523b6385634276c4.r2.cloudflarestorage.com`,
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
     credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
