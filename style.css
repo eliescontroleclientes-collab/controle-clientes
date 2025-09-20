@@ -1,0 +1,50 @@
+/* Estilo para que a lista de clientes tenha rolagem se for muito grande */
+.table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+/* Deixa as linhas da tabela clicáveis */
+#client-list-body tr {
+    cursor: pointer;
+}
+
+/* Grade do Calendário - Alterado para 7 colunas para exibir a semana completa */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-day {
+    padding: 10px;
+    text-align: center;
+    border-radius: 5px;
+    font-weight: bold;
+    color: #333;
+    border: 1px solid #ddd;
+    transition: transform 0.2s ease;
+}
+
+/* Adiciona cursor de ponteiro para dias que não são fim de semana */
+.calendar-day:not(.status-weekend) {
+    cursor: pointer;
+}
+
+.calendar-day:not(.status-weekend):hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+
+/* Cores do Calendário */
+.status-paid { background-color: #d1e7dd; color: #0f5132; } /* Verde - Pago */
+.status-pending { background-color: #fff3cd; color: #664d03; border: 2px solid #ffc107; } /* Amarelo - Hoje/Pendente */
+.status-late { background-color: #f8d7da; color: #842029; } /* Vermelho - Atrasado */
+.status-future { background-color: #f8f9fa; } /* Cinza - Futuro */
+
+/* NOVO: Estilo para Sábado e Domingo */
+.status-weekend {
+    background-color: #e9ecef; /* Cinza neutro para não confundir com status */
+    color: #6c757d;
+}
