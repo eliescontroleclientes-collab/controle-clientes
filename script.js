@@ -15,8 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadBtn = document.getElementById('upload-btn');
     const uploadProgressBarContainer = document.getElementById('upload-progress-bar-container');
     const uploadProgressBar = document.getElementById('upload-progress-bar');
-
-    // --- ELEMENTOS DO MODAL DE ADIÇÃO (ATUALIZADO) ---
+    // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
     const clientCPFInput = document.getElementById('clientCPF');
@@ -30,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const newClientFileInput = document.getElementById('new-client-file-input');
     const newClientFileList = document.getElementById('new-client-file-list');
     const saveClientBtn = document.getElementById('save-client-btn');
-
     // --- ELEMENTOS DO MODAL DE EDIÇÃO ---
     const editClientForm = document.getElementById('edit-client-form');
     const editClientCPFInput = document.getElementById('editClientCPF');
@@ -39,6 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const editInstallmentsInput = document.getElementById('editInstallments');
     const editInstallmentValueInput = document.getElementById('editInstallmentValue');
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
+    // --- NOVO ELEMENTO DO RELÓGIO ---
+    const clockTimeEl = document.getElementById('clock-time');
+    const clockDateEl = document.getElementById('clock-date');
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
@@ -89,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Versão para o Modal de Edição
     function updateEditInstallmentValue() {
         const loanValue = parseCurrency(editLoanValueInput.value);
         const installments = parseInt(editInstallmentsInput.value, 10);
@@ -150,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return paymentDates;
     }
 
-
     // --- FUNÇÕES DE API ---
     async function loadClients() {
         try {
@@ -194,13 +193,16 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.dataset.clientId = client.id;
             tr.className = client.id === selectedClientId ? 'table-active' : '';
 
-            // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE STATUS #########
-            const today = new Date().setHours(0, 0, 0, 0);
-            const todayStr = new Date(today).toISOString().split('T')[0];
+            // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE STATUS COM UTC #########
+            const todayUTCString = new Date().toISOString().split('T')[0];
+            const todayUTCMidnight = new Date(todayUTCString + 'T00:00:00.000Z').getTime();
 
-            const isLate = (client.paymentDates || []).some(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid');
-            const todayPayment = (client.paymentDates || []).find(p => p.date.startsWith(todayStr));
-            const isPending = todayPayment && todayPayment.status !== 'paid';
+            const isLate = (client.paymentDates || []).some(p => {
+                const paymentDateTime = new Date(p.date).getTime();
+                return paymentDateTime < todayUTCMidnight && p.status !== 'paid';
+            });
+
+            const isPending = (client.paymentDates || []).some(p => p.date.startsWith(todayUTCString) && p.status !== 'paid');
 
             let status;
             if (isLate) {
@@ -236,13 +238,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
 
-        // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE STATUS #########
-        const today = new Date().setHours(0, 0, 0, 0);
-        const todayStr = new Date(today).toISOString().split('T')[0];
+        // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE STATUS COM UTC #########
+        const todayUTCString = new Date().toISOString().split('T')[0];
+        const todayUTCMidnight = new Date(todayUTCString + 'T00:00:00.000Z').getTime();
 
-        const isLate = (client.paymentDates || []).some(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid');
-        const todayPayment = (client.paymentDates || []).find(p => p.date.startsWith(todayStr));
-        const isPending = todayPayment && todayPayment.status !== 'paid';
+        const isLate = (client.paymentDates || []).some(p => {
+            const paymentDateTime = new Date(p.date).getTime();
+            return paymentDateTime < todayUTCMidnight && p.status !== 'paid';
+        });
+
+        const isPending = (client.paymentDates || []).some(p => p.date.startsWith(todayUTCString) && p.status !== 'paid');
 
         let statusBadge;
         if (isLate) {
@@ -293,10 +298,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (payment) {
                     dayDiv.dataset.date = payment.date;
                     const paymentDateMidnight = new Date(payment.date).setUTCHours(0, 0, 0, 0);
-                    const todayUTC = new Date(new Date().toISOString().split('T')[0]).getTime();
 
                     if (payment.status === 'paid') dayDiv.classList.add('status-paid');
-                    else if (paymentDateMidnight < todayUTC) {
+                    else if (paymentDateMidnight < todayUTCMidnight) {
                         dayDiv.classList.add('status-late');
                         payment.status = 'late';
                     } else dayDiv.classList.add('status-pending');
@@ -381,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateEditInstallmentValue();
         toggleEditPaymentFrequency();
     });
+
 
     // Lógica de Drag & Drop para o novo cliente
     newClientDropZone.addEventListener('click', () => newClientFileInput.click());
@@ -467,8 +472,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientIndex = clients.findIndex(c => c.id === selectedClientId);
         if (clientIndex === -1) return;
         const client = clients[clientIndex];
-        const todayStr = new Date().toISOString().split('T')[0];
-        const todayPayment = client.paymentDates.find(p => p.date.startsWith(todayStr));
+        const todayUTCString = new Date().toISOString().split('T')[0];
+        const todayPayment = client.paymentDates.find(p => p.date.startsWith(todayUTCString));
         if (todayPayment) {
             if (todayPayment.status !== 'paid') {
                 todayPayment.status = 'paid';
@@ -482,29 +487,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } else alert('Não há uma parcela de pagamento agendada para hoje.');
     });
 
-    // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DO CLIQUE NO CALENDÁRIO #########
     calendar.addEventListener('click', async (e) => {
         const dayDiv = e.target.closest('.calendar-day:not(.status-weekend)');
         if (!dayDiv || !dayDiv.dataset.date || selectedClientId === null) return;
-
         const clientIndex = clients.findIndex(c => c.id === selectedClientId);
         const client = clients[clientIndex];
-        const paymentDateStr = dayDiv.dataset.date;
-        const payment = client.paymentDates.find(p => p.date === paymentDateStr);
+        const payment = client.paymentDates.find(p => p.date === dayDiv.dataset.date);
         if (!payment) return;
-
-        // Calcula o número da parcela
-        const installmentIndex = client.paymentDates.findIndex(p => p.date === paymentDateStr);
+        const installmentIndex = client.paymentDates.findIndex(p => p.date === dayDiv.dataset.date);
         const installmentNumber = installmentIndex + 1;
-
-        // Cria a mensagem para a confirmação
         const confirmationMessage = `Parcela ${installmentNumber} de ${client.installments}.\n\nO pagamento foi recebido?`;
-
-        // Usa confirm() para obter uma resposta Sim/Não (true/false)
         const wasPaid = confirm(confirmationMessage);
-
-        // Atualiza o status com base na resposta
-        // Se o status já estiver correto, não faz nada
         const newStatus = wasPaid ? 'paid' : 'pending';
         if (payment.status !== newStatus) {
             payment.status = newStatus;
@@ -515,7 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    // ######### FIM DA ALTERAÇÃO #########
 
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
@@ -616,7 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
         syncClientsForm.reset();
     });
 
-    // UPLOAD DE ARQUIVOS NO PAINEL DE DETALHES
     uploadFileForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedClientId || fileInput.files.length === 0) return;
@@ -651,7 +642,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // EXCLUSÃO DE ARQUIVOS NO PAINEL DE DETALHES
     fileList.addEventListener('click', async (e) => {
         const deleteBtn = e.target.closest('.delete-file-btn');
         if (!deleteBtn) return;
@@ -675,5 +665,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- INICIALIZAÇÃO ---
+
+    // ######### NOVA FUNÇÃO E INICIALIZAÇÃO DO RELÓGIO #########
+    function updateClock() {
+        if (!clockTimeEl || !clockDateEl) return;
+        const now = new Date();
+        const timeZone = 'America/Cuiaba';
+
+        const timeOptions = { timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+        const dateOptions = { timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+        clockTimeEl.textContent = now.toLocaleTimeString('pt-BR', timeOptions);
+
+        let dateString = now.toLocaleDateString('pt-BR', dateOptions);
+        // Capitaliza a primeira letra do dia da semana
+        dateString = dateString.charAt(0).toUpperCase() + dateString.slice(1);
+        clockDateEl.textContent = dateString;
+    }
+
+    updateClock(); // Chama imediatamente para não esperar 1 segundo
+    setInterval(updateClock, 1000); // Atualiza a cada segundo
+
     loadClients();
 });
