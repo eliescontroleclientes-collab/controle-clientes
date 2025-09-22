@@ -61,11 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     };
     const parseCurrency = (value) => {
-        return Number(value.replace(/[^0-9,-]+/g, "").replace(",", "."));
+        // Esta função agora precisa ser robusta para lidar tanto com o formato "R$ 1.000,00" quanto com um número puro
+        if (typeof value === 'number') return value;
+        return Number(String(value).replace(/[^0-9,-]+/g, "").replace(",", "."));
     };
 
     // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
     function updateInstallmentValue() {
+        // Usamos parseCurrency aqui pois o valor no campo estará formatado
         const loanValue = parseCurrency(loanValueInput.value);
         const installments = parseInt(installmentsInput.value, 10);
         if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
@@ -302,10 +305,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Máscaras e Cálculos no Modal de Adicionar
     clientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     clientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
+
+    // ######### INÍCIO DA ALTERAÇÃO #########
+    // Lógica corrigida para o campo de valor do empréstimo (Adicionar Cliente)
     loanValueInput.addEventListener('input', (e) => {
-        e.target.value = formatCurrency(parseCurrency(e.target.value));
+        // 1. Pega apenas os dígitos do que o usuário digitou
+        let digits = e.target.value.replace(/\D/g, '');
+
+        // 2. Se estiver vazio, limpa o campo e atualiza o cálculo
+        if (digits === "") {
+            e.target.value = "";
+            updateInstallmentValue();
+            return;
+        }
+
+        // 3. Converte os dígitos para um número (considerando os centavos)
+        const numberValue = Number(digits) / 100;
+
+        // 4. Formata o número como moeda e atualiza o campo
+        e.target.value = formatCurrency(numberValue);
+
+        // 5. Chama a função de cálculo da parcela
         updateInstallmentValue();
     });
+    // ######### FIM DA ALTERAÇÃO #########
+
     installmentsInput.addEventListener('input', () => {
         updateInstallmentValue();
         togglePaymentFrequency();
@@ -314,10 +338,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Máscaras e Cálculos no Modal de Editar
     editClientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     editClientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
+
+    // ######### INÍCIO DA ALTERAÇÃO #########
+    // Lógica corrigida para o campo de valor do empréstimo (Editar Cliente)
     editLoanValueInput.addEventListener('input', (e) => {
-        e.target.value = formatCurrency(parseCurrency(e.target.value));
+        let digits = e.target.value.replace(/\D/g, '');
+
+        if (digits === "") {
+            e.target.value = "";
+            updateEditInstallmentValue();
+            return;
+        }
+
+        const numberValue = Number(digits) / 100;
+        e.target.value = formatCurrency(numberValue);
         updateEditInstallmentValue();
     });
+    // ######### FIM DA ALTERAÇÃO #########
+
     editInstallmentsInput.addEventListener('input', () => {
         updateEditInstallmentValue();
         toggleEditPaymentFrequency();
