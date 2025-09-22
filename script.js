@@ -37,14 +37,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const editInstallmentsInput = document.getElementById('editInstallments');
     const editInstallmentValueInput = document.getElementById('editInstallmentValue');
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
-    // --- NOVO ELEMENTO DO RELÓGIO ---
+    // --- ELEMENTOS DO RELÓGIO E MODAL DE PAGAMENTO ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
+    const paymentModalEl = document.getElementById('paymentModal');
+    const paymentModalTitle = document.getElementById('paymentModalTitle');
+    const paymentDateInput = document.getElementById('paymentDateInput');
+    const markPendingBtn = document.getElementById('markPendingBtn');
+    const markPaidConfirmBtn = document.getElementById('markPaidConfirmBtn');
+
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
     let selectedClientId = null;
     let newClientFiles = [];
+    let currentPaymentDate = null; // Guarda a data do pagamento sendo editada no modal
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -193,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.dataset.clientId = client.id;
             tr.className = client.id === selectedClientId ? 'table-active' : '';
 
-            // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE STATUS COM UTC #########
             const todayUTCString = new Date().toISOString().split('T')[0];
             const todayUTCMidnight = new Date(todayUTCString + 'T00:00:00.000Z').getTime();
 
@@ -212,7 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 status = '<span class="badge bg-success">Em Dia</span>';
             }
-            // ######### FIM DA ALTERAÇÃO #########
 
             const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
             tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
@@ -238,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
 
-        // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE STATUS COM UTC #########
         const todayUTCString = new Date().toISOString().split('T')[0];
         const todayUTCMidnight = new Date(todayUTCString + 'T00:00:00.000Z').getTime();
 
@@ -258,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
             statusBadge = '<span class="badge bg-success">Em Dia</span>';
         }
         document.getElementById('panel-status').innerHTML = statusBadge;
-        // ######### FIM DA ALTERAÇÃO #########
 
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
@@ -348,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- EVENT LISTENERS ---
 
-    // Máscaras e Cálculos no Modal de Adicionar
+    // Máscaras e Cálculos
     clientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     clientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
     loanValueInput.addEventListener('input', (e) => {
@@ -366,8 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateInstallmentValue();
         togglePaymentFrequency();
     });
-
-    // Máscaras e Cálculos no Modal de Editar
     editClientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     editClientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
     editLoanValueInput.addEventListener('input', (e) => {
@@ -386,8 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleEditPaymentFrequency();
     });
 
-
-    // Lógica de Drag & Drop para o novo cliente
+    // Drag & Drop
     newClientDropZone.addEventListener('click', () => newClientFileInput.click());
     newClientFileInput.addEventListener('change', (e) => handleNewFiles(e.target.files));
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => newClientDropZone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false));
@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePaymentFrequency();
     });
 
-    // Event listener para adicionar novo cliente
+    // Adicionar novo cliente
     addClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const saveBtnSpinner = saveClientBtn.querySelector('.spinner-border');
@@ -477,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (todayPayment) {
             if (todayPayment.status !== 'paid') {
                 todayPayment.status = 'paid';
+                todayPayment.paidAt = new Date().toISOString(); // Adiciona data de pagamento
                 const updatedClient = await updateClient(client);
                 if (updatedClient) {
                     clients[clientIndex] = updatedClient;
@@ -487,27 +488,67 @@ document.addEventListener('DOMContentLoaded', () => {
         } else alert('Não há uma parcela de pagamento agendada para hoje.');
     });
 
-    calendar.addEventListener('click', async (e) => {
+    // ######### INÍCIO DA ALTERAÇÃO: NOVO EVENT LISTENER DO CALENDÁRIO #########
+    calendar.addEventListener('click', (e) => {
         const dayDiv = e.target.closest('.calendar-day:not(.status-weekend)');
         if (!dayDiv || !dayDiv.dataset.date || selectedClientId === null) return;
+
+        const client = clients.find(c => c.id === selectedClientId);
+        const paymentDateStr = dayDiv.dataset.date;
+        const payment = client.paymentDates.find(p => p.date === paymentDateStr);
+        if (!payment) return;
+
+        currentPaymentDate = paymentDateStr; // Guarda a data da parcela que estamos editando
+
+        const installmentIndex = client.paymentDates.findIndex(p => p.date === paymentDateStr);
+        const installmentNumber = installmentIndex + 1;
+
+        // Popula e abre o novo modal
+        paymentModalTitle.textContent = `Parcela ${installmentNumber} de ${client.installments}`;
+
+        // Define a data de pagamento para hoje por padrão, no formato YYYY-MM-DD
+        const todayForInput = new Date().toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
+        paymentDateInput.value = payment.paidAt ? payment.paidAt.split('T')[0] : todayForInput;
+
+        const modal = new bootstrap.Modal(paymentModalEl);
+        modal.show();
+    });
+
+    async function handlePaymentUpdate(newStatus) {
         const clientIndex = clients.findIndex(c => c.id === selectedClientId);
         const client = clients[clientIndex];
-        const payment = client.paymentDates.find(p => p.date === dayDiv.dataset.date);
-        if (!payment) return;
-        const installmentIndex = client.paymentDates.findIndex(p => p.date === dayDiv.dataset.date);
-        const installmentNumber = installmentIndex + 1;
-        const confirmationMessage = `Parcela ${installmentNumber} de ${client.installments}.\n\nO pagamento foi recebido?`;
-        const wasPaid = confirm(confirmationMessage);
-        const newStatus = wasPaid ? 'paid' : 'pending';
-        if (payment.status !== newStatus) {
-            payment.status = newStatus;
-            const updatedClient = await updateClient(client);
-            if (updatedClient) {
-                clients[clientIndex] = updatedClient;
-                renderClientPanel(selectedClientId);
-            }
+        const payment = client.paymentDates.find(p => p.date === currentPaymentDate);
+
+        if (payment.status === newStatus && newStatus === 'pending') {
+            // Se já está pendente e o usuário clica em pendente, não faz nada
+            return;
         }
+
+        payment.status = newStatus;
+        if (newStatus === 'paid') {
+            const paidDate = new Date(paymentDateInput.value + 'T00:00:00.000Z');
+            payment.paidAt = paidDate.toISOString();
+        } else {
+            delete payment.paidAt; // Remove a data de pagamento se voltar a ser pendente
+        }
+
+        const updatedClient = await updateClient(client);
+        if (updatedClient) {
+            clients[clientIndex] = updatedClient;
+            renderClientPanel(selectedClientId);
+        }
+    }
+
+    markPaidConfirmBtn.addEventListener('click', async () => {
+        await handlePaymentUpdate('paid');
+        bootstrap.Modal.getInstance(paymentModalEl).hide();
     });
+
+    markPendingBtn.addEventListener('click', async () => {
+        await handlePaymentUpdate('pending');
+        bootstrap.Modal.getInstance(paymentModalEl).hide();
+    });
+    // ######### FIM DA ALTERAÇÃO #########
 
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
@@ -665,8 +706,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- INICIALIZAÇÃO ---
-
-    // ######### NOVA FUNÇÃO E INICIALIZAÇÃO DO RELÓGIO #########
     function updateClock() {
         if (!clockTimeEl || !clockDateEl) return;
         const now = new Date();
@@ -678,13 +717,12 @@ document.addEventListener('DOMContentLoaded', () => {
         clockTimeEl.textContent = now.toLocaleTimeString('pt-BR', timeOptions);
 
         let dateString = now.toLocaleDateString('pt-BR', dateOptions);
-        // Capitaliza a primeira letra do dia da semana
         dateString = dateString.charAt(0).toUpperCase() + dateString.slice(1);
         clockDateEl.textContent = dateString;
     }
 
-    updateClock(); // Chama imediatamente para não esperar 1 segundo
-    setInterval(updateClock, 1000); // Atualiza a cada segundo
+    updateClock();
+    setInterval(updateClock, 1000);
 
     loadClients();
 });
