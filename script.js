@@ -61,14 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     };
     const parseCurrency = (value) => {
-        // Esta função agora precisa ser robusta para lidar tanto com o formato "R$ 1.000,00" quanto com um número puro
         if (typeof value === 'number') return value;
         return Number(String(value).replace(/[^0-9,-]+/g, "").replace(",", "."));
     };
 
     // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
     function updateInstallmentValue() {
-        // Usamos parseCurrency aqui pois o valor no campo estará formatado
         const loanValue = parseCurrency(loanValueInput.value);
         const installments = parseInt(installmentsInput.value, 10);
         if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
@@ -116,12 +114,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
+    // ######### INÍCIO DA ALTERAÇÃO #########
     // --- FUNÇÃO DE CALENDÁRIO ATUALIZADA ---
     function generatePaymentDates(startDateStr, installments, frequency) {
         if (!startDateStr || !installments || !frequency) return [];
-        const paymentDates = [];
-        let currentDate = new Date(startDateStr + 'T00:00:00Z');
 
+        const paymentDates = [];
+        let currentDate;
+
+        // 1. Calcula a data da PRIMEIRA parcela com base nas novas regras
+        if (frequency === 'daily') {
+            let firstDate = new Date(startDateStr + 'T00:00:00Z');
+            firstDate.setUTCDate(firstDate.getUTCDate() + 1); // Começa a verificar a partir do dia seguinte
+
+            // Pula fins de semana para encontrar o próximo dia útil
+            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6) {
+                firstDate.setUTCDate(firstDate.getUTCDate() + 1);
+            }
+            currentDate = firstDate;
+        } else if (frequency === 'weekly') {
+            let firstDate = new Date(startDateStr + 'T00:00:00Z');
+            firstDate.setUTCDate(firstDate.getUTCDate() + 7); // Exatamente 7 dias depois
+            currentDate = firstDate;
+        } else {
+            return []; // Frequência desconhecida
+        }
+
+        // 2. Gera a lista de datas a partir da primeira parcela calculada
         if (frequency === 'daily') {
             let businessDaysCount = 0;
             while (businessDaysCount < installments) {
@@ -138,8 +157,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentDate.setUTCDate(currentDate.getUTCDate() + 7);
             }
         }
+
         return paymentDates;
     }
+    // ######### FIM DA ALTERAÇÃO #########
 
 
     // --- FUNÇÕES DE API ---
@@ -231,12 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('panel-end-date').textContent = lastPaymentDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
             let currentDate = new Date(firstPaymentDate);
-            while (currentDate.getUTCDay() !== 1) { // Inicia o grid na Segunda-Feira
+            while (currentDate.getUTCDay() !== 1) {
                 currentDate.setUTCDate(currentDate.getUTCDate() - 1);
             }
 
             let calendarEndDate = new Date(lastPaymentDate);
-            while (calendarEndDate.getUTCDay() !== 0) { // Termina o grid no Domingo
+            while (calendarEndDate.getUTCDay() !== 0) {
                 calendarEndDate.setUTCDate(calendarEndDate.getUTCDate() + 1);
             }
 
@@ -305,31 +326,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Máscaras e Cálculos no Modal de Adicionar
     clientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     clientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
-
-    // ######### INÍCIO DA ALTERAÇÃO #########
-    // Lógica corrigida para o campo de valor do empréstimo (Adicionar Cliente)
     loanValueInput.addEventListener('input', (e) => {
-        // 1. Pega apenas os dígitos do que o usuário digitou
         let digits = e.target.value.replace(/\D/g, '');
-
-        // 2. Se estiver vazio, limpa o campo e atualiza o cálculo
         if (digits === "") {
             e.target.value = "";
             updateInstallmentValue();
             return;
         }
-
-        // 3. Converte os dígitos para um número (considerando os centavos)
         const numberValue = Number(digits) / 100;
-
-        // 4. Formata o número como moeda e atualiza o campo
         e.target.value = formatCurrency(numberValue);
-
-        // 5. Chama a função de cálculo da parcela
         updateInstallmentValue();
     });
-    // ######### FIM DA ALTERAÇÃO #########
-
     installmentsInput.addEventListener('input', () => {
         updateInstallmentValue();
         togglePaymentFrequency();
@@ -338,24 +345,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Máscaras e Cálculos no Modal de Editar
     editClientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     editClientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
-
-    // ######### INÍCIO DA ALTERAÇÃO #########
-    // Lógica corrigida para o campo de valor do empréstimo (Editar Cliente)
     editLoanValueInput.addEventListener('input', (e) => {
         let digits = e.target.value.replace(/\D/g, '');
-
         if (digits === "") {
             e.target.value = "";
             updateEditInstallmentValue();
             return;
         }
-
         const numberValue = Number(digits) / 100;
         e.target.value = formatCurrency(numberValue);
         updateEditInstallmentValue();
     });
-    // ######### FIM DA ALTERAÇÃO #########
-
     editInstallmentsInput.addEventListener('input', () => {
         updateEditInstallmentValue();
         toggleEditPaymentFrequency();
@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addClientForm.reset();
         newClientFiles = [];
         renderNewClientFileList();
-        togglePaymentFrequency(); // Reseta o estado dos radios
+        togglePaymentFrequency();
     });
 
     // Event listener para adicionar novo cliente
@@ -483,21 +483,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ######### INÍCIO DA ALTERAÇÃO #########
     // Event Listener para popular o Modal de Edição
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
+
         document.getElementById('editClientId').value = client.id;
         document.getElementById('editClientName').value = client.name;
-        document.getElementById('editStartDate').value = client.startDate || '';
+
+        // Preenche a data no formato YYYY-MM-DD para o input type="date"
+        document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
+
         editClientCPFInput.value = client.cpf ? formatCPF(client.cpf) : '';
         editClientPhoneInput.value = client.phone ? formatPhone(client.phone) : '';
         editLoanValueInput.value = formatCurrency(client.loanValue || 0);
         editInstallmentsInput.value = client.installments || 20;
         editInstallmentValueInput.value = formatCurrency(client.dailyValue || 0);
 
-        // Lógica dos radios de frequência
         toggleEditPaymentFrequency();
         if (client.frequency === 'weekly') {
             document.getElementById('editFreqWeekly').checked = true;
@@ -507,6 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         new bootstrap.Modal(document.getElementById('editClientModal')).show();
     });
+    // ######### FIM DA ALTERAÇÃO #########
 
     // Event listener para salvar edição
     editClientForm.addEventListener('submit', async (e) => {
