@@ -113,34 +113,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
-    // ######### INÍCIO DA ALTERAÇÃO #########
-    // --- FUNÇÃO DE CALENDÁRIO ATUALIZADA ---
     function generatePaymentDates(startDateStr, installments, frequency) {
         if (!startDateStr || !installments || !frequency) return [];
-
         const paymentDates = [];
         let currentDate;
-
-        // 1. Calcula a data da PRIMEIRA parcela com base nas novas regras
         if (frequency === 'daily') {
             let firstDate = new Date(startDateStr + 'T00:00:00Z');
-            firstDate.setUTCDate(firstDate.getUTCDate() + 1); // Começa a verificar a partir do dia seguinte
-
-            // Pula fins de semana para encontrar o próximo dia útil
+            firstDate.setUTCDate(firstDate.getUTCDate() + 1);
             while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6) {
                 firstDate.setUTCDate(firstDate.getUTCDate() + 1);
             }
             currentDate = firstDate;
         } else if (frequency === 'weekly') {
             let firstDate = new Date(startDateStr + 'T00:00:00Z');
-            firstDate.setUTCDate(firstDate.getUTCDate() + 7); // Exatamente 7 dias depois
+            firstDate.setUTCDate(firstDate.getUTCDate() + 7);
             currentDate = firstDate;
         } else {
-            return []; // Frequência desconhecida
+            return [];
         }
-
-        // 2. Gera a lista de datas a partir da primeira parcela calculada
         if (frequency === 'daily') {
             let businessDaysCount = 0;
             while (businessDaysCount < installments) {
@@ -157,10 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentDate.setUTCDate(currentDate.getUTCDate() + 7);
             }
         }
-
         return paymentDates;
     }
-    // ######### FIM DA ALTERAÇÃO #########
 
 
     // --- FUNÇÕES DE API ---
@@ -205,9 +193,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.dataset.clientId = client.id;
             tr.className = client.id === selectedClientId ? 'table-active' : '';
+
+            // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE STATUS #########
             const today = new Date().setHours(0, 0, 0, 0);
-            const paymentsDue = (client.paymentDates || []).filter(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid').length;
-            const status = paymentsDue > 0 ? '<span class="badge bg-danger">Atrasado</span>' : '<span class="badge bg-success">Em Dia</span>';
+            const todayStr = new Date(today).toISOString().split('T')[0];
+
+            const isLate = (client.paymentDates || []).some(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid');
+            const todayPayment = (client.paymentDates || []).find(p => p.date.startsWith(todayStr));
+            const isPending = todayPayment && todayPayment.status !== 'paid';
+
+            let status;
+            if (isLate) {
+                status = '<span class="badge bg-danger">Atrasado</span>';
+            } else if (isPending) {
+                status = '<span class="badge bg-warning text-dark">Pendente</span>';
+            } else {
+                status = '<span class="badge bg-success">Em Dia</span>';
+            }
+            // ######### FIM DA ALTERAÇÃO #########
+
             const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
             tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
             clientListBody.appendChild(tr);
@@ -231,9 +235,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedCPF = client.cpf ? formatCPF(client.cpf) : 'N/A';
         const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
+
+        // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE STATUS #########
         const today = new Date().setHours(0, 0, 0, 0);
-        const paymentsDue = (client.paymentDates || []).filter(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid').length;
-        document.getElementById('panel-status').innerHTML = paymentsDue > 0 ? '<span class="badge bg-danger">Atrasado</span>' : '<span class="badge bg-success">Em Dia</span>';
+        const todayStr = new Date(today).toISOString().split('T')[0];
+
+        const isLate = (client.paymentDates || []).some(p => new Date(p.date).setHours(0, 0, 0, 0) < today && p.status !== 'paid');
+        const todayPayment = (client.paymentDates || []).find(p => p.date.startsWith(todayStr));
+        const isPending = todayPayment && todayPayment.status !== 'paid';
+
+        let statusBadge;
+        if (isLate) {
+            statusBadge = '<span class="badge bg-danger">Atrasado</span>';
+        } else if (isPending) {
+            statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
+        } else {
+            statusBadge = '<span class="badge bg-success">Em Dia</span>';
+        }
+        document.getElementById('panel-status').innerHTML = statusBadge;
+        // ######### FIM DA ALTERAÇÃO #########
+
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
         document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'A preencher';
@@ -361,7 +382,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleEditPaymentFrequency();
     });
 
-
     // Lógica de Drag & Drop para o novo cliente
     newClientDropZone.addEventListener('click', () => newClientFileInput.click());
     newClientFileInput.addEventListener('change', (e) => handleNewFiles(e.target.files));
@@ -462,29 +482,41 @@ document.addEventListener('DOMContentLoaded', () => {
         } else alert('Não há uma parcela de pagamento agendada para hoje.');
     });
 
+    // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DO CLIQUE NO CALENDÁRIO #########
     calendar.addEventListener('click', async (e) => {
         const dayDiv = e.target.closest('.calendar-day:not(.status-weekend)');
         if (!dayDiv || !dayDiv.dataset.date || selectedClientId === null) return;
+
         const clientIndex = clients.findIndex(c => c.id === selectedClientId);
         const client = clients[clientIndex];
-        const payment = client.paymentDates.find(p => p.date === dayDiv.dataset.date);
+        const paymentDateStr = dayDiv.dataset.date;
+        const payment = client.paymentDates.find(p => p.date === paymentDateStr);
         if (!payment) return;
-        const newStatus = prompt(`Alterar status para o dia ${new Date(payment.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}.\n\nDigite "pago" ou "pendente":`, payment.status);
-        if (newStatus) {
-            const statusCleaned = newStatus.toLowerCase().trim();
-            if (['pago', 'pendente'].includes(statusCleaned)) {
-                payment.status = statusCleaned === 'pago' ? 'paid' : 'pending';
-                const updatedClient = await updateClient(client);
-                if (updatedClient) {
-                    clients[clientIndex] = updatedClient;
-                    renderClientPanel(selectedClientId);
-                }
-            } else alert('Status inválido. Por favor, use "pago" ou "pendente".');
+
+        // Calcula o número da parcela
+        const installmentIndex = client.paymentDates.findIndex(p => p.date === paymentDateStr);
+        const installmentNumber = installmentIndex + 1;
+
+        // Cria a mensagem para a confirmação
+        const confirmationMessage = `Parcela ${installmentNumber} de ${client.installments}.\n\nO pagamento foi recebido?`;
+
+        // Usa confirm() para obter uma resposta Sim/Não (true/false)
+        const wasPaid = confirm(confirmationMessage);
+
+        // Atualiza o status com base na resposta
+        // Se o status já estiver correto, não faz nada
+        const newStatus = wasPaid ? 'paid' : 'pending';
+        if (payment.status !== newStatus) {
+            payment.status = newStatus;
+            const updatedClient = await updateClient(client);
+            if (updatedClient) {
+                clients[clientIndex] = updatedClient;
+                renderClientPanel(selectedClientId);
+            }
         }
     });
+    // ######### FIM DA ALTERAÇÃO #########
 
-    // ######### INÍCIO DA ALTERAÇÃO #########
-    // Event Listener para popular o Modal de Edição
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
@@ -492,10 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('editClientId').value = client.id;
         document.getElementById('editClientName').value = client.name;
-
-        // Preenche a data no formato YYYY-MM-DD para o input type="date"
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
-
         editClientCPFInput.value = client.cpf ? formatCPF(client.cpf) : '';
         editClientPhoneInput.value = client.phone ? formatPhone(client.phone) : '';
         editLoanValueInput.value = formatCurrency(client.loanValue || 0);
@@ -511,9 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         new bootstrap.Modal(document.getElementById('editClientModal')).show();
     });
-    // ######### FIM DA ALTERAÇÃO #########
 
-    // Event listener para salvar edição
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const clientId = parseInt(document.getElementById('editClientId').value);
