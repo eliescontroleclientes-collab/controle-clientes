@@ -1,69 +1,47 @@
-import { spawn } from 'child_process';
-import multiparty from 'multiparty';
-import fs from 'fs';
+import { Pool } from 'pg';
+import { dump } from 'pg-god';
 
-export const config = {
-    api: {
-        bodyParser: false,
-    },
-};
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        res.setHeader('Allow', ['POST']);
+    if (req.method !== 'GET') {
+        res.setHeader('Allow', ['GET']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
+    const db = await pool.connect();
     try {
-        const databaseUrl = process.env.DATABASE_URL;
-        if (!databaseUrl) {
-            throw new Error("DATABASE_URL não está configurada.");
-        }
+        res.setHeader('Content-Type', 'application/sql');
+        res.setHeader('Content-Disposition', `attachment; filename="backup_clientes_${new Date().toISOString().split('T')[0]}.sql"`);
 
-        const form = new multiparty.Form();
-        const { files } = await new Promise((resolve, reject) => {
-            form.parse(req, (err, fields, files) => {
-                if (err) reject(err);
-                resolve({ files });
-            });
+        // A função dump da biblioteca 'pg-god' recebe o cliente de conexão.
+        // A beleza desta biblioteca é sua simplicidade.
+        const dumpStream = await dump(db);
+
+        // Direciona o fluxo de dados do backup diretamente para a resposta da API
+        dumpStream.pipe(res);
+
+        // Tratamento de erros durante o streaming
+        dumpStream.on('error', (err) => {
+            console.error('Erro durante o stream do backup:', err);
+            if (!res.headersSent) {
+                res.status(500).send('Erro ao gerar backup.');
+            }
+            res.end();
         });
-
-        if (!files.backupFile || files.backupFile.length === 0) {
-            return res.status(400).json({ error: "Nenhum arquivo de backup enviado." });
-        }
-
-        const backupFilePath = files.backupFile[0].path;
-
-        const psql = spawn('psql', [databaseUrl]);
-
-        const stream = fs.createReadStream(backupFilePath);
-        stream.pipe(psql.stdin);
-
-        let errorOutput = '';
-        psql.stderr.on('data', (data) => {
-            errorOutput += data.toString();
-        });
-
-        await new Promise((resolve, reject) => {
-            psql.on('close', (code) => {
-                fs.unlinkSync(backupFilePath); // Limpa o arquivo temporário
-                if (code === 0) {
-                    resolve();
-                } else {
-                    console.error(`psql stderr: ${errorOutput}`);
-                    reject(new Error(`Processo de restauração falhou com código ${code}.`));
-                }
-            });
-            psql.on('error', (err) => {
-                fs.unlinkSync(backupFilePath);
-                reject(err);
-            });
-        });
-
-        res.status(200).json({ message: "Backup restaurado com sucesso!" });
 
     } catch (error) {
-        console.error('API /restore-db error:', error);
-        res.status(500).json({ error: 'Erro ao restaurar backup: ' + error.message });
+        console.error('API /backup-db error:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Erro interno do servidor.' });
+        }
+    } finally {
+        // A resposta do stream cuidará de liberar o cliente
+        res.on('finish', () => {
+            db.release();
+        });
     }
 }
