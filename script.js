@@ -156,7 +156,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return paymentDates;
     }
 
+    // ######### INÍCIO DA ALTERAÇÃO: FUNÇÃO DE CÁLCULO DE STATUS ATUALIZADA #########
     function calculateClientStatus(client) {
+        if (!client.paymentDates || client.paymentDates.length === 0) {
+            return '<span class="badge bg-secondary">Sem dados</span>';
+        }
+
+        // Prioridade 1: Verificar se o empréstimo foi concluído.
+        const allPaid = client.paymentDates.every(p => p.status === 'paid');
+        if (allPaid) {
+            return '<span class="badge bg-dark">Empréstimo Concluído</span>';
+        }
+
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
@@ -164,10 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let lateCount = 0;
         let isPendingToday = false;
         let advancedCount = 0;
-
-        if (!client.paymentDates || client.paymentDates.length === 0) {
-            return '<span class="badge bg-secondary">Sem dados</span>';
-        }
 
         client.paymentDates.forEach(p => {
             const paymentDateTime = new Date(p.date).getTime();
@@ -177,13 +184,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (paymentDateTime === cuiabaTodayUTCMidnight) {
                     isPendingToday = true;
                 }
-            } else {
+            } else { // p.status === 'paid'
                 if (paymentDateTime > cuiabaTodayUTCMidnight) {
                     advancedCount++;
                 }
             }
         });
 
+        // Prioridade 2: Verificar atrasos.
         if (lateCount > 0) {
             let statusText = `<span class="badge bg-danger">Atrasado (${lateCount})</span>`;
             if (isPendingToday) {
@@ -191,14 +199,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return statusText;
         }
+
+        // Prioridade 3: Verificar pendência de hoje.
         if (isPendingToday) {
             return '<span class="badge bg-warning text-dark">Pendente</span>';
         }
+
+        // Prioridade 4: Verificar adiantamentos.
         if (advancedCount > 0) {
             return `<span class="badge bg-info text-dark">Adiantado (${advancedCount})</span>`;
         }
+
+        // Status Padrão: Em dia.
         return '<span class="badge bg-success">Em Dia</span>';
     }
+    // ######### FIM DA ALTERAÇÃO #########
 
     // --- FUNÇÕES DE API ---
     async function loadClients() {
@@ -302,10 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             while (currentDate <= calendarEndDate) {
                 const dayDiv = document.createElement('div');
-                // ######### INÍCIO DA CORREÇÃO: dayOfWeek definido aqui #########
                 const dayOfWeek = currentDate.getUTCDay();
-                // ######### FIM DA CORREÇÃO #########
-
                 dayDiv.textContent = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
                 dayDiv.classList.add('calendar-day');
 
@@ -523,10 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(err.error || 'Falha ao registrar pagamento.');
             }
 
-            // ######### INÍCIO DA CORREÇÃO: Atualização da lista #########
-            await loadClients(); // Recarrega TODOS os clientes para garantir consistência
-            renderClientPanel(selectedClientId); // Re-renderiza o painel para manter a seleção
-            // ######### FIM DA CORREÇÃO #########
+            await loadClients();
+            renderClientPanel(selectedClientId);
 
             bootstrap.Modal.getInstance(paymentModalEl).hide();
 
