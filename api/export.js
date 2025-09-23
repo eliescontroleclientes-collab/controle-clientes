@@ -6,14 +6,10 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Helper function to calculate status (replicated from frontend for backend use)
+// Helper function to calculate status (replicated from frontend)
 function calculateClientStatus(client) {
-    if (!client.paymentDates || client.paymentDates.length === 0) {
-        return "Sem dados";
-    }
-    if (client.paymentDates.every(p => p.status === 'paid')) {
-        return "Empréstimo Concluído";
-    }
+    if (!client.paymentDates || client.paymentDates.length === 0) return "Sem dados";
+    if (client.paymentDates.every(p => p.status === 'paid')) return "Empréstimo Concluído";
     const timeZone = 'America/Cuiaba';
     const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
     const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
@@ -32,7 +28,7 @@ function calculateClientStatus(client) {
         return statusText;
     }
     if (isPendingToday) return "Pendente";
-    return "Em Dia"; // Simplified version for brevity in Excel
+    return "Em Dia";
 }
 
 export default async function handler(req, res) {
@@ -45,106 +41,137 @@ export default async function handler(req, res) {
         workbook.creator = 'Sistema de Controle';
         workbook.created = new Date();
 
-        // Aba 1: Empréstimos
-        const loansSheet = workbook.addWorksheet('Empréstimos');
-        const personalDataSheet = workbook.addWorksheet('Dados Pessoais');
+        const sheet = workbook.addWorksheet('Painel de Controle');
 
-        // Headers da aba de Dados Pessoais
-        personalDataSheet.columns = [
-            { header: 'ID', key: 'id', width: 10 },
-            { header: 'Nome', key: 'name', width: 35 },
-            { header: 'CPF', key: 'cpf', width: 15 },
-            { header: 'Telefone', key: 'phone', width: 18 },
-            { header: 'Profissão', key: 'profissao', width: 25 },
-            { header: 'Bairro', key: 'bairro', width: 25 },
-            { header: 'Localização', key: 'localizacao', width: 40 }
-        ];
+        // Configuração geral da página (opcional, mas ajuda na visualização)
+        sheet.properties.defaultRowHeight = 20;
 
-        // Headers da aba de Empréstimos (dinâmicos)
-        const baseLoanHeaders = [
-            { header: 'ID', key: 'id', width: 10 },
-            { header: 'Nome', key: 'name', width: 35 },
-            { header: 'Status', key: 'status', width: 25 },
-            { header: 'Data Início', key: 'startDate', width: 15 },
-            { header: 'Data Final Estimada', key: 'endDate', width: 20 },
-            { header: 'Data Quitação', key: 'settlementDate', width: 15 },
-            { header: 'Valor Empréstimo', key: 'loanValue', width: 20, style: { numFmt: '"R$"#,##0.00' } },
-            { header: 'Valor Parcela', key: 'dailyValue', width: 18, style: { numFmt: '"R$"#,##0.00' } },
-            { header: 'Saldo', key: 'saldo', width: 15, style: { numFmt: '"R$"#,##0.00' } }
-        ];
+        // Título Principal
+        sheet.mergeCells('A1:R3');
+        const titleCell = sheet.getCell('A1');
+        titleCell.value = 'PAINEL DE CONTROLE DE CLIENTES';
+        titleCell.font = { name: 'Calibri', size: 26, bold: true };
+        titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        let maxInstallments = 0;
-        clients.forEach(c => {
-            if (c.installments > maxInstallments) maxInstallments = c.installments;
-        });
+        let currentRow = 4; // Linha inicial para o primeiro cliente
 
-        for (let i = 1; i <= maxInstallments; i++) {
-            baseLoanHeaders.push({ header: `Venc. Parcela ${i}`, key: `venc${i}`, width: 15 });
-            baseLoanHeaders.push({ header: `Status Parcela ${i}`, key: `status${i}`, width: 15 });
-            baseLoanHeaders.push({ header: `Data Pag. ${i}`, key: `paidAt${i}`, width: 15 });
-        }
-        loansSheet.columns = baseLoanHeaders;
-
-        // Preenchendo os dados
         clients.forEach(client => {
-            // Adiciona dados pessoais
-            personalDataSheet.addRow({
-                id: client.id,
-                name: client.name,
-                cpf: client.cpf,
-                phone: client.phone,
-                profissao: client.profissao,
-                bairro: client.bairro,
-                localizacao: client.localizacao
-            });
+            const startRow = currentRow;
 
-            // Adiciona dados do empréstimo
+            // --- BLOCO DE CABEÇALHOS ---
+            const headerStyle = { font: { name: 'Calibri', size: 11, bold: true }, alignment: { vertical: 'middle', horizontal: 'center' } };
+            sheet.getCell(`A${startRow}`).value = 'ID';
+            sheet.getCell(`B${startRow}`).value = 'Nome';
+            sheet.getCell(`C${startRow}`).value = 'Valor do Empréstimo';
+            sheet.getCell(`D${startRow}`).value = 'Valor Parcela';
+            sheet.getCell(`E${startRow}`).value = 'Data Quitação';
+
+            sheet.mergeCells(`F${startRow}:L${startRow}`);
+            sheet.getCell(`F${startRow}`).value = 'CALENDARIO DE PAGAMENTOS';
+
+            sheet.mergeCells(`M${startRow}:R${startRow}`);
+            sheet.getCell(`M${startRow}`).value = 'OBSERVAÇÃO';
+
+            // Aplica estilo a todos os cabeçalhos da linha
+            sheet.getRow(startRow).eachCell(cell => Object.assign(cell, headerStyle));
+
+            // --- BLOCO DE DADOS (5 LINHAS) ---
+            const dataAlignment = { vertical: 'middle', horizontal: 'center' };
+
+            // ID (mesclado)
+            sheet.mergeCells(`A${startRow + 1}:A${startRow + 5}`);
+            const idCell = sheet.getCell(`A${startRow + 1}`);
+            idCell.value = client.id;
+            idCell.alignment = dataAlignment;
+            idCell.font = { name: 'Calibri', size: 11 };
+
+            // Dados Coluna B
+            sheet.getCell(`B${startRow + 1}`).value = client.name;
+            sheet.getCell(`B${startRow + 2}`).value = 'Status';
+            sheet.getCell(`B${startRow + 3}`).value = calculateClientStatus(client);
+            sheet.getCell(`B${startRow + 4}`).value = 'Saldo';
+            sheet.getCell(`B${startRow + 5}`).value = { formula: `D${startRow + 5}`, result: parseFloat(client.saldo) };
+            sheet.getCell(`B${startRow + 5}`).numFmt = '"R$"#,##0.00';
+
+            // Dados Coluna C
+            sheet.getCell(`C${startRow + 1}`).value = 'Data Início';
+            sheet.getCell(`C${startRow + 2}`).value = client.startDate ? new Date(client.startDate) : 'N/A';
+            sheet.getCell(`C${startRow + 3}`).value = 'Data Final Estimada';
+            sheet.getCell(`C${startRow + 4}`).value = client.paymentDates && client.paymentDates.length > 0 ? new Date(client.paymentDates[client.paymentDates.length - 1].date) : 'N/A';
+
+            // Dados Coluna D
+            sheet.getCell(`D${startRow + 1}`).value = 'Nº de Parcelas';
+            sheet.getCell(`D${startRow + 2}`).value = client.installments;
+            sheet.getCell(`D${startRow + 3}`).value = 'Frequência';
+            sheet.getCell(`D${startRow + 4}`).value = client.frequency === 'daily' ? 'Diário' : 'Semanal';
+            sheet.getCell(`D${startRow + 5}`).value = parseFloat(client.saldo); // Valor para a fórmula do saldo
+
+            // Dados Coluna E (Data Quitação)
             let lastPaymentDate = null;
             if (client.paymentDates && client.paymentDates.every(p => p.status === 'paid')) {
                 const paidDates = client.paymentDates.map(p => new Date(p.paidAt)).filter(d => !isNaN(d));
                 if (paidDates.length > 0) lastPaymentDate = new Date(Math.max.apply(null, paidDates));
             }
+            sheet.getCell(`E${startRow + 1}`).value = lastPaymentDate;
 
-            const loanRow = {
-                id: client.id,
-                name: client.name,
-                status: calculateClientStatus(client),
-                startDate: client.startDate,
-                endDate: client.paymentDates && client.paymentDates.length > 0 ? new Date(client.paymentDates[client.paymentDates.length - 1].date) : null,
-                settlementDate: lastPaymentDate,
-                loanValue: parseFloat(client.loanValue),
-                dailyValue: parseFloat(client.dailyValue),
-                saldo: parseFloat(client.saldo)
-            };
+            // Formatações e estilos de dados
+            sheet.getCell(`C${startRow + 2}`).numFmt = 'dd/mm/yyyy';
+            sheet.getCell(`C${startRow + 4}`).numFmt = 'dd/mm/yyyy';
+            sheet.getCell(`E${startRow + 1}`).numFmt = 'dd/mm/yyyy';
+            sheet.getCell(`C${startRow + 5}`).value = { formula: `C${startRow + 1}.value`, result: parseFloat(client.loanValue) };
+            sheet.getCell(`C${startRow + 5}`).numFmt = '"R$"#,##0.00';
+            sheet.getCell(`D${startRow + 5}`).numFmt = '"R$"#,##0.00';
 
-            (client.paymentDates || []).forEach((p, index) => {
-                loanRow[`venc${index + 1}`] = new Date(p.date);
-                loanRow[`status${index + 1}`] = p.status;
-                loanRow[`paidAt${index + 1}`] = p.paidAt ? new Date(p.paidAt) : null;
-            });
-            loansSheet.addRow(loanRow);
-        });
-
-        // Estilizando as células de status
-        loansSheet.eachRow((row, rowNumber) => {
-            if (rowNumber > 1) { // Pula o cabeçalho
-                for (let i = 1; i <= maxInstallments; i++) {
-                    const statusCell = row.getCell(`status${i}`);
-                    if (statusCell.value === 'paid') {
-                        statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D1E7DD' } };
-                    } else if (statusCell.value === 'late') {
-                        statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F8D7DA' } };
-                    } else if (statusCell.value === 'pending') {
-                        statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3CD' } };
-                    }
-                }
+            // Centraliza os dados
+            for (let i = 1; i <= 5; i++) {
+                sheet.getCell(`B${startRow + i}`).alignment = dataAlignment;
+                sheet.getCell(`C${startRow + i}`).alignment = dataAlignment;
+                sheet.getCell(`D${startRow + i}`).alignment = dataAlignment;
+                sheet.getCell(`E${startRow + i}`).alignment = dataAlignment;
             }
-        });
 
+
+            // Calendário de Pagamentos (F a L)
+            const calendarCols = 7;
+            let calRow = startRow + 1;
+            let calCol = 6; // Coluna F
+            (client.paymentDates || []).forEach(p => {
+                const dateCell = sheet.getCell(calRow, calCol);
+                dateCell.value = new Date(p.date);
+                dateCell.numFmt = 'dd/mm';
+                dateCell.alignment = dataAlignment;
+                if (p.status === 'paid') {
+                    dateCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D1E7DD' } };
+                } else if (p.status === 'late') {
+                    dateCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F8D7DA' } };
+                } else { // pending
+                    dateCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3CD' } };
+                }
+
+                calCol++;
+                if (calCol > 12) { // Passou da coluna L
+                    calCol = 6; // Volta para a F
+                    calRow++;
+                }
+            });
+
+            // Observação (mesclado)
+            sheet.mergeCells(`M${startRow + 1}:R${startRow + 5}`);
+            const obsCell = sheet.getCell(`M${startRow + 1}`);
+            obsCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+
+            // --- LINHA DE SEPARAÇÃO ---
+            currentRow = startRow + 6;
+            sheet.mergeCells(`A${currentRow}:R${currentRow}`);
+            const separatorCell = sheet.getCell(`A${currentRow}`);
+            separatorCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; // Preto
+
+            currentRow++; // Prepara para o próximo cliente
+        });
 
         // Envia o arquivo para o navegador
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename="relatorio_clientes.xlsx"');
+        res.setHeader('Content-Disposition', 'attachment; filename="relatorio_clientes_detalhado.xlsx"');
         await workbook.xlsx.write(res);
         res.end();
 
