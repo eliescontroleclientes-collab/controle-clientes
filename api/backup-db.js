@@ -1,5 +1,10 @@
 import { Pool } from 'pg';
-import { dump } from 'pg-god';
+// ######### INÍCIO DA CORREÇÃO: Sintaxe de importação ajustada #########
+import pgGod from 'pg-god';
+
+// A função 'dump' está dentro do objeto exportado, então a extraímos assim:
+const { dump } = pgGod;
+// ######### FIM DA CORREÇÃO #########
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -17,8 +22,7 @@ export default async function handler(req, res) {
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename="backup_clientes_${new Date().toISOString().split('T')[0]}.sql"`);
 
-        // A função dump da biblioteca 'pg-god' recebe o cliente de conexão.
-        // A beleza desta biblioteca é sua simplicidade.
+        // A chamada da função 'dump(db)' permanece a mesma, agora que a importamos corretamente.
         const dumpStream = await dump(db);
 
         // Direciona o fluxo de dados do backup diretamente para a resposta da API
