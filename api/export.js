@@ -86,7 +86,6 @@ export default async function handler(req, res) {
             sheet.mergeCells(`A${startRow + 1}:A${startRow + 5}`);
             const idCell = sheet.getCell(`A${startRow + 1}`);
             idCell.value = client.id;
-            // ######### CORREÇÃO DE ALINHAMENTO #########
             idCell.alignment = centerAlignment;
 
             sheet.getCell(`B${startRow}`).value = 'Nome';
@@ -128,7 +127,6 @@ export default async function handler(req, res) {
             sheet.mergeCells(`F${startRow}:L${startRow}`);
             const calendarTitleCell = sheet.getCell(`F${startRow}`);
             calendarTitleCell.value = 'CALENDÁRIO DE PAGAMENTOS';
-            // ######### CORREÇÃO DE ALINHAMENTO #########
             calendarTitleCell.alignment = centerAlignment;
 
             if (client.paymentDates && client.paymentDates.length > 0) {
@@ -139,16 +137,16 @@ export default async function handler(req, res) {
                 calendarStartDate.setUTCDate(calendarStartDate.getUTCDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
 
                 let calendarRow = startRow + 1;
-                let calendarCol = 6;
+                let calendarCol = 6; // Coluna F
 
                 const timeZone = 'America/Cuiaba';
                 const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
                 const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
 
+                // Renderiza 5 semanas para cobrir um mês
                 for (let i = 0; i < 35; i++) {
                     const cell = sheet.getCell(calendarRow, calendarCol);
                     cell.value = new Date(calendarStartDate);
-                    // ######### CORREÇÃO DO FORMATO DA DATA #########
                     cell.numFmt = 'dd/mm';
 
                     const currentDayStr = calendarStartDate.toISOString().split('T')[0];
@@ -158,20 +156,20 @@ export default async function handler(req, res) {
                     if (payment) {
                         const paymentDateTime = new Date(payment.date).getTime();
                         if (payment.status === 'paid') {
-                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D1E7DD' } };
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D1E7DD' } }; // Verde
                         } else if (paymentDateTime < cuiabaTodayUTCMidnight) {
-                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F8D7DA' } };
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F8D7DA' } }; // Vermelho
                         } else if (paymentDateTime === cuiabaTodayUTCMidnight) {
-                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3CD' } };
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3CD' } }; // Amarelo
                         }
                     } else if (currentDayOfWeek === 0 || currentDayOfWeek === 6) {
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E9ECEF' } };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E9ECEF' } }; // Cinza
                     }
 
                     calendarStartDate.setUTCDate(calendarStartDate.getUTCDate() + 1);
                     calendarCol++;
-                    if (calendarCol > 12) {
-                        calendarCol = 6;
+                    if (calendarCol > 12) { // Vai até a coluna L
+                        calendarCol = 6; // Volta para a coluna F
                         calendarRow++;
                     }
                 }
@@ -181,14 +179,13 @@ export default async function handler(req, res) {
             sheet.mergeCells(`M${startRow}:R${startRow}`);
             const observationTitleCell = sheet.getCell(`M${startRow}`);
             observationTitleCell.value = 'OBSERVAÇÃO';
-            // ######### CORREÇÃO DE ALINHAMENTO #########
             observationTitleCell.alignment = centerAlignment;
             sheet.mergeCells(`M${startRow + 1}:R${startRow + 5}`);
 
 
             // --- Aplica Estilos no Card Inteiro ---
             for (let r = startRow; r <= startRow + 5; r++) {
-                for (let c = 1; c <= 18; c++) {
+                for (let c = 1; c <= 18; c++) { // De A a R
                     const cell = sheet.getCell(r, c);
                     if (!cell.isMerged) {
                         cell.alignment = centerAlignment;
@@ -197,6 +194,7 @@ export default async function handler(req, res) {
                     cell.border = thinBorder;
                 }
             }
+            // Aplica negrito nos títulos
             sheet.getRow(startRow).font = headerFont;
             sheet.getCell(`B${startRow + 2}`).font = headerFont;
             sheet.getCell(`B${startRow + 4}`).font = headerFont;
@@ -206,6 +204,7 @@ export default async function handler(req, res) {
             sheet.getCell(`D${startRow + 4}`).font = headerFont;
             sheet.getCell(`A${startRow + 1}`).font = { name: 'Calibri', size: 11, bold: true };
 
+            // Formatação de datas
             sheet.getCell(`C${startRow + 3}`).numFmt = 'dd/mm/yyyy';
             sheet.getCell(`C${startRow + 5}`).numFmt = 'dd/mm/yyyy';
             sheet.getCell(`E${startRow + 1}`).numFmt = 'dd/mm/yyyy';

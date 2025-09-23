@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteClientBtn = document.getElementById('delete-client-btn');
     const syncClientsForm = document.getElementById('sync-clients-form');
     const searchInput = document.getElementById('searchInput');
-    const downloadSheetBtn = document.getElementById('download-sheet-btn'); // Novo
-    const downloadSpinner = document.getElementById('download-spinner'); // Novo
+    const downloadSheetBtn = document.getElementById('download-sheet-btn');
+    const downloadSpinner = document.getElementById('download-spinner');
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const panelLocation = document.getElementById('panel-location');
     const settlementDateRow = document.getElementById('settlement-date-row');
     const panelSettlementDate = document.getElementById('panel-settlement-date');
+    // ######### NOVOS ELEMENTOS DO PAINEL DE DETALHES #########
+    const panelFirstInstallmentDate = document.getElementById('panel-first-installment-date');
+
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -65,10 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentValueInput = document.getElementById('paymentValueInput');
     const paymentDateInput = document.getElementById('paymentDateInput');
     const registerPaymentBtn = document.getElementById('registerPaymentBtn');
-    const passwordModalEl = document.getElementById('passwordModal'); // Novo
-    const passwordForm = document.getElementById('password-form'); // Novo
-    const passwordInput = document.getElementById('passwordInput'); // Novo
-    const passwordError = document.getElementById('password-error'); // Novo
+    const passwordModalEl = document.getElementById('passwordModal');
+    const passwordForm = document.getElementById('password-form');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordError = document.getElementById('password-error');
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
@@ -320,7 +323,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
-        document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'A preencher';
+
+        // ######### INÍCIO DA ALTERAÇÃO DE RENDERIZAÇÃO #########
+        document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
+
+        if (client.paymentDates && client.paymentDates.length > 0) {
+            const firstInstallment = new Date(client.paymentDates[0].date);
+            panelFirstInstallmentDate.textContent = firstInstallment.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
+            const lastInstallment = new Date(client.paymentDates[client.paymentDates.length - 1].date);
+            document.getElementById('panel-end-date').textContent = lastInstallment.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        } else {
+            panelFirstInstallmentDate.textContent = 'N/A';
+            document.getElementById('panel-end-date').textContent = 'N/A';
+        }
+        // ######### FIM DA ALTERAÇÃO #########
+
         panelBalance.textContent = formatCurrency(client.saldo || 0);
         panelBalance.className = (client.saldo > 0) ? 'text-success fw-bold' : 'fw-bold';
 
@@ -329,13 +347,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         calendar.innerHTML = '';
         if (!client.startDate || !client.paymentDates || client.paymentDates.length === 0) {
-            document.getElementById('panel-end-date').textContent = 'N/A';
             calendar.innerHTML = '<p class="text-center text-muted">Preencha os dados financeiros para gerar o calendário.</p>';
         } else {
             const paymentDates = client.paymentDates.map(p => new Date(p.date));
             const firstPaymentDate = paymentDates[0];
             const lastPaymentDate = paymentDates[paymentDates.length - 1];
-            document.getElementById('panel-end-date').textContent = lastPaymentDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
             let currentDate = new Date(firstPaymentDate);
             while (currentDate.getUTCDay() !== 1) {
@@ -628,7 +644,6 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(paymentModalEl).show();
     });
 
-    // ######### LÓGICA DE EDIÇÃO ATUALIZADA COM SENHA #########
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
@@ -636,14 +651,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const modal = new bootstrap.Modal(editClientModalEl);
 
-        // Reseta o modal para o estado "travado" toda vez que é aberto
         saveEditBtn.classList.add('d-none');
         unlockEditBtn.classList.remove('d-none');
         const formElements = Array.from(editClientForm.elements);
         formElements.forEach(el => el.readOnly = true);
         document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(radio => radio.disabled = true);
 
-        // Preenche os campos
         editClientIdDisplay.value = `#${client.id}`;
         document.getElementById('editClientName').value = client.name;
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
@@ -667,7 +680,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     unlockEditBtn.addEventListener('click', () => {
-        // Abre o modal de senha em vez de usar prompt
         const passwordModal = new bootstrap.Modal(passwordModalEl);
         passwordModal.show();
     });
@@ -688,7 +700,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (result.success) {
-                // Libera os campos permitidos
                 document.getElementById('editClientName').readOnly = false;
                 editClientPhoneInput.readOnly = false;
                 editProfessionInput.readOnly = false;
@@ -716,9 +727,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientIndex = clients.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
 
-        // Pega apenas os dados editáveis do formulário
         const updatedClientData = {
-            ...clients[clientIndex], // Mantém todos os dados antigos como base
+            ...clients[clientIndex],
             name: document.getElementById('editClientName').value,
             phone: editClientPhoneInput.value.replace(/\D/g, ''),
             localizacao: editLocationInput.value,

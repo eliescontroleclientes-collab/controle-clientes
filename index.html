@@ -63,19 +63,24 @@
                             </div>
                             <hr>
                             <h6>Detalhes Financeiros</h6>
+                            <!-- ######### INÍCIO DA ALTERAÇÃO DE NOMENCLATURA ######### -->
                             <div class="row">
                                 <div class="col-6"><strong>Empréstimo:</strong> <span id="panel-loan-value"></span>
                                 </div>
                                 <div class="col-6"><strong>Valor Parcela:</strong> <span id="panel-daily-value"></span>
                                 </div>
-                                <div class="col-6"><strong>Data Início:</strong> <span id="panel-start-date"></span>
+                                <div class="col-6"><strong>Data Cadastro:</strong> <span id="panel-start-date"></span>
                                 </div>
-                                <div class="col-6"><strong>Data Final:</strong> <span id="panel-end-date"></span></div>
+                                <div class="col-6"><strong>Primeira Parcela:</strong> <span
+                                        id="panel-first-installment-date"></span></div>
+                                <div class="col-6"><strong>Última Parcela:</strong> <span id="panel-end-date"></span>
+                                </div>
                                 <div class="col-6" id="settlement-date-row" style="display: none;"><strong>Data
                                         Quitação:</strong> <span id="panel-settlement-date"></span></div>
                                 <div class="col-12 mt-2"><strong>Saldo (Crédito):</strong> <span id="panel-balance"
                                         class="fw-bold"></span></div>
                             </div>
+                            <!-- ######### FIM DA ALTERAÇÃO ######### -->
                             <hr>
                             <h6>Calendário de Pagamentos</h6>
                             <div id="payment-calendar" class="calendar-grid"></div>
@@ -114,7 +119,6 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
                         <div class="btn-toolbar">
-                            <!-- ######### NOVO BOTÃO DE DOWNLOAD ######### -->
                             <button class="btn btn-success btn-sm me-2" id="download-sheet-btn">
                                 <span class="spinner-border spinner-border-sm me-1" id="download-spinner"
                                     style="display: none;"></span>
@@ -147,7 +151,8 @@
                                         <th>ID</th>
                                         <th>Nome do Cliente</th>
                                         <th>Status</th>
-                                        <th>Data Início</th>
+                                        <!-- ######### ALTERAÇÃO DE NOMENCLATURA ######### -->
+                                        <th>Data Cadastro</th>
                                     </tr>
                                 </thead>
                                 <tbody id="client-list-body"></tbody>
@@ -178,8 +183,9 @@
                                 <label for="clientName" class="form-label">Nome Completo</label>
                                 <input type="text" class="form-control" id="clientName" required>
                             </div>
+                            <!-- ######### ALTERAÇÃO DE NOMENCLATURA ######### -->
                             <div class="col-md-4 mb-3">
-                                <label for="startDate" class="form-label">Data de Início</label>
+                                <label for="startDate" class="form-label">Data do Cadastro</label>
                                 <input type="date" class="form-control" id="startDate" required>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -274,8 +280,9 @@
                                 <label for="editClientName" class="form-label">Nome Completo</label>
                                 <input type="text" class="form-control" id="editClientName" required>
                             </div>
+                            <!-- ######### ALTERAÇÃO DE NOMENCLATURA ######### -->
                             <div class="col-md-4 mb-3">
-                                <label for="editStartDate" class="form-label">Data de Início</label>
+                                <label for="editStartDate" class="form-label">Data do Cadastro</label>
                                 <input type="date" class="form-control" id="editStartDate" required readonly>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -397,7 +404,7 @@
         </div>
     </div>
 
-    <!-- ######### NOVO MODAL DE SENHA ######### -->
+    <!-- Modal de Senha -->
     <div class="modal fade" id="passwordModal" tabindex="-1">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
