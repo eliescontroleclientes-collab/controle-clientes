@@ -1,10 +1,9 @@
+// --- START OF FILE backup-db.js ---
+
 const { Pool } = require('pg');
-// ######### INÍCIO DA CORREÇÃO DEFINITIVA #########
-// 1. Importa o "envelope" da biblioteca.
-const pgGod = require('pg-god');
-// 2. Extrai a função 'dump' real da propriedade '.default'.
-const dump = pgGod.default;
-// ######### FIM DA CORREÇÃO DEFINITIVA #########
+// A forma correta de importar o 'pg-god' é diretamente para a variável,
+// pois a biblioteca exporta a função 'dump' como seu módulo principal.
+const dump = require('pg-god');
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -22,7 +21,7 @@ module.exports = async (req, res) => {
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename="backup_clientes_${new Date().toISOString().split('T')[0]}.sql"`);
 
-        // 3. Agora, a variável 'dump' contém a função correta e a chamada funcionará.
+        // Agora, a variável 'dump' contém a função correta e a chamada funcionará.
         const dumpStream = await dump(db);
 
         // Direciona o fluxo de dados do backup diretamente para a resposta da API
