@@ -156,13 +156,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return paymentDates;
     }
 
-    // ######### INÍCIO DA ALTERAÇÃO: FUNÇÃO DE CÁLCULO DE STATUS ATUALIZADA #########
     function calculateClientStatus(client) {
         if (!client.paymentDates || client.paymentDates.length === 0) {
             return '<span class="badge bg-secondary">Sem dados</span>';
         }
-
-        // Prioridade 1: Verificar se o empréstimo foi concluído.
         const allPaid = client.paymentDates.every(p => p.status === 'paid');
         if (allPaid) {
             return '<span class="badge bg-dark">Empréstimo Concluído</span>';
@@ -184,14 +181,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (paymentDateTime === cuiabaTodayUTCMidnight) {
                     isPendingToday = true;
                 }
-            } else { // p.status === 'paid'
+            } else {
                 if (paymentDateTime > cuiabaTodayUTCMidnight) {
                     advancedCount++;
                 }
             }
         });
 
-        // Prioridade 2: Verificar atrasos.
         if (lateCount > 0) {
             let statusText = `<span class="badge bg-danger">Atrasado (${lateCount})</span>`;
             if (isPendingToday) {
@@ -199,21 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return statusText;
         }
-
-        // Prioridade 3: Verificar pendência de hoje.
         if (isPendingToday) {
             return '<span class="badge bg-warning text-dark">Pendente</span>';
         }
-
-        // Prioridade 4: Verificar adiantamentos.
         if (advancedCount > 0) {
             return `<span class="badge bg-info text-dark">Adiantado (${advancedCount})</span>`;
         }
-
-        // Status Padrão: Em dia.
         return '<span class="badge bg-success">Em Dia</span>';
     }
-    // ######### FIM DA ALTERAÇÃO #########
 
     // --- FUNÇÕES DE API ---
     async function loadClients() {
@@ -536,7 +525,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             await loadClients();
-            renderClientPanel(selectedClientId);
+            // A seleção será perdida, mas a lista estará 100% correta. O usuário pode re-selecionar.
+            // Para manter a seleção, teríamos que buscar o cliente atualizado na lista recarregada.
+            // Por simplicidade e robustez, recarregar tudo é mais seguro.
+            const currentSelectedId = selectedClientId;
+            renderClientPanel(currentSelectedId);
 
             bootstrap.Modal.getInstance(paymentModalEl).hide();
 
@@ -548,19 +541,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE CLIQUE NO CALENDÁRIO ATUALIZADA #########
     calendar.addEventListener('click', (e) => {
-        const dayDiv = e.target.closest('.calendar-day:not(.status-weekend)');
+        const dayDiv = e.target.closest('.calendar-day'); // Pega qualquer dia clicável
         if (!dayDiv || selectedClientId === null) return;
 
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
 
         paymentModalTitle.textContent = "Registrar Pagamento";
-        paymentValueInput.value = formatCurrency(client.dailyValue);
-        paymentDateInput.value = new Date().toLocaleDateString('en-CA');
+        paymentValueInput.value = formatCurrency(client.dailyValue); // Sugere o valor da parcela
+
+        // Se o dia clicado tem uma data de parcela, pré-seleciona essa data
+        if (dayDiv.dataset.date) {
+            const clickedDate = dayDiv.dataset.date.split('T')[0]; // Formato YYYY-MM-DD
+            paymentDateInput.value = clickedDate;
+        } else {
+            // Se não, usa a data de hoje como padrão
+            paymentDateInput.value = new Date().toLocaleDateString('en-CA');
+        }
 
         new bootstrap.Modal(paymentModalEl).show();
     });
+    // ######### FIM DA ALTERAÇÃO #########
 
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
