@@ -24,9 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const panelLocation = document.getElementById('panel-location');
     const settlementDateRow = document.getElementById('settlement-date-row');
     const panelSettlementDate = document.getElementById('panel-settlement-date');
-    // ######### NOVOS ELEMENTOS DO PAINEL DE DETALHES #########
     const panelFirstInstallmentDate = document.getElementById('panel-first-installment-date');
-
+    const observationsTextarea = document.getElementById('observations-textarea');
+    const editObservationsBtn = document.getElementById('edit-observations-btn');
+    const saveObservationsBtn = document.getElementById('save-observations-btn');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -324,7 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
 
-        // ######### INÍCIO DA ALTERAÇÃO DE RENDERIZAÇÃO #########
         document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
 
         if (client.paymentDates && client.paymentDates.length > 0) {
@@ -337,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
             panelFirstInstallmentDate.textContent = 'N/A';
             document.getElementById('panel-end-date').textContent = 'N/A';
         }
-        // ######### FIM DA ALTERAÇÃO #########
 
         panelBalance.textContent = formatCurrency(client.saldo || 0);
         panelBalance.className = (client.saldo > 0) ? 'text-success fw-bold' : 'fw-bold';
@@ -403,6 +402,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             fileList.innerHTML = '<li class="list-group-item text-muted">Nenhum arquivo encontrado.</li>';
         }
+
+        observationsTextarea.value = client.observacoes || '';
+        observationsTextarea.readOnly = true;
+        editObservationsBtn.classList.remove('d-none');
+        saveObservationsBtn.classList.add('d-none');
+
         renderClientList();
     }
 
@@ -812,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadProgressBar.classList.add('bg-success');
             setTimeout(() => { uploadProgressBarContainer.style.display = 'none'; }, 2000);
         } catch (error) {
-            console.error('Erro no upload:', error);
+            console.error('Erro ao upload:', error);
             alert(`Erro: ${error.message}`);
             uploadProgressBar.textContent = 'Falhou!';
             uploadProgressBar.classList.add('bg-danger');
@@ -877,6 +882,41 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             downloadSpinner.style.display = 'none';
             downloadSheetBtn.disabled = false;
+        }
+    });
+
+    editObservationsBtn.addEventListener('click', () => {
+        observationsTextarea.readOnly = false;
+        editObservationsBtn.classList.add('d-none');
+        saveObservationsBtn.classList.remove('d-none');
+        observationsTextarea.focus();
+    });
+
+    saveObservationsBtn.addEventListener('click', async () => {
+        if (selectedClientId === null) return;
+
+        const clientIndex = clients.findIndex(c => c.id === selectedClientId);
+        if (clientIndex === -1) return;
+
+        const updatedClientData = {
+            ...clients[clientIndex], // Pega todos os dados atuais do cliente
+            observacoes: observationsTextarea.value, // Adiciona a nova observação
+        };
+
+        saveObservationsBtn.disabled = true;
+
+        try {
+            const updatedClient = await updateClient(updatedClientData);
+            if (updatedClient) {
+                clients[clientIndex] = updatedClient;
+                renderClientPanel(selectedClientId); // Re-renderiza o painel com os dados atualizados
+                alert('Observações salvas com sucesso!');
+            }
+        } catch (error) {
+            console.error('Erro ao salvar observações:', error);
+            alert('Não foi possível salvar as observações.');
+        } finally {
+            saveObservationsBtn.disabled = false;
         }
     });
 

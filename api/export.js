@@ -32,7 +32,7 @@ function calculateClientStatus(client) {
         return statusText;
     }
     if (isPendingToday) return "Pendente";
-    return "Em Dia"; // Simplified version for brevity in Excel
+    return "Em Dia";
 }
 
 
@@ -53,11 +53,12 @@ export default async function handler(req, res) {
         const headerFont = { name: 'Calibri', size: 11, bold: true };
         const defaultFont = { name: 'Calibri', size: 11 };
         const centerAlignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        const topLeftAlignment = { vertical: 'top', horizontal: 'left', wrapText: true }; // Novo alinhamento para observações
         const thinBorder = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
         // Definindo a largura das colunas
         sheet.columns = [
-            { key: 'A', width: 10 }, { key: 'B', width: 35 }, { key: 'C', width: 20 },
+            { key: 'A', width: 10 }, { key: 'B', width: 50 }, { key: 'C', width: 20 },
             { key: 'D', width: 20 }, { key: 'E', width: 20 }, { key: 'F', width: 12 },
             { key: 'G', width: 12 }, { key: 'H', width: 12 }, { key: 'I', width: 12 },
             { key: 'J', width: 12 }, { key: 'K', width: 12 }, { key: 'L', width: 12 },
@@ -79,9 +80,7 @@ export default async function handler(req, res) {
         clients.forEach(client => {
             const startRow = currentRow;
 
-            // ######### INÍCIO DA NOVA ESTRUTURA DE BLOCO #########
-
-            // --- Coluna A (ID) ---
+            // --- Bloco de Informações do Cliente ---
             sheet.getCell(`A${startRow}`).value = 'ID';
             sheet.mergeCells(`A${startRow + 1}:A${startRow + 5}`);
             const idCell = sheet.getCell(`A${startRow + 1}`);
@@ -89,7 +88,6 @@ export default async function handler(req, res) {
             idCell.alignment = centerAlignment;
             idCell.font = { name: 'Calibri', size: 11, bold: true };
 
-            // --- Coluna B (Dados Principais) ---
             sheet.getCell(`B${startRow}`).value = 'Nome';
             sheet.getCell(`B${startRow + 1}`).value = client.name;
             sheet.getCell(`B${startRow + 2}`).value = 'Data Cadastro';
@@ -97,7 +95,6 @@ export default async function handler(req, res) {
             sheet.getCell(`B${startRow + 4}`).value = 'Status';
             sheet.getCell(`B${startRow + 5}`).value = calculateClientStatus(client);
 
-            // --- Coluna C (Valores) ---
             sheet.getCell(`C${startRow}`).value = 'Valor do Empréstimo';
             const loanCell = sheet.getCell(`C${startRow + 1}`);
             loanCell.value = parseFloat(client.loanValue || 0);
@@ -107,7 +104,6 @@ export default async function handler(req, res) {
             sheet.getCell(`C${startRow + 4}`).value = 'Última Parcela';
             sheet.getCell(`C${startRow + 5}`).value = (client.paymentDates && client.paymentDates.length > 0) ? new Date(client.paymentDates[client.paymentDates.length - 1].date) : null;
 
-            // --- Coluna D (Condições) ---
             sheet.getCell(`D${startRow}`).value = 'Valor Parcela';
             const installmentValueCell = sheet.getCell(`D${startRow + 1}`);
             installmentValueCell.value = parseFloat(client.dailyValue || 0);
@@ -117,7 +113,6 @@ export default async function handler(req, res) {
             sheet.getCell(`D${startRow + 4}`).value = 'Frequência';
             sheet.getCell(`D${startRow + 5}`).value = client.frequency === 'daily' ? 'Diária' : 'Semanal';
 
-            // --- Coluna E (Financeiro Final) ---
             sheet.getCell(`E${startRow}`).value = 'Saldo';
             const balanceCell = sheet.getCell(`E${startRow + 1}`);
             balanceCell.value = parseFloat(client.saldo || 0);
@@ -140,7 +135,6 @@ export default async function handler(req, res) {
             calendarTitleCell.alignment = centerAlignment;
 
             if (client.paymentDates && client.paymentDates.length > 0) {
-                // ... (lógica do calendário permanece a mesma)
                 const firstPaymentDate = new Date(client.paymentDates[0].date);
                 let calendarStartDate = new Date(firstPaymentDate);
                 let dayOfWeek = calendarStartDate.getUTCDay();
@@ -178,12 +172,15 @@ export default async function handler(req, res) {
                 }
             }
 
-            // --- Bloco de Observação (Colunas M a R) ---
+            // --- Bloco de Observação (Colunas M a R) - ATUALIZADO ---
             sheet.mergeCells(`M${startRow}:R${startRow}`);
             const observationTitleCell = sheet.getCell(`M${startRow}`);
             observationTitleCell.value = 'OBSERVAÇÃO';
             observationTitleCell.alignment = centerAlignment;
             sheet.mergeCells(`M${startRow + 1}:R${startRow + 5}`);
+            const observationCell = sheet.getCell(`M${startRow + 1}`);
+            observationCell.value = client.observacoes; // Adiciona o texto da observação
+            observationCell.alignment = topLeftAlignment; // Alinha no topo e à esquerda
 
             // --- Aplica Estilos no Card Inteiro ---
             for (let r = startRow; r <= startRow + 5; r++) {
@@ -205,13 +202,10 @@ export default async function handler(req, res) {
             sheet.getCell(`D${startRow + 4}`).font = headerFont;
             sheet.getCell(`E${startRow + 2}`).font = headerFont;
 
-            // Formatação de datas
             sheet.getCell(`B${startRow + 3}`).numFmt = 'dd/mm/yyyy';
             sheet.getCell(`C${startRow + 3}`).numFmt = 'dd/mm/yyyy';
             sheet.getCell(`C${startRow + 5}`).numFmt = 'dd/mm/yyyy';
             settlementDateCell.numFmt = 'dd/mm/yyyy';
-
-            // ######### FIM DA NOVA ESTRUTURA DE BLOCO #########
 
             // --- Linha Separadora ---
             currentRow += 6;

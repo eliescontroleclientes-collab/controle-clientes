@@ -63,7 +63,6 @@
                             </div>
                             <hr>
                             <h6>Detalhes Financeiros</h6>
-                            <!-- ######### INÍCIO DA ALTERAÇÃO DE NOMENCLATURA ######### -->
                             <div class="row">
                                 <div class="col-6"><strong>Empréstimo:</strong> <span id="panel-loan-value"></span>
                                 </div>
@@ -80,7 +79,6 @@
                                 <div class="col-12 mt-2"><strong>Saldo (Crédito):</strong> <span id="panel-balance"
                                         class="fw-bold"></span></div>
                             </div>
-                            <!-- ######### FIM DA ALTERAÇÃO ######### -->
                             <hr>
                             <h6>Calendário de Pagamentos</h6>
                             <div id="payment-calendar" class="calendar-grid"></div>
@@ -107,6 +105,17 @@
                                             0%</div>
                                     </div>
                                 </form>
+                            </div>
+                            <!-- ######### NOVA SEÇÃO DE OBSERVAÇÕES ######### -->
+                            <hr>
+                            <h6><i class="bi bi-pencil-fill"></i> Observações</h6>
+                            <div id="observations-section">
+                                <textarea class="form-control" id="observations-textarea" rows="4" readonly></textarea>
+                                <div class="text-end mt-2">
+                                    <button class="btn btn-secondary btn-sm" id="edit-observations-btn">Editar</button>
+                                    <button class="btn btn-success btn-sm d-none"
+                                        id="save-observations-btn">Salvar</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -151,7 +160,6 @@
                                         <th>ID</th>
                                         <th>Nome do Cliente</th>
                                         <th>Status</th>
-                                        <!-- ######### ALTERAÇÃO DE NOMENCLATURA ######### -->
                                         <th>Data Cadastro</th>
                                     </tr>
                                 </thead>
