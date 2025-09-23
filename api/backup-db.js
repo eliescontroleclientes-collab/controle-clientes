@@ -1,9 +1,13 @@
 // --- START OF FILE backup-db.js ---
 
 const { Pool } = require('pg');
-// A forma correta de importar o 'pg-god' é diretamente para a variável,
-// pois a biblioteca exporta a função 'dump' como seu módulo principal.
-const dump = require('pg-god');
+
+// ######### INÍCIO DA CORREÇÃO ROBUSTA #########
+// 1. Importa o módulo. O resultado pode ser a própria função ou um objeto.
+const pgGod = require('pg-god');
+// 2. Extrai a função 'dump' de forma segura, cobrindo ambos os cenários (ESM e CJS).
+const dump = pgGod.default || pgGod;
+// ######### FIM DA CORREÇÃO ROBUSTA #########
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -16,12 +20,17 @@ module.exports = async (req, res) => {
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
+    // Adiciona um log para depuração, para ter certeza que 'dump' é uma função
+    if (typeof dump !== 'function') {
+        console.error('Falha crítica: pg-god não foi importado como uma função.', { importedModule: pgGod });
+        return res.status(500).send('Erro de configuração interna do servidor ao carregar a dependência de backup.');
+    }
+
     const db = await pool.connect();
     try {
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename="backup_clientes_${new Date().toISOString().split('T')[0]}.sql"`);
 
-        // Agora, a variável 'dump' contém a função correta e a chamada funcionará.
         const dumpStream = await dump(db);
 
         // Direciona o fluxo de dados do backup diretamente para a resposta da API
@@ -42,7 +51,6 @@ module.exports = async (req, res) => {
             res.status(500).json({ error: 'Erro interno do servidor.' });
         }
     } finally {
-        // A resposta do stream cuidará de liberar o cliente
         res.on('finish', () => {
             db.release();
         });
