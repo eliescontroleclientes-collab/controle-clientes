@@ -8,13 +8,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const editClientBtn = document.getElementById('edit-client-btn');
     const deleteClientBtn = document.getElementById('delete-client-btn');
     const syncClientsForm = document.getElementById('sync-clients-form');
-    // ELEMENTOS DO PAINEL DE DETALHES (UPLOAD)
+    // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
     const fileInput = document.getElementById('file-input');
     const uploadBtn = document.getElementById('upload-btn');
     const uploadProgressBarContainer = document.getElementById('upload-progress-bar-container');
     const uploadProgressBar = document.getElementById('upload-progress-bar');
+    const panelBalance = document.getElementById('panel-balance'); // Novo
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -42,15 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const clockDateEl = document.getElementById('clock-date');
     const paymentModalEl = document.getElementById('paymentModal');
     const paymentModalTitle = document.getElementById('paymentModalTitle');
+    const paymentValueInput = document.getElementById('paymentValueInput'); // Novo
     const paymentDateInput = document.getElementById('paymentDateInput');
-    const markPendingBtn = document.getElementById('markPendingBtn');
-    const markPaidConfirmBtn = document.getElementById('markPaidConfirmBtn');
+    const registerPaymentBtn = document.getElementById('registerPaymentBtn'); // Novo
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
     let selectedClientId = null;
     let newClientFiles = [];
-    let currentPaymentDate = null;
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -156,11 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return paymentDates;
     }
 
-    // ######### INÍCIO DA ALTERAÇÃO: NOVA FUNÇÃO DE CÁLCULO DE STATUS #########
     function calculateClientStatus(client) {
-        // 1. Define "hoje" com base no fuso horário de Cuiabá, mas em formato UTC para comparações.
         const timeZone = 'America/Cuiaba';
-        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone }); // YYYY-MM-DD
+        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
 
         let lateCount = 0;
@@ -173,21 +171,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         client.paymentDates.forEach(p => {
             const paymentDateTime = new Date(p.date).getTime();
-
             if (p.status !== 'paid') {
                 if (paymentDateTime < cuiabaTodayUTCMidnight) {
                     lateCount++;
                 } else if (paymentDateTime === cuiabaTodayUTCMidnight) {
                     isPendingToday = true;
                 }
-            } else { // p.status === 'paid'
+            } else {
                 if (paymentDateTime > cuiabaTodayUTCMidnight) {
                     advancedCount++;
                 }
             }
         });
 
-        // Aplica a hierarquia de regras para definir o status
         if (lateCount > 0) {
             let statusText = `<span class="badge bg-danger">Atrasado (${lateCount})</span>`;
             if (isPendingToday) {
@@ -195,18 +191,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return statusText;
         }
-
         if (isPendingToday) {
             return '<span class="badge bg-warning text-dark">Pendente</span>';
         }
-
         if (advancedCount > 0) {
             return `<span class="badge bg-info text-dark">Adiantado (${advancedCount})</span>`;
         }
-
         return '<span class="badge bg-success">Em Dia</span>';
     }
-    // ######### FIM DA ALTERAÇÃO #########
 
     // --- FUNÇÕES DE API ---
     async function loadClients() {
@@ -250,10 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.dataset.clientId = client.id;
             tr.className = client.id === selectedClientId ? 'table-active' : '';
-
-            // ######### ALTERAÇÃO: Usa a nova função de status #########
             const status = calculateClientStatus(client);
-
             const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
             tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
             clientListBody.appendChild(tr);
@@ -277,13 +266,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedCPF = client.cpf ? formatCPF(client.cpf) : 'N/A';
         const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
-
-        // ######### ALTERAÇÃO: Usa a nova função de status #########
         document.getElementById('panel-status').innerHTML = calculateClientStatus(client);
-
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
         document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'A preencher';
+        panelBalance.textContent = formatCurrency(client.saldo || 0);
+        panelBalance.className = (client.saldo > 0) ? 'text-success fw-bold' : 'fw-bold';
 
         const calendarTitle = document.querySelector('#panel-details h6:nth-of-type(3)');
         calendarTitle.textContent = `Calendário de Pagamentos (${client.installments || ''}x ${client.frequency === 'weekly' ? 'Semanal' : 'Diário'})`;
@@ -314,7 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             while (currentDate <= calendarEndDate) {
                 const dayDiv = document.createElement('div');
-                const dayOfWeek = currentDate.getUTCDay();
                 dayDiv.textContent = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
                 dayDiv.classList.add('calendar-day');
 
@@ -370,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT LISTENERS ---
+
     clientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     clientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
     loanValueInput.addEventListener('input', (e) => {
@@ -403,6 +391,15 @@ document.addEventListener('DOMContentLoaded', () => {
     editInstallmentsInput.addEventListener('input', () => {
         updateEditInstallmentValue();
         toggleEditPaymentFrequency();
+    });
+    paymentValueInput.addEventListener('input', (e) => {
+        let digits = e.target.value.replace(/\D/g, '');
+        if (digits === "") {
+            e.target.value = "";
+            return;
+        }
+        const numberValue = Number(digits) / 100;
+        e.target.value = formatCurrency(numberValue);
     });
 
     newClientDropZone.addEventListener('click', () => newClientFileInput.click());
@@ -483,80 +480,73 @@ document.addEventListener('DOMContentLoaded', () => {
         if (row && row.dataset.clientId) renderClientPanel(parseInt(row.dataset.clientId));
     });
 
-    markPaidBtn.addEventListener('click', async () => {
+    // ######### LÓGICA DO MODAL DE PAGAMENTO ATUALIZADA #########
+    markPaidBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
-        const clientIndex = clients.findIndex(c => c.id === selectedClientId);
-        if (clientIndex === -1) return;
-        const client = clients[clientIndex];
-
-        const timeZone = 'America/Cuiaba';
-        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
-        const todayPayment = client.paymentDates.find(p => p.date.startsWith(todayInCuiaba));
-
-        if (todayPayment) {
-            if (todayPayment.status !== 'paid') {
-                todayPayment.status = 'paid';
-                todayPayment.paidAt = new Date().toISOString();
-                const updatedClient = await updateClient(client);
-                if (updatedClient) {
-                    clients[clientIndex] = updatedClient;
-                    renderClientPanel(selectedClientId);
-                    alert('Pagamento de hoje marcado como recebido!');
-                }
-            } else alert('O pagamento de hoje já foi marcado como recebido.');
-        } else alert('Não há uma parcela de pagamento agendada para hoje.');
-    });
-
-    calendar.addEventListener('click', (e) => {
-        const dayDiv = e.target.closest('.calendar-day:not(.status-weekend)');
-        if (!dayDiv || !dayDiv.dataset.date || selectedClientId === null) return;
-
         const client = clients.find(c => c.id === selectedClientId);
-        const paymentDateStr = dayDiv.dataset.date;
-        const payment = client.paymentDates.find(p => p.date === paymentDateStr);
-        if (!payment) return;
+        if (!client) return;
 
-        currentPaymentDate = paymentDateStr;
-
-        const installmentIndex = client.paymentDates.findIndex(p => p.date === paymentDateStr);
-        const installmentNumber = installmentIndex + 1;
-
-        paymentModalTitle.textContent = `Parcela ${installmentNumber} de ${client.installments}`;
-
-        const todayForInput = new Date().toLocaleDateString('en-CA');
-        paymentDateInput.value = payment.paidAt ? payment.paidAt.split('T')[0] : todayForInput;
+        paymentModalTitle.textContent = "Registrar Pagamento";
+        paymentValueInput.value = formatCurrency(client.dailyValue); // Sugere o valor da parcela
+        paymentDateInput.value = new Date().toLocaleDateString('en-CA');
 
         new bootstrap.Modal(paymentModalEl).show();
     });
 
-    async function handlePaymentUpdate(newStatus) {
-        const clientIndex = clients.findIndex(c => c.id === selectedClientId);
-        const client = clients[clientIndex];
-        const payment = client.paymentDates.find(p => p.date === currentPaymentDate);
+    registerPaymentBtn.addEventListener('click', async () => {
+        const paymentValue = parseCurrency(paymentValueInput.value);
+        const paymentDate = paymentDateInput.value;
 
-        payment.status = newStatus;
-        if (newStatus === 'paid') {
-            const paidDate = new Date(paymentDateInput.value + 'T00:00:00.000Z');
-            payment.paidAt = paidDate.toISOString();
-        } else {
-            delete payment.paidAt;
+        if (isNaN(paymentValue) || paymentValue <= 0 || !paymentDate) {
+            alert('Por favor, insira um valor e uma data válidos.');
+            return;
         }
 
-        const updatedClient = await updateClient(client);
-        if (updatedClient) {
+        registerPaymentBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clientId: selectedClientId,
+                    paymentValue: paymentValue,
+                    paymentDate: paymentDate
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Falha ao registrar pagamento.');
+            }
+
+            const updatedClient = await response.json();
+            const clientIndex = clients.findIndex(c => c.id === selectedClientId);
             clients[clientIndex] = updatedClient;
             renderClientPanel(selectedClientId);
-        }
-    }
+            bootstrap.Modal.getInstance(paymentModalEl).hide();
 
-    markPaidConfirmBtn.addEventListener('click', async () => {
-        await handlePaymentUpdate('paid');
-        bootstrap.Modal.getInstance(paymentModalEl).hide();
+        } catch (error) {
+            console.error('Erro ao registrar pagamento:', error);
+            alert(`Erro: ${error.message}`);
+        } finally {
+            registerPaymentBtn.disabled = false;
+        }
     });
 
-    markPendingBtn.addEventListener('click', async () => {
-        await handlePaymentUpdate('pending');
-        bootstrap.Modal.getInstance(paymentModalEl).hide();
+    calendar.addEventListener('click', (e) => {
+        const dayDiv = e.target.closest('.calendar-day:not(.status-weekend)');
+        if (!dayDiv || selectedClientId === null) return;
+
+        const client = clients.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        // Ao clicar em qualquer dia do calendário, abre o modal de registrar pagamento.
+        paymentModalTitle.textContent = "Registrar Pagamento";
+        paymentValueInput.value = formatCurrency(client.dailyValue);
+        paymentDateInput.value = new Date().toLocaleDateString('en-CA');
+
+        new bootstrap.Modal(paymentModalEl).show();
     });
 
     editClientBtn.addEventListener('click', () => {
@@ -604,7 +594,8 @@ document.addEventListener('DOMContentLoaded', () => {
             installments: installments,
             frequency: frequency,
             paymentDates: generatePaymentDates(startDate, installments, frequency),
-            files: clients[clientIndex].files || []
+            files: clients[clientIndex].files || [],
+            saldo: clients[clientIndex].saldo || 0.00
         };
         const updatedClient = await updateClient(updatedClientData);
         if (updatedClient) {

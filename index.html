@@ -66,12 +66,15 @@
                                 <div class="col-6"><strong>Data Início:</strong> <span id="panel-start-date"></span>
                                 </div>
                                 <div class="col-6"><strong>Data Final:</strong> <span id="panel-end-date"></span></div>
+                                <!-- ######### NOVO CAMPO DE SALDO ######### -->
+                                <div class="col-12 mt-2"><strong>Saldo (Crédito):</strong> <span id="panel-balance"
+                                        class="fw-bold"></span></div>
                             </div>
                             <hr>
                             <h6>Calendário de Pagamentos</h6>
                             <div id="payment-calendar" class="calendar-grid"></div>
-                            <button id="mark-paid-btn" class="btn btn-success w-100 mt-3">Marcar Pagamento de Hoje como
-                                Recebido</button>
+                            <button id="mark-paid-btn" class="btn btn-primary w-100 mt-3"><i
+                                    class="bi bi-currency-dollar"></i> Registrar Pagamento</button>
                             <hr>
                             <h6><i class="bi bi-folder2-open"></i> Arquivos e Documentos</h6>
                             <div id="file-management-section">
@@ -309,25 +312,30 @@
         </div>
     </div>
 
-    <!-- ######### NOVO: Modal para Gerenciar Pagamento ######### -->
+    <!-- ######### MODAL DE PAGAMENTO ATUALIZADO ######### -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="paymentModalTitle">Gerenciar Parcela</h5>
+                    <h5 class="modal-title" id="paymentModalTitle">Registrar Pagamento</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="paymentDateInput" class="form-label">Data do Recebimento</label>
-                        <input type="date" class="form-control" id="paymentDateInput">
-                    </div>
-                    <p class="text-muted small">Altere a data acima somente se o pagamento foi recebido em um dia
-                        diferente do vencimento.</p>
+                    <form id="register-payment-form">
+                        <div class="mb-3">
+                            <label for="paymentValueInput" class="form-label">Valor Recebido (R$)</label>
+                            <input type="text" class="form-control" id="paymentValueInput" placeholder="R$ 0,00"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="paymentDateInput" class="form-label">Data do Recebimento</label>
+                            <input type="date" class="form-control" id="paymentDateInput" required>
+                        </div>
+                    </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-warning" id="markPendingBtn">Marcar como Pendente</button>
-                    <button type="button" class="btn btn-success" id="markPaidConfirmBtn">Marcar como Pago</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="registerPaymentBtn">Registrar Pagamento</button>
                 </div>
             </div>
         </div>
