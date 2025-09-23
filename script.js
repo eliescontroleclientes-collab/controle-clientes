@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- SENHA DE EDIÇÃO ---
+    // IMPORTANTE: Troque "sua_senha_secreta" pela sua senha real.
+    // Para maior segurança, o ideal é mover isso para uma Environment Variable na Vercel.
+    const EDIT_PASSWORD = "admin444";
+
     // --- ELEMENTOS DO DOM ---
     const clientListBody = document.getElementById('client-list-body');
     const panelPlaceholder = document.getElementById('panel-placeholder');
@@ -40,12 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const newClientFileInput = document.getElementById('new-client-file-input');
     const newClientFileList = document.getElementById('new-client-file-list');
     const saveClientBtn = document.getElementById('save-client-btn');
-    // --- ELEMENTOS DO MODAL DE EDIÇÃO (ATUALIZADO) ---
-    const editClientModalEl = document.getElementById('editClientModal');
+    // --- ELEMENTOS DO MODAL DE EDIÇÃO ---
+    const editClientModalEl = document.getElementById('editClientModal'); // Novo
     const editClientForm = document.getElementById('edit-client-form');
-    const editClientFieldset = document.getElementById('edit-client-fieldset');
-    const editIdDisplay = document.getElementById('editIdDisplay');
-    const editClientNameInput = document.getElementById('editClientName');
+    const editClientIdDisplay = document.getElementById('editClientIdDisplay'); // Novo
     const editClientCPFInput = document.getElementById('editClientCPF');
     const editClientPhoneInput = document.getElementById('editClientPhone');
     const editLocationInput = document.getElementById('editLocation');
@@ -55,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editInstallmentsInput = document.getElementById('editInstallments');
     const editInstallmentValueInput = document.getElementById('editInstallmentValue');
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
-    const unlockEditBtn = document.getElementById('unlock-edit-btn');
-    const saveEditBtn = document.getElementById('save-edit-btn');
+    const unlockEditBtn = document.getElementById('unlock-edit-btn'); // Novo
+    const saveEditBtn = document.getElementById('save-edit-btn'); // Novo
     // --- ELEMENTOS DO RELÓGIO E MODAL DE PAGAMENTO ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
@@ -70,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let clients = [];
     let selectedClientId = null;
     let newClientFiles = [];
-    const EDIT_PASSWORD = "admin444"; // <<< ALTERE AQUI A SENHA PARA EDIÇÃO
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -271,7 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
             clientListBody.appendChild(tr);
         });
-        filterClientList(); // Aplica o filtro atual após renderizar
+        // Após renderizar, aplica o filtro de pesquisa atual
+        filterClientList();
     }
 
     function renderClientPanel(clientId) {
@@ -402,6 +405,19 @@ document.addEventListener('DOMContentLoaded', () => {
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
             li.innerHTML = `<span><i class="bi bi-file-earmark-zip"></i> ${file.name}</span><button type="button" class="btn-close" aria-label="Remover" data-index="${index}"></button>`;
             newClientFileList.appendChild(li);
+        });
+    }
+
+    // --- FUNÇÃO DE PESQUISA ---
+    function filterClientList() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const rows = clientListBody.querySelectorAll('tr');
+
+        rows.forEach(row => {
+            const idCell = row.cells[0].textContent.toLowerCase();
+            const nameCell = row.cells[1].textContent.toLowerCase();
+            const isVisible = idCell.includes(searchTerm) || nameCell.includes(searchTerm);
+            row.style.display = isVisible ? '' : 'none';
         });
     }
 
@@ -613,26 +629,23 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(paymentModalEl).show();
     });
 
-    // ######### NOVO EVENT LISTENER PARA O MODO DE EDIÇÃO COM SENHA #########
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        // Reseta o formulário para o estado inicial (travado)
-        editClientFieldset.disabled = true;
-        // Percorre todos os inputs DENTRO do fieldset e os torna readonly
-        editClientFieldset.querySelectorAll('input, select, textarea').forEach(el => el.setAttribute('readonly', true));
-        // Garante que os radios fiquem desabilitados
-        editClientFieldset.querySelectorAll('input[type="radio"]').forEach(el => el.disabled = true);
+        // Esconde botão de salvar e mostra o de liberar
+        saveEditBtn.classList.add('d-none');
+        unlockEditBtn.classList.remove('d-none');
 
-        unlockEditBtn.style.display = 'inline-block';
-        saveEditBtn.style.display = 'none';
+        // Trava todos os campos inicialmente
+        const formElements = editClientForm.elements;
+        for (const element of formElements) {
+            element.readOnly = true;
+        }
 
-        // Popula os dados
-        document.getElementById('editClientId').value = client.id;
-        editIdDisplay.value = `#${client.id}`;
-        editClientNameInput.value = client.name;
+        editClientIdDisplay.value = client.id;
+        document.getElementById('editClientName').value = client.name;
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
         editClientCPFInput.value = client.cpf ? formatCPF(client.cpf) : '';
         editClientPhoneInput.value = client.phone ? formatPhone(client.phone) : '';
@@ -649,58 +662,45 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             document.getElementById('editFreqDaily').checked = true;
         }
+        // Garante que os radios de frequência também fiquem travados
+        document.getElementById('editFreqDaily').disabled = true;
+        document.getElementById('editFreqWeekly').disabled = true;
+
 
         new bootstrap.Modal(editClientModalEl).show();
     });
 
+    // ######### NOVO EVENT LISTENER PARA LIBERAR EDIÇÃO #########
     unlockEditBtn.addEventListener('click', () => {
-        const password = prompt('Para editar, por favor, insira a senha de administrador:');
+        const password = prompt("Digite a senha para liberar a edição:");
         if (password === EDIT_PASSWORD) {
-            // Libera o fieldset para edição
-            editClientFieldset.disabled = false;
+            // Libera apenas os campos permitidos
+            document.getElementById('editClientName').readOnly = false;
+            editClientPhoneInput.readOnly = false;
+            editProfessionInput.readOnly = false;
+            editNeighborhoodInput.readOnly = false;
+            editLocationInput.readOnly = false;
 
-            // Define quais campos permanecem não editáveis
-            editIdDisplay.setAttribute('readonly', true);
-            document.getElementById('editStartDate').setAttribute('readonly', true);
-            editClientCPFInput.setAttribute('readonly', true);
-            editLoanValueInput.setAttribute('readonly', true);
-            editInstallmentsInput.setAttribute('readonly', true);
-            editInstallmentValueInput.setAttribute('readonly', true);
-            document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(radio => radio.disabled = true);
+            // Troca a visibilidade dos botões
+            unlockEditBtn.classList.add('d-none');
+            saveEditBtn.classList.remove('d-none');
 
-            // Libera os campos que podem ser editados
-            editClientNameInput.removeAttribute('readonly');
-            editClientPhoneInput.removeAttribute('readonly');
-            editProfessionInput.removeAttribute('readonly');
-            editNeighborhoodInput.removeAttribute('readonly');
-            editLocationInput.removeAttribute('readonly');
-
-            // Troca os botões
-            unlockEditBtn.style.display = 'none';
-            saveEditBtn.style.display = 'inline-block';
-            alert('Edição liberada!');
-        } else if (password !== null) { // Só mostra o alerta se o usuário não clicou em "Cancelar"
-            alert('Senha incorreta. A edição não foi liberada.');
+            alert("Campos liberados para edição!");
+        } else if (password !== null) { // Evita alerta se o usuário cancelar
+            alert("Senha incorreta!");
         }
-    });
-
-    editClientModalEl.addEventListener('hidden.bs.modal', () => {
-        // Garante que o formulário volte ao estado travado quando o modal for fechado
-        editClientFieldset.disabled = true;
-        unlockEditBtn.style.display = 'inline-block';
-        saveEditBtn.style.display = 'none';
     });
 
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const clientId = parseInt(document.getElementById('editClientId').value);
+        const clientId = parseInt(editClientIdDisplay.value);
         const clientIndex = clients.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
 
-        // Pega os dados apenas dos campos que foram liberados para edição
+        // Pega apenas os dados editáveis do formulário
         const updatedClientData = {
-            ...clients[clientIndex], // Pega todos os dados existentes para não perder os não editáveis
-            name: editClientNameInput.value,
+            ...clients[clientIndex], // Mantém todos os dados antigos como base
+            name: document.getElementById('editClientName').value,
             phone: editClientPhoneInput.value.replace(/\D/g, ''),
             localizacao: editLocationInput.value,
             bairro: editNeighborhoodInput.value,
@@ -815,19 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    searchInput.addEventListener('input', () => {
-        const searchTerm = searchInput.value.toLowerCase();
-        const rows = clientListBody.querySelectorAll('tr');
-
-        rows.forEach(row => {
-            const idCell = row.cells[0].textContent.toLowerCase();
-            const nameCell = row.cells[1].textContent.toLowerCase();
-
-            const isVisible = idCell.includes(searchTerm) || nameCell.includes(searchTerm);
-
-            row.style.display = isVisible ? '' : 'none';
-        });
-    });
+    searchInput.addEventListener('input', filterClientList);
 
     // --- INICIALIZAÇÃO ---
     function updateClock() {
