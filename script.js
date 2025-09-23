@@ -41,10 +41,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const newClientFileList = document.getElementById('new-client-file-list');
     const saveClientBtn = document.getElementById('save-client-btn');
     // --- ELEMENTOS DO MODAL DE EDIÇÃO (ATUALIZADO) ---
-    const editClientModalEl = document.getElementById('editClientModal'); // Novo
+    const editClientModalEl = document.getElementById('editClientModal');
     const editClientForm = document.getElementById('edit-client-form');
-    const editClientFieldset = document.getElementById('edit-client-fieldset'); // Novo
-    const editIdDisplay = document.getElementById('editIdDisplay'); // Novo
+    const editClientFieldset = document.getElementById('edit-client-fieldset');
+    const editIdDisplay = document.getElementById('editIdDisplay');
     const editClientNameInput = document.getElementById('editClientName');
     const editClientCPFInput = document.getElementById('editClientCPF');
     const editClientPhoneInput = document.getElementById('editClientPhone');
@@ -55,8 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editInstallmentsInput = document.getElementById('editInstallments');
     const editInstallmentValueInput = document.getElementById('editInstallmentValue');
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
-    const unlockEditBtn = document.getElementById('unlock-edit-btn'); // Novo
-    const saveEditBtn = document.getElementById('save-edit-btn'); // Novo
+    const unlockEditBtn = document.getElementById('unlock-edit-btn');
+    const saveEditBtn = document.getElementById('save-edit-btn');
     // --- ELEMENTOS DO RELÓGIO E MODAL DE PAGAMENTO ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
@@ -271,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
             clientListBody.appendChild(tr);
         });
+        filterClientList(); // Aplica o filtro atual após renderizar
     }
 
     function renderClientPanel(clientId) {
@@ -612,11 +613,23 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(paymentModalEl).show();
     });
 
+    // ######### NOVO EVENT LISTENER PARA O MODO DE EDIÇÃO COM SENHA #########
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
 
+        // Reseta o formulário para o estado inicial (travado)
+        editClientFieldset.disabled = true;
+        // Percorre todos os inputs DENTRO do fieldset e os torna readonly
+        editClientFieldset.querySelectorAll('input, select, textarea').forEach(el => el.setAttribute('readonly', true));
+        // Garante que os radios fiquem desabilitados
+        editClientFieldset.querySelectorAll('input[type="radio"]').forEach(el => el.disabled = true);
+
+        unlockEditBtn.style.display = 'inline-block';
+        saveEditBtn.style.display = 'none';
+
+        // Popula os dados
         document.getElementById('editClientId').value = client.id;
         editIdDisplay.value = `#${client.id}`;
         editClientNameInput.value = client.name;
@@ -640,33 +653,60 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(editClientModalEl).show();
     });
 
+    unlockEditBtn.addEventListener('click', () => {
+        const password = prompt('Para editar, por favor, insira a senha de administrador:');
+        if (password === EDIT_PASSWORD) {
+            // Libera o fieldset para edição
+            editClientFieldset.disabled = false;
+
+            // Define quais campos permanecem não editáveis
+            editIdDisplay.setAttribute('readonly', true);
+            document.getElementById('editStartDate').setAttribute('readonly', true);
+            editClientCPFInput.setAttribute('readonly', true);
+            editLoanValueInput.setAttribute('readonly', true);
+            editInstallmentsInput.setAttribute('readonly', true);
+            editInstallmentValueInput.setAttribute('readonly', true);
+            document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(radio => radio.disabled = true);
+
+            // Libera os campos que podem ser editados
+            editClientNameInput.removeAttribute('readonly');
+            editClientPhoneInput.removeAttribute('readonly');
+            editProfessionInput.removeAttribute('readonly');
+            editNeighborhoodInput.removeAttribute('readonly');
+            editLocationInput.removeAttribute('readonly');
+
+            // Troca os botões
+            unlockEditBtn.style.display = 'none';
+            saveEditBtn.style.display = 'inline-block';
+            alert('Edição liberada!');
+        } else if (password !== null) { // Só mostra o alerta se o usuário não clicou em "Cancelar"
+            alert('Senha incorreta. A edição não foi liberada.');
+        }
+    });
+
+    editClientModalEl.addEventListener('hidden.bs.modal', () => {
+        // Garante que o formulário volte ao estado travado quando o modal for fechado
+        editClientFieldset.disabled = true;
+        unlockEditBtn.style.display = 'inline-block';
+        saveEditBtn.style.display = 'none';
+    });
+
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const clientId = parseInt(document.getElementById('editClientId').value);
         const clientIndex = clients.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
 
-        const installments = parseInt(editInstallmentsInput.value);
-        const frequency = document.querySelector('input[name="editPaymentFrequency"]:checked').value;
-        const startDate = document.getElementById('editStartDate').value || null;
-
+        // Pega os dados apenas dos campos que foram liberados para edição
         const updatedClientData = {
-            id: clientId,
+            ...clients[clientIndex], // Pega todos os dados existentes para não perder os não editáveis
             name: editClientNameInput.value,
-            startDate: startDate,
-            cpf: editClientCPFInput.value.replace(/\D/g, ''),
             phone: editClientPhoneInput.value.replace(/\D/g, ''),
-            loanValue: parseCurrency(editLoanValueInput.value),
-            dailyValue: parseCurrency(editInstallmentValueInput.value),
-            installments: installments,
-            frequency: frequency,
-            paymentDates: generatePaymentDates(startDate, installments, frequency),
-            files: clients[clientIndex].files || [],
-            saldo: clients[clientIndex].saldo || 0.00,
             localizacao: editLocationInput.value,
             bairro: editNeighborhoodInput.value,
             profissao: editProfessionInput.value
         };
+
         const updatedClient = await updateClient(updatedClientData);
         if (updatedClient) {
             clients[clientIndex] = updatedClient;
