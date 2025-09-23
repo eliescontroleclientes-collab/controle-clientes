@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteClientBtn = document.getElementById('delete-client-btn');
     const syncClientsForm = document.getElementById('sync-clients-form');
     const searchInput = document.getElementById('searchInput');
+    const downloadSheetBtn = document.getElementById('download-sheet-btn'); // Novo
+    const downloadSpinner = document.getElementById('download-spinner'); // Novo
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -833,6 +835,40 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     searchInput.addEventListener('input', filterClientList);
+
+    downloadSheetBtn.addEventListener('click', async () => {
+        downloadSpinner.style.display = 'inline-block';
+        downloadSheetBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/export');
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Falha ao gerar a planilha.');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+
+            const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+            a.download = `relatorio_clientes_${date}.xlsx`;
+
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+
+        } catch (error) {
+            console.error("Erro ao baixar planilha:", error);
+            alert(`Não foi possível baixar a planilha. Erro: ${error.message}`);
+        } finally {
+            downloadSpinner.style.display = 'none';
+            downloadSheetBtn.disabled = false;
+        }
+    });
 
     // --- INICIALIZAÇÃO ---
     function updateClock() {
