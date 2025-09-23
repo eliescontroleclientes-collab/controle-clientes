@@ -125,7 +125,6 @@
                             </button>
                         </div>
                     </div>
-                    <!-- ######### NOVA BARRA DE PESQUISA ######### -->
                     <div class="card-body border-bottom">
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -133,7 +132,6 @@
                                 placeholder="Pesquisar por nome ou ID...">
                         </div>
                     </div>
-                    <!-- ######### FIM DA ALTERAÇÃO ######### -->
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover table-striped mb-0">
@@ -154,7 +152,7 @@
         </div>
     </div>
 
-    <!-- Modal para Adicionar Novo Cliente ATUALIZADO -->
+    <!-- Modal para Adicionar Novo Cliente -->
     <div class="modal fade" id="addClientModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -165,7 +163,6 @@
                 <div class="modal-body">
                     <form id="add-client-form">
                         <div class="row">
-                            <!-- ######### NOVO CAMPO DE ID ######### -->
                             <div class="col-md-4 mb-3">
                                 <label for="clientId" class="form-label">ID do Cliente</label>
                                 <input type="number" class="form-control" id="clientId" required>
@@ -251,7 +248,7 @@
         </div>
     </div>
 
-    <!-- Modal para Editar Cliente -->
+    <!-- Modal para Editar Cliente ATUALIZADO COM MODO DE EDIÇÃO -->
     <div class="modal fade" id="editClientModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -261,72 +258,80 @@
                 </div>
                 <div class="modal-body">
                     <form id="edit-client-form">
+                        <fieldset id="edit-client-fieldset" disabled>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="editIdDisplay" class="form-label">ID do Cliente</label>
+                                    <input type="text" class="form-control" id="editIdDisplay" readonly>
+                                </div>
+                                <div class="col-md-8 mb-3">
+                                    <label for="editClientName" class="form-label">Nome Completo</label>
+                                    <input type="text" class="form-control" id="editClientName" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="editStartDate" class="form-label">Data de Início</label>
+                                    <input type="date" class="form-control" id="editStartDate" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="editClientCPF" class="form-label">CPF</label>
+                                    <input type="text" class="form-control" id="editClientCPF"
+                                        placeholder="000.000.000-00">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="editClientPhone" class="form-label">Telefone</label>
+                                    <input type="text" class="form-control" id="editClientPhone"
+                                        placeholder="(00) 00000-0000">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="editProfession" class="form-label">Profissão</label>
+                                    <input type="text" class="form-control" id="editProfession">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="editNeighborhood" class="form-label">Bairro</label>
+                                    <input type="text" class="form-control" id="editNeighborhood">
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="editLocation" class="form-label">Localização (Link do Maps)</label>
+                                    <input type="url" class="form-control" id="editLocation"
+                                        placeholder="https://maps.app.goo.gl/...">
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="editLoanValue" class="form-label">Valor do Empréstimo (R$)</label>
+                                    <input type="text" class="form-control" id="editLoanValue" placeholder="R$ 0,00"
+                                        required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="editInstallments" class="form-label">Número de Parcelas</label>
+                                    <input type="number" class="form-control" id="editInstallments" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="editInstallmentValue" class="form-label">Valor da Parcela (R$)</label>
+                                    <input type="text" class="form-control" id="editInstallmentValue"
+                                        placeholder="R$ 0,00" readonly>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label d-block">Frequência de Pagamento</label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="editPaymentFrequency"
+                                            id="editFreqDaily" value="daily">
+                                        <label class="form-check-label" for="editFreqDaily">Diário (Dias Úteis)</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="editPaymentFrequency"
+                                            id="editFreqWeekly" value="weekly">
+                                        <label class="form-check-label" for="editFreqWeekly">Semanal</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
                         <input type="hidden" id="editClientId">
-                        <div class="row">
-                            <div class="col-md-8 mb-3">
-                                <label for="editClientName" class="form-label">Nome Completo</label>
-                                <input type="text" class="form-control" id="editClientName" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="editStartDate" class="form-label">Data de Início</label>
-                                <input type="date" class="form-control" id="editStartDate" required readonly>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="editClientCPF" class="form-label">CPF</label>
-                                <input type="text" class="form-control" id="editClientCPF" placeholder="000.000.000-00">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="editClientPhone" class="form-label">Telefone</label>
-                                <input type="text" class="form-control" id="editClientPhone"
-                                    placeholder="(00) 00000-0000">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="editProfession" class="form-label">Profissão</label>
-                                <input type="text" class="form-control" id="editProfession">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="editNeighborhood" class="form-label">Bairro</label>
-                                <input type="text" class="form-control" id="editNeighborhood">
-                            </div>
-                            <div class="col-12 mb-3">
-                                <label for="editLocation" class="form-label">Localização (Link do Maps)</label>
-                                <input type="url" class="form-control" id="editLocation"
-                                    placeholder="https://maps.app.goo.gl/...">
-                            </div>
-                        </div>
-                        <hr>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="editLoanValue" class="form-label">Valor do Empréstimo (R$)</label>
-                                <input type="text" class="form-control" id="editLoanValue" placeholder="R$ 0,00"
-                                    required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="editInstallments" class="form-label">Número de Parcelas</label>
-                                <input type="number" class="form-control" id="editInstallments" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="editInstallmentValue" class="form-label">Valor da Parcela (R$)</label>
-                                <input type="text" class="form-control" id="editInstallmentValue" placeholder="R$ 0,00"
-                                    readonly>
-                            </div>
-                            <div class="col-12 mb-3">
-                                <label class="form-label d-block">Frequência de Pagamento</label>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="editPaymentFrequency"
-                                        id="editFreqDaily" value="daily">
-                                    <label class="form-check-label" for="editFreqDaily">Diário (Dias Úteis)</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="editPaymentFrequency"
-                                        id="editFreqWeekly" value="weekly">
-                                    <label class="form-check-label" for="editFreqWeekly">Semanal</label>
-                                </div>
-                            </div>
-                        </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                            <button type="button" class="btn btn-warning" id="unlock-edit-btn">Liberar Edição</button>
+                            <button type="submit" class="btn btn-primary" id="save-edit-btn"
+                                style="display: none;">Salvar Alterações</button>
                         </div>
                     </form>
                 </div>

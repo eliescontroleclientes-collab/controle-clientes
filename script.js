@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editClientBtn = document.getElementById('edit-client-btn');
     const deleteClientBtn = document.getElementById('delete-client-btn');
     const syncClientsForm = document.getElementById('sync-clients-form');
-    const searchInput = document.getElementById('searchInput'); // Novo
+    const searchInput = document.getElementById('searchInput');
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
-    const clientIdInput = document.getElementById('clientId'); // Novo
+    const clientIdInput = document.getElementById('clientId');
     const clientCPFInput = document.getElementById('clientCPF');
     const clientPhoneInput = document.getElementById('clientPhone');
     const locationInput = document.getElementById('location');
@@ -40,8 +40,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const newClientFileInput = document.getElementById('new-client-file-input');
     const newClientFileList = document.getElementById('new-client-file-list');
     const saveClientBtn = document.getElementById('save-client-btn');
-    // --- ELEMENTOS DO MODAL DE EDIÇÃO ---
+    // --- ELEMENTOS DO MODAL DE EDIÇÃO (ATUALIZADO) ---
+    const editClientModalEl = document.getElementById('editClientModal'); // Novo
     const editClientForm = document.getElementById('edit-client-form');
+    const editClientFieldset = document.getElementById('edit-client-fieldset'); // Novo
+    const editIdDisplay = document.getElementById('editIdDisplay'); // Novo
+    const editClientNameInput = document.getElementById('editClientName');
     const editClientCPFInput = document.getElementById('editClientCPF');
     const editClientPhoneInput = document.getElementById('editClientPhone');
     const editLocationInput = document.getElementById('editLocation');
@@ -51,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editInstallmentsInput = document.getElementById('editInstallments');
     const editInstallmentValueInput = document.getElementById('editInstallmentValue');
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
+    const unlockEditBtn = document.getElementById('unlock-edit-btn'); // Novo
+    const saveEditBtn = document.getElementById('save-edit-btn'); // Novo
     // --- ELEMENTOS DO RELÓGIO E MODAL DE PAGAMENTO ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
@@ -64,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let clients = [];
     let selectedClientId = null;
     let newClientFiles = [];
+    const EDIT_PASSWORD = "admin444"; // <<< ALTERE AQUI A SENHA PARA EDIÇÃO
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -477,7 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const startDate = document.getElementById('startDate').value || null;
 
         const clientData = {
-            // ######### ID MANUAL ADICIONADO AQUI #########
             id: parseInt(clientIdInput.value, 10),
             name: document.getElementById('clientName').value,
             startDate: startDate,
@@ -570,11 +576,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await loadClients();
             const currentSelectedId = selectedClientId;
-            // A lista é recarregada, precisamos encontrar o cliente novamente na nova lista
             if (clients.some(c => c.id === currentSelectedId)) {
                 renderClientPanel(currentSelectedId);
             } else {
-                // Se o cliente foi removido ou algo deu errado, reseta o painel
                 renderClientPanel(null);
             }
 
@@ -614,7 +618,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!client) return;
 
         document.getElementById('editClientId').value = client.id;
-        document.getElementById('editClientName').value = client.name;
+        editIdDisplay.value = `#${client.id}`;
+        editClientNameInput.value = client.name;
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
         editClientCPFInput.value = client.cpf ? formatCPF(client.cpf) : '';
         editClientPhoneInput.value = client.phone ? formatPhone(client.phone) : '';
@@ -632,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editFreqDaily').checked = true;
         }
 
-        new bootstrap.Modal(document.getElementById('editClientModal')).show();
+        new bootstrap.Modal(editClientModalEl).show();
     });
 
     editClientForm.addEventListener('submit', async (e) => {
@@ -647,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const updatedClientData = {
             id: clientId,
-            name: document.getElementById('editClientName').value,
+            name: editClientNameInput.value,
             startDate: startDate,
             cpf: editClientCPFInput.value.replace(/\D/g, ''),
             phone: editClientPhoneInput.value.replace(/\D/g, ''),
@@ -667,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clients[clientIndex] = updatedClient;
             renderClientPanel(clientId);
         }
-        bootstrap.Modal.getInstance(document.getElementById('editClientModal')).hide();
+        bootstrap.Modal.getInstance(editClientModalEl).hide();
     });
 
     deleteClientBtn.addEventListener('click', async () => {
@@ -770,20 +775,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ######### NOVO EVENT LISTENER PARA A BARRA DE PESQUISA #########
     searchInput.addEventListener('input', () => {
         const searchTerm = searchInput.value.toLowerCase();
         const rows = clientListBody.querySelectorAll('tr');
 
         rows.forEach(row => {
-            // Pega o conteúdo da primeira (ID) e segunda (Nome) célula
             const idCell = row.cells[0].textContent.toLowerCase();
             const nameCell = row.cells[1].textContent.toLowerCase();
 
-            // Verifica se o termo de busca está contido no ID ou no Nome
             const isVisible = idCell.includes(searchTerm) || nameCell.includes(searchTerm);
 
-            // Mostra ou esconde a linha
             row.style.display = isVisible ? '' : 'none';
         });
     });
