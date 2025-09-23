@@ -1,8 +1,9 @@
 const { Pool } = require('pg');
 // ######### INÍCIO DA CORREÇÃO DEFINITIVA #########
-// A biblioteca 'pg-god' exporta a função 'dump' diretamente.
-// A sintaxe correta é importar a função inteira para uma variável, sem as chaves {}.
-const dump = require('pg-god');
+// 1. Importa o "envelope" da biblioteca.
+const pgGod = require('pg-god');
+// 2. Extrai a função 'dump' real da propriedade '.default'.
+const dump = pgGod.default;
 // ######### FIM DA CORREÇÃO DEFINITIVA #########
 
 const pool = new Pool({
@@ -21,7 +22,7 @@ module.exports = async (req, res) => {
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename="backup_clientes_${new Date().toISOString().split('T')[0]}.sql"`);
 
-        // Agora, a variável 'dump' contém a função correta.
+        // 3. Agora, a variável 'dump' contém a função correta e a chamada funcionará.
         const dumpStream = await dump(db);
 
         // Direciona o fluxo de dados do backup diretamente para a resposta da API
