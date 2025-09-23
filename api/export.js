@@ -73,7 +73,7 @@ export default async function handler(req, res) {
 
         // --- Configuração da Aba "Painel de Empréstimos" ---
         loansSheet.columns = [
-            { key: 'A', width: 10 }, { key: 'B', width: 50 }, { key: 'C', width: 20 },
+            { key: 'A', width: 10 }, { key: 'B', width: 51 }, { key: 'C', width: 20 },
             { key: 'D', width: 20 }, { key: 'E', width: 20 }, { key: 'F', width: 12 },
             { key: 'G', width: 12 }, { key: 'H', width: 12 }, { key: 'I', width: 12 },
             { key: 'J', width: 12 }, { key: 'K', width: 12 }, { key: 'L', width: 12 },
