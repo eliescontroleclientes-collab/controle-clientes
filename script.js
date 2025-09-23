@@ -834,6 +834,111 @@ document.addEventListener('DOMContentLoaded', () => {
 
     searchInput.addEventListener('input', filterClientList);
 
+    // ######### NOVOS EVENT LISTENERS PARA EXPORTAÇÃO E BACKUP #########
+    downloadExcelBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const originalText = e.target.innerHTML;
+        e.target.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gerando...`;
+        e.target.disabled = true;
+
+        try {
+            const response = await fetch('/api/export-excel');
+            if (!response.ok) {
+                throw new Error('Falha ao gerar a planilha.');
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `relatorio_clientes_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        } catch (error) {
+            console.error("Erro ao baixar planilha:", error);
+            alert("Não foi possível gerar a planilha Excel.");
+        } finally {
+            e.target.innerHTML = originalText;
+            e.target.disabled = false;
+        }
+    });
+
+    backupDbBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const originalText = e.target.textContent;
+        e.target.textContent = 'Gerando...';
+        e.target.disabled = true;
+        try {
+            const response = await fetch('/api/backup-db');
+            if (!response.ok) {
+                throw new Error('Falha ao gerar o backup.');
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `backup_clientes_${new Date().toISOString().split('T')[0]}.sql`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        } catch (error) {
+            console.error("Erro ao gerar backup:", error);
+            alert("Não foi possível gerar o arquivo de backup.");
+        } finally {
+            e.target.textContent = originalText;
+            e.target.disabled = false;
+        }
+    });
+
+    restoreDbForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (backupFileInput.files.length === 0) {
+            alert("Por favor, selecione um arquivo de backup para restaurar.");
+            return;
+        }
+
+        const confirmation = prompt("Esta é uma ação perigosa e irreversível. Todos os dados atuais serão APAGADOS e substituídos pelo backup. Para confirmar, digite 'RESTAURAR DADOS':");
+        if (confirmation !== "RESTAURAR DADOS") {
+            alert("Restauração cancelada.");
+            return;
+        }
+
+        const originalText = restoreDbBtn.textContent;
+        restoreDbBtn.textContent = 'Restaurando...';
+        restoreDbBtn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('backupFile', backupFileInput.files[0]);
+
+        try {
+            const response = await fetch('/api/restore-db', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Falha ao restaurar o backup.');
+            }
+
+            alert("Backup restaurado com sucesso! A página será recarregada.");
+            bootstrap.Modal.getInstance(backupRestoreModalEl).hide();
+            await loadClients(); // Recarrega os dados restaurados
+
+        } catch (error) {
+            console.error("Erro ao restaurar backup:", error);
+            alert(`Não foi possível restaurar o backup. Erro: ${error.message}`);
+        } finally {
+            restoreDbBtn.textContent = originalText;
+            restoreDbBtn.disabled = false;
+            restoreDbForm.reset();
+        }
+    });
+
     // --- INICIALIZAÇÃO ---
     function updateClock() {
         if (!clockTimeEl || !clockDateEl) return;
