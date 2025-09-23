@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadBtn = document.getElementById('upload-btn');
     const uploadProgressBarContainer = document.getElementById('upload-progress-bar-container');
     const uploadProgressBar = document.getElementById('upload-progress-bar');
-    const panelBalance = document.getElementById('panel-balance'); // Novo
+    const panelBalance = document.getElementById('panel-balance');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -43,9 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const clockDateEl = document.getElementById('clock-date');
     const paymentModalEl = document.getElementById('paymentModal');
     const paymentModalTitle = document.getElementById('paymentModalTitle');
-    const paymentValueInput = document.getElementById('paymentValueInput'); // Novo
+    const paymentValueInput = document.getElementById('paymentValueInput');
     const paymentDateInput = document.getElementById('paymentDateInput');
-    const registerPaymentBtn = document.getElementById('registerPaymentBtn'); // Novo
+    const registerPaymentBtn = document.getElementById('registerPaymentBtn');
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
@@ -302,6 +302,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             while (currentDate <= calendarEndDate) {
                 const dayDiv = document.createElement('div');
+                // ######### INÍCIO DA CORREÇÃO: dayOfWeek definido aqui #########
+                const dayOfWeek = currentDate.getUTCDay();
+                // ######### FIM DA CORREÇÃO #########
+
                 dayDiv.textContent = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
                 dayDiv.classList.add('calendar-day');
 
@@ -480,14 +484,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (row && row.dataset.clientId) renderClientPanel(parseInt(row.dataset.clientId));
     });
 
-    // ######### LÓGICA DO MODAL DE PAGAMENTO ATUALIZADA #########
     markPaidBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
 
         paymentModalTitle.textContent = "Registrar Pagamento";
-        paymentValueInput.value = formatCurrency(client.dailyValue); // Sugere o valor da parcela
+        paymentValueInput.value = formatCurrency(client.dailyValue);
         paymentDateInput.value = new Date().toLocaleDateString('en-CA');
 
         new bootstrap.Modal(paymentModalEl).show();
@@ -520,10 +523,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(err.error || 'Falha ao registrar pagamento.');
             }
 
-            const updatedClient = await response.json();
-            const clientIndex = clients.findIndex(c => c.id === selectedClientId);
-            clients[clientIndex] = updatedClient;
-            renderClientPanel(selectedClientId);
+            // ######### INÍCIO DA CORREÇÃO: Atualização da lista #########
+            await loadClients(); // Recarrega TODOS os clientes para garantir consistência
+            renderClientPanel(selectedClientId); // Re-renderiza o painel para manter a seleção
+            // ######### FIM DA CORREÇÃO #########
+
             bootstrap.Modal.getInstance(paymentModalEl).hide();
 
         } catch (error) {
@@ -541,7 +545,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        // Ao clicar em qualquer dia do calendário, abre o modal de registrar pagamento.
         paymentModalTitle.textContent = "Registrar Pagamento";
         paymentValueInput.value = formatCurrency(client.dailyValue);
         paymentDateInput.value = new Date().toLocaleDateString('en-CA');
