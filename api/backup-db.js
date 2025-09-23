@@ -1,9 +1,6 @@
-import { Pool } from 'pg';
-// ######### INÍCIO DA CORREÇÃO: Sintaxe de importação ajustada #########
-import pgGod from 'pg-god';
-
-// A função 'dump' está dentro do objeto exportado, então a extraímos assim:
-const { dump } = pgGod;
+const { Pool } = require('pg');
+// ######### INÍCIO DA CORREÇÃO: Troca de 'import' por 'require' #########
+const { dump } = require('pg-god');
 // ######### FIM DA CORREÇÃO #########
 
 const pool = new Pool({
@@ -11,7 +8,8 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-export default async function handler(req, res) {
+// A sintaxe de exportação também precisa mudar para o padrão 'module.exports'
+module.exports = async (req, res) => {
     if (req.method !== 'GET') {
         res.setHeader('Allow', ['GET']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
@@ -22,7 +20,7 @@ export default async function handler(req, res) {
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename="backup_clientes_${new Date().toISOString().split('T')[0]}.sql"`);
 
-        // A chamada da função 'dump(db)' permanece a mesma, agora que a importamos corretamente.
+        // A chamada da função 'dump(db)' permanece a mesma.
         const dumpStream = await dump(db);
 
         // Direciona o fluxo de dados do backup diretamente para a resposta da API
@@ -48,4 +46,4 @@ export default async function handler(req, res) {
             db.release();
         });
     }
-}
+};
