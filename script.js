@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editClientBtn = document.getElementById('edit-client-btn');
     const deleteClientBtn = document.getElementById('delete-client-btn');
     const syncClientsForm = document.getElementById('sync-clients-form');
+    const searchInput = document.getElementById('searchInput'); // Novo
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
+    const clientIdInput = document.getElementById('clientId'); // Novo
     const clientCPFInput = document.getElementById('clientCPF');
     const clientPhoneInput = document.getElementById('clientPhone');
     const locationInput = document.getElementById('location');
@@ -283,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
         document.getElementById('panel-status').innerHTML = calculateClientStatus(client);
 
-        // ######### INÍCIO DA ALTERAÇÃO: EXIBIÇÃO DOS NOVOS CAMPOS #########
         panelProfession.textContent = client.profissao || 'N/A';
         panelNeighborhood.textContent = client.bairro || 'N/A';
         if (client.localizacao) {
@@ -305,7 +306,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             settlementDateRow.style.display = 'none';
         }
-        // ######### FIM DA ALTERAÇÃO #########
 
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
@@ -466,7 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePaymentFrequency();
     });
 
-    // ######### ADICIONAR NOVO CLIENTE ATUALIZADO COM NOVOS CAMPOS #########
     addClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const saveBtnSpinner = saveClientBtn.querySelector('.spinner-border');
@@ -478,6 +477,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const startDate = document.getElementById('startDate').value || null;
 
         const clientData = {
+            // ######### ID MANUAL ADICIONADO AQUI #########
+            id: parseInt(clientIdInput.value, 10),
             name: document.getElementById('clientName').value,
             startDate: startDate,
             cpf: clientCPFInput.value.replace(/\D/g, ''),
@@ -498,7 +499,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(clientData),
             });
-            if (!response.ok) throw new Error('Falha ao criar o registro do cliente.');
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Falha ao criar o registro do cliente.');
+            }
             const newClient = await response.json();
             if (newClientFiles.length > 0) {
                 const uploadPromises = newClientFiles.map(file => {
@@ -566,7 +570,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await loadClients();
             const currentSelectedId = selectedClientId;
-            renderClientPanel(currentSelectedId);
+            // A lista é recarregada, precisamos encontrar o cliente novamente na nova lista
+            if (clients.some(c => c.id === currentSelectedId)) {
+                renderClientPanel(currentSelectedId);
+            } else {
+                // Se o cliente foi removido ou algo deu errado, reseta o painel
+                renderClientPanel(null);
+            }
 
             bootstrap.Modal.getInstance(paymentModalEl).hide();
 
@@ -598,7 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(paymentModalEl).show();
     });
 
-    // ######### EDITAR CLIENTE ATUALIZADO COM NOVOS CAMPOS #########
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
@@ -759,6 +768,24 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Erro ao excluir:', error);
             alert(`Erro: ${error.message}`);
         }
+    });
+
+    // ######### NOVO EVENT LISTENER PARA A BARRA DE PESQUISA #########
+    searchInput.addEventListener('input', () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        const rows = clientListBody.querySelectorAll('tr');
+
+        rows.forEach(row => {
+            // Pega o conteúdo da primeira (ID) e segunda (Nome) célula
+            const idCell = row.cells[0].textContent.toLowerCase();
+            const nameCell = row.cells[1].textContent.toLowerCase();
+
+            // Verifica se o termo de busca está contido no ID ou no Nome
+            const isVisible = idCell.includes(searchTerm) || nameCell.includes(searchTerm);
+
+            // Mostra ou esconde a linha
+            row.style.display = isVisible ? '' : 'none';
+        });
     });
 
     // --- INICIALIZAÇÃO ---

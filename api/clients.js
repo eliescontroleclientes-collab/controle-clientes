@@ -12,24 +12,32 @@ export default async function handler(req, res) {
     try {
         const db = await pool.connect();
 
-        // Rota para buscar todos os clientes (GET)
+        // Rota para buscar todos os clientes (GET) - ATUALIZADA
         if (req.method === 'GET') {
-            const result = await db.query('SELECT * FROM clients ORDER BY id DESC');
+            // Alterado de DESC para ASC para ordenar do menor para o maior ID
+            const result = await db.query('SELECT * FROM clients ORDER BY id ASC');
             res.status(200).json(result.rows);
         }
         // Rota para adicionar um novo cliente (POST) - ATUALIZADA
         else if (req.method === 'POST') {
-            const { name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, localizacao, bairro, profissao } = req.body;
+            // Adicionado "id" à lista de campos recebidos
+            const { id, name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, localizacao, bairro, profissao } = req.body;
+
+            if (!id) {
+                return res.status(400).json({ error: 'O ID do cliente é obrigatório.' });
+            }
+
             const query = `
-                INSERT INTO clients (name, "startDate", cpf, phone, "loanValue", "dailyValue", "paymentDates", installments, frequency, files, saldo, localizacao, bairro, profissao) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, '[]'::jsonb, 0.00, $10, $11, $12) 
+                INSERT INTO clients (id, name, "startDate", cpf, phone, "loanValue", "dailyValue", "paymentDates", installments, frequency, files, saldo, localizacao, bairro, profissao) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, '[]'::jsonb, 0.00, $11, $12, $13) 
                 RETURNING *
             `;
-            const values = [name, startDate, cpf, phone, loanValue, dailyValue, JSON.stringify(paymentDates), installments, frequency, localizacao, bairro, profissao];
+            // Adicionado "id" como o primeiro valor no array
+            const values = [id, name, startDate, cpf, phone, loanValue, dailyValue, JSON.stringify(paymentDates), installments, frequency, localizacao, bairro, profissao];
             const result = await db.query(query, values);
             res.status(201).json(result.rows[0]);
         }
-        // Rota para atualizar um cliente (PUT) - ATUALIZADA
+        // Rota para atualizar um cliente (PUT)
         else if (req.method === 'PUT') {
             const { id, name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, files, saldo, localizacao, bairro, profissao } = req.body;
             if (!id) return res.status(400).json({ error: 'Client ID is required' });
@@ -60,6 +68,10 @@ export default async function handler(req, res) {
         db.release();
     } catch (error) {
         console.error('API Error:', error);
+        // Retorna erro específico para violação de chave primária (ID duplicado)
+        if (error.code === '23505') {
+            return res.status(409).json({ error: 'Este ID de cliente já está em uso.' });
+        }
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
