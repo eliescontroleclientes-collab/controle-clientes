@@ -1,14 +1,15 @@
 const { Pool } = require('pg');
-// ######### INÍCIO DA CORREÇÃO: Troca de 'import' por 'require' #########
-const { dump } = require('pg-god');
-// ######### FIM DA CORREÇÃO #########
+// ######### INÍCIO DA CORREÇÃO DEFINITIVA #########
+// A biblioteca 'pg-god' exporta a função 'dump' diretamente.
+// A sintaxe correta é importar a função inteira para uma variável, sem as chaves {}.
+const dump = require('pg-god');
+// ######### FIM DA CORREÇÃO DEFINITIVA #########
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// A sintaxe de exportação também precisa mudar para o padrão 'module.exports'
 module.exports = async (req, res) => {
     if (req.method !== 'GET') {
         res.setHeader('Allow', ['GET']);
@@ -20,7 +21,7 @@ module.exports = async (req, res) => {
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename="backup_clientes_${new Date().toISOString().split('T')[0]}.sql"`);
 
-        // A chamada da função 'dump(db)' permanece a mesma.
+        // Agora, a variável 'dump' contém a função correta.
         const dumpStream = await dump(db);
 
         // Direciona o fluxo de dados do backup diretamente para a resposta da API
