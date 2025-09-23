@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
     const unlockEditBtn = document.getElementById('unlock-edit-btn');
     const saveEditBtn = document.getElementById('save-edit-btn');
-    // --- ELEMENTOS DE PAGAMENTO, SENHA E BACKUP ---
+    // --- ELEMENTOS DO RELÓGIO E MODAIS DE PAGAMENTO/SENHA ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
     const paymentModalEl = document.getElementById('paymentModal');
@@ -63,16 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentValueInput = document.getElementById('paymentValueInput');
     const paymentDateInput = document.getElementById('paymentDateInput');
     const registerPaymentBtn = document.getElementById('registerPaymentBtn');
-    const passwordModalEl = document.getElementById('passwordModal');
-    const passwordForm = document.getElementById('password-form');
-    const passwordInput = document.getElementById('passwordInput');
-    const passwordError = document.getElementById('password-error');
-    const downloadExcelBtn = document.getElementById('downloadExcelBtn'); // Novo
-    const backupRestoreModalEl = document.getElementById('backupRestoreModal'); // Novo
-    const backupDbBtn = document.getElementById('backupDbBtn'); // Novo
-    const restoreDbForm = document.getElementById('restore-db-form'); // Novo
-    const restoreDbBtn = document.getElementById('restoreDbBtn'); // Novo
-    const backupFileInput = document.getElementById('backupFile'); // Novo
+    const passwordModalEl = document.getElementById('passwordModal'); // Novo
+    const passwordForm = document.getElementById('password-form'); // Novo
+    const passwordInput = document.getElementById('passwordInput'); // Novo
+    const passwordError = document.getElementById('password-error'); // Novo
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
@@ -632,6 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(paymentModalEl).show();
     });
 
+    // ######### LÓGICA DE EDIÇÃO ATUALIZADA COM SENHA #########
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
@@ -639,12 +634,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const modal = new bootstrap.Modal(editClientModalEl);
 
+        // Reseta o modal para o estado "travado" toda vez que é aberto
         saveEditBtn.classList.add('d-none');
         unlockEditBtn.classList.remove('d-none');
         const formElements = Array.from(editClientForm.elements);
         formElements.forEach(el => el.readOnly = true);
         document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(radio => radio.disabled = true);
 
+        // Preenche os campos
         editClientIdDisplay.value = `#${client.id}`;
         document.getElementById('editClientName').value = client.name;
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
@@ -668,6 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     unlockEditBtn.addEventListener('click', () => {
+        // Abre o modal de senha em vez de usar prompt
         const passwordModal = new bootstrap.Modal(passwordModalEl);
         passwordModal.show();
     });
@@ -688,6 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (result.success) {
+                // Libera os campos permitidos
                 document.getElementById('editClientName').readOnly = false;
                 editClientPhoneInput.readOnly = false;
                 editProfessionInput.readOnly = false;
@@ -715,8 +714,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientIndex = clients.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
 
+        // Pega apenas os dados editáveis do formulário
         const updatedClientData = {
-            ...clients[clientIndex],
+            ...clients[clientIndex], // Mantém todos os dados antigos como base
             name: document.getElementById('editClientName').value,
             phone: editClientPhoneInput.value.replace(/\D/g, ''),
             localizacao: editLocationInput.value,
@@ -833,111 +833,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     searchInput.addEventListener('input', filterClientList);
-
-    // ######### NOVOS EVENT LISTENERS PARA EXPORTAÇÃO E BACKUP #########
-    downloadExcelBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const originalText = e.target.innerHTML;
-        e.target.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gerando...`;
-        e.target.disabled = true;
-
-        try {
-            const response = await fetch('/api/export-excel');
-            if (!response.ok) {
-                throw new Error('Falha ao gerar a planilha.');
-            }
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `relatorio_clientes_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-        } catch (error) {
-            console.error("Erro ao baixar planilha:", error);
-            alert("Não foi possível gerar a planilha Excel.");
-        } finally {
-            e.target.innerHTML = originalText;
-            e.target.disabled = false;
-        }
-    });
-
-    backupDbBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const originalText = e.target.textContent;
-        e.target.textContent = 'Gerando...';
-        e.target.disabled = true;
-        try {
-            const response = await fetch('/api/backup-db');
-            if (!response.ok) {
-                throw new Error('Falha ao gerar o backup.');
-            }
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `backup_clientes_${new Date().toISOString().split('T')[0]}.sql`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-        } catch (error) {
-            console.error("Erro ao gerar backup:", error);
-            alert("Não foi possível gerar o arquivo de backup.");
-        } finally {
-            e.target.textContent = originalText;
-            e.target.disabled = false;
-        }
-    });
-
-    restoreDbForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (backupFileInput.files.length === 0) {
-            alert("Por favor, selecione um arquivo de backup para restaurar.");
-            return;
-        }
-
-        const confirmation = prompt("Esta é uma ação perigosa e irreversível. Todos os dados atuais serão APAGADOS e substituídos pelo backup. Para confirmar, digite 'RESTAURAR DADOS':");
-        if (confirmation !== "RESTAURAR DADOS") {
-            alert("Restauração cancelada.");
-            return;
-        }
-
-        const originalText = restoreDbBtn.textContent;
-        restoreDbBtn.textContent = 'Restaurando...';
-        restoreDbBtn.disabled = true;
-
-        const formData = new FormData();
-        formData.append('backupFile', backupFileInput.files[0]);
-
-        try {
-            const response = await fetch('/api/restore-db', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Falha ao restaurar o backup.');
-            }
-
-            alert("Backup restaurado com sucesso! A página será recarregada.");
-            bootstrap.Modal.getInstance(backupRestoreModalEl).hide();
-            await loadClients(); // Recarrega os dados restaurados
-
-        } catch (error) {
-            console.error("Erro ao restaurar backup:", error);
-            alert(`Não foi possível restaurar o backup. Erro: ${error.message}`);
-        } finally {
-            restoreDbBtn.textContent = originalText;
-            restoreDbBtn.disabled = false;
-            restoreDbForm.reset();
-        }
-    });
 
     // --- INICIALIZAÇÃO ---
     function updateClock() {
