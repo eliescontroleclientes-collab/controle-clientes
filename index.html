@@ -248,7 +248,7 @@
         </div>
     </div>
 
-    <!-- Modal para Editar Cliente ATUALIZADO -->
+    <!-- Modal para Editar Cliente -->
     <div class="modal fade" id="editClientModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -259,7 +259,6 @@
                 <div class="modal-body">
                     <form id="edit-client-form">
                         <div class="row">
-                            <!-- ######### NOVO CAMPO DE ID (VISUALIZAÇÃO) ######### -->
                             <div class="col-md-4 mb-3">
                                 <label for="editClientIdDisplay" class="form-label">ID do Cliente</label>
                                 <input type="text" class="form-control" id="editClientIdDisplay" readonly>
@@ -325,7 +324,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- ######### NOVOS BOTÕES DE EDIÇÃO ######### -->
                         <div class="modal-footer">
                             <button type="button" class="btn btn-warning" id="unlock-edit-btn">Liberar Edição</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -387,6 +385,31 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="registerPaymentBtn">Registrar Pagamento</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ######### NOVO MODAL DE SENHA ######### -->
+    <div class="modal fade" id="passwordModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Verificação de Segurança</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="password-form">
+                        <div class="mb-3">
+                            <label for="passwordInput" class="form-label">Digite a senha para continuar</label>
+                            <input type="password" class="form-control" id="passwordInput" required>
+                            <div class="invalid-feedback" id="password-error" style="display: none;">Senha incorreta.
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Confirmar</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

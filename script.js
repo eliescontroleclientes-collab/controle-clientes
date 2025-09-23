@@ -1,9 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- SENHA DE EDIÇÃO ---
-    // IMPORTANTE: Troque "sua_senha_secreta" pela sua senha real.
-    // Para maior segurança, o ideal é mover isso para uma Environment Variable na Vercel.
-    const EDIT_PASSWORD = "admin444";
-
     // --- ELEMENTOS DO DOM ---
     const clientListBody = document.getElementById('client-list-body');
     const panelPlaceholder = document.getElementById('panel-placeholder');
@@ -46,9 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const newClientFileList = document.getElementById('new-client-file-list');
     const saveClientBtn = document.getElementById('save-client-btn');
     // --- ELEMENTOS DO MODAL DE EDIÇÃO ---
-    const editClientModalEl = document.getElementById('editClientModal'); // Novo
+    const editClientModalEl = document.getElementById('editClientModal');
     const editClientForm = document.getElementById('edit-client-form');
-    const editClientIdDisplay = document.getElementById('editClientIdDisplay'); // Novo
+    const editClientIdDisplay = document.getElementById('editClientIdDisplay');
     const editClientCPFInput = document.getElementById('editClientCPF');
     const editClientPhoneInput = document.getElementById('editClientPhone');
     const editLocationInput = document.getElementById('editLocation');
@@ -58,9 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const editInstallmentsInput = document.getElementById('editInstallments');
     const editInstallmentValueInput = document.getElementById('editInstallmentValue');
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
-    const unlockEditBtn = document.getElementById('unlock-edit-btn'); // Novo
-    const saveEditBtn = document.getElementById('save-edit-btn'); // Novo
-    // --- ELEMENTOS DO RELÓGIO E MODAL DE PAGAMENTO ---
+    const unlockEditBtn = document.getElementById('unlock-edit-btn');
+    const saveEditBtn = document.getElementById('save-edit-btn');
+    // --- ELEMENTOS DO RELÓGIO E MODAIS DE PAGAMENTO/SENHA ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
     const paymentModalEl = document.getElementById('paymentModal');
@@ -68,6 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentValueInput = document.getElementById('paymentValueInput');
     const paymentDateInput = document.getElementById('paymentDateInput');
     const registerPaymentBtn = document.getElementById('registerPaymentBtn');
+    const passwordModalEl = document.getElementById('passwordModal'); // Novo
+    const passwordForm = document.getElementById('password-form'); // Novo
+    const passwordInput = document.getElementById('passwordInput'); // Novo
+    const passwordError = document.getElementById('password-error'); // Novo
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
@@ -273,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
             clientListBody.appendChild(tr);
         });
-        // Após renderizar, aplica o filtro de pesquisa atual
         filterClientList();
     }
 
@@ -408,7 +406,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- FUNÇÃO DE PESQUISA ---
     function filterClientList() {
         const searchTerm = searchInput.value.toLowerCase();
         const rows = clientListBody.querySelectorAll('tr');
@@ -629,22 +626,23 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(paymentModalEl).show();
     });
 
+    // ######### LÓGICA DE EDIÇÃO ATUALIZADA COM SENHA #########
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        // Esconde botão de salvar e mostra o de liberar
+        const modal = new bootstrap.Modal(editClientModalEl);
+
+        // Reseta o modal para o estado "travado" toda vez que é aberto
         saveEditBtn.classList.add('d-none');
         unlockEditBtn.classList.remove('d-none');
+        const formElements = Array.from(editClientForm.elements);
+        formElements.forEach(el => el.readOnly = true);
+        document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(radio => radio.disabled = true);
 
-        // Trava todos os campos inicialmente
-        const formElements = editClientForm.elements;
-        for (const element of formElements) {
-            element.readOnly = true;
-        }
-
-        editClientIdDisplay.value = client.id;
+        // Preenche os campos
+        editClientIdDisplay.value = `#${client.id}`;
         document.getElementById('editClientName').value = client.name;
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
         editClientCPFInput.value = client.cpf ? formatCPF(client.cpf) : '';
@@ -662,38 +660,57 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             document.getElementById('editFreqDaily').checked = true;
         }
-        // Garante que os radios de frequência também fiquem travados
-        document.getElementById('editFreqDaily').disabled = true;
-        document.getElementById('editFreqWeekly').disabled = true;
 
-
-        new bootstrap.Modal(editClientModalEl).show();
+        modal.show();
     });
 
-    // ######### NOVO EVENT LISTENER PARA LIBERAR EDIÇÃO #########
     unlockEditBtn.addEventListener('click', () => {
-        const password = prompt("Digite a senha para liberar a edição:");
-        if (password === EDIT_PASSWORD) {
-            // Libera apenas os campos permitidos
-            document.getElementById('editClientName').readOnly = false;
-            editClientPhoneInput.readOnly = false;
-            editProfessionInput.readOnly = false;
-            editNeighborhoodInput.readOnly = false;
-            editLocationInput.readOnly = false;
+        // Abre o modal de senha em vez de usar prompt
+        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        passwordModal.show();
+    });
 
-            // Troca a visibilidade dos botões
-            unlockEditBtn.classList.add('d-none');
-            saveEditBtn.classList.remove('d-none');
+    passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const enteredPassword = passwordInput.value;
+        passwordInput.classList.remove('is-invalid');
+        passwordError.style.display = 'none';
 
-            alert("Campos liberados para edição!");
-        } else if (password !== null) { // Evita alerta se o usuário cancelar
-            alert("Senha incorreta!");
+        try {
+            const response = await fetch('/api/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: enteredPassword })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Libera os campos permitidos
+                document.getElementById('editClientName').readOnly = false;
+                editClientPhoneInput.readOnly = false;
+                editProfessionInput.readOnly = false;
+                editNeighborhoodInput.readOnly = false;
+                editLocationInput.readOnly = false;
+
+                unlockEditBtn.classList.add('d-none');
+                saveEditBtn.classList.remove('d-none');
+
+                bootstrap.Modal.getInstance(passwordModalEl).hide();
+                passwordForm.reset();
+            } else {
+                passwordInput.classList.add('is-invalid');
+                passwordError.style.display = 'block';
+            }
+        } catch (error) {
+            console.error("Erro ao verificar senha:", error);
+            alert("Ocorreu um erro ao tentar verificar a senha.");
         }
     });
 
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const clientId = parseInt(editClientIdDisplay.value);
+        const clientId = parseInt(selectedClientId);
         const clientIndex = clients.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
 
