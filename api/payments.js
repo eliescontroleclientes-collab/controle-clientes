@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     try {
         await db.query('BEGIN');
 
-        // 1. Busca o cliente para garantir que ele existe e trava a linha para a transação
+        // 1. Busca o cliente e trava a linha para a transação
         const clientResult = await db.query('SELECT * FROM clients WHERE id = $1 FOR UPDATE', [clientId]);
         if (clientResult.rows.length === 0) {
             throw new Error('Cliente não encontrado.');
@@ -29,22 +29,50 @@ export default async function handler(req, res) {
         let client = clientResult.rows[0];
         let currentBalance = parseFloat(client.saldo) + paymentValue;
         let paymentDates = client.paymentDates || [];
+        const installmentValue = parseFloat(client.dailyValue);
 
-        // 2. Ordena as parcelas para garantir que as mais antigas sejam pagas primeiro
-        paymentDates.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Define "hoje" com base no fuso horário de Cuiabá
+        const timeZone = 'America/Cuiaba';
+        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone }); // Formato YYYY-MM-DD
+        const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z');
 
-        // 3. Itera sobre as parcelas e tenta quitá-las com o saldo
-        for (const payment of paymentDates) {
-            if (payment.status !== 'paid') {
-                const installmentValue = parseFloat(client.dailyValue);
-                if (currentBalance >= installmentValue) {
-                    currentBalance -= installmentValue;
-                    payment.status = 'paid';
-                    payment.paidAt = new Date(paymentDate).toISOString();
-                } else {
-                    // Para aqui se o saldo não for suficiente para a próxima parcela
-                    break;
-                }
+        // 2. Separa as parcelas pendentes em categorias
+        const todayInstallment = paymentDates.find(p => p.status !== 'paid' && p.date.startsWith(todayInCuiaba));
+        const lateInstallments = paymentDates
+            .filter(p => p.status !== 'paid' && new Date(p.date) < cuiabaTodayUTCMidnight)
+            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Mais antigas primeiro
+        const futureInstallments = paymentDates
+            .filter(p => p.status !== 'paid' && new Date(p.date) > cuiabaTodayUTCMidnight)
+            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Mais próximas primeiro
+
+        // 3. Implementa a nova hierarquia de quitação
+
+        // Prioridade 1: Pagar a parcela de hoje
+        if (todayInstallment && currentBalance >= installmentValue) {
+            currentBalance -= installmentValue;
+            todayInstallment.status = 'paid';
+            todayInstallment.paidAt = new Date(paymentDate).toISOString();
+        }
+
+        // Prioridade 2: Pagar as parcelas atrasadas (da mais antiga para a mais nova)
+        for (const payment of lateInstallments) {
+            if (currentBalance >= installmentValue) {
+                currentBalance -= installmentValue;
+                payment.status = 'paid';
+                payment.paidAt = new Date(paymentDate).toISOString();
+            } else {
+                break; // Para se o saldo não for suficiente
+            }
+        }
+
+        // Prioridade 3: Usar o saldo restante para pagar parcelas futuras (da mais próxima para a mais distante)
+        for (const payment of futureInstallments) {
+            if (currentBalance >= installmentValue) {
+                currentBalance -= installmentValue;
+                payment.status = 'paid';
+                payment.paidAt = new Date(paymentDate).toISOString();
+            } else {
+                break;
             }
         }
 
