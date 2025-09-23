@@ -32,9 +32,7 @@ function calculateClientStatus(client) {
         return statusText;
     }
     if (isPendingToday) return "Pendente";
-
-    // Simplified for Excel, as "Adiantado" can be inferred if all past are paid
-    return "Em Dia";
+    return "Em Dia"; // Simplified version for brevity in Excel
 }
 
 
@@ -59,8 +57,8 @@ export default async function handler(req, res) {
 
         // Definindo a largura das colunas
         sheet.columns = [
-            { key: 'A', width: 10 }, { key: 'B', width: 50 }, { key: 'C', width: 20 },
-            { key: 'D', width: 15 }, { key: 'E', width: 15 }, { key: 'F', width: 12 },
+            { key: 'A', width: 10 }, { key: 'B', width: 35 }, { key: 'C', width: 20 },
+            { key: 'D', width: 20 }, { key: 'E', width: 20 }, { key: 'F', width: 12 },
             { key: 'G', width: 12 }, { key: 'H', width: 12 }, { key: 'I', width: 12 },
             { key: 'J', width: 12 }, { key: 'K', width: 12 }, { key: 'L', width: 12 },
             { key: 'M', width: 10 }, { key: 'N', width: 10 }, { key: 'O', width: 10 },
@@ -81,31 +79,35 @@ export default async function handler(req, res) {
         clients.forEach(client => {
             const startRow = currentRow;
 
-            // --- Bloco de Informações do Cliente ---
+            // ######### INÍCIO DA NOVA ESTRUTURA DE BLOCO #########
+
+            // --- Coluna A (ID) ---
             sheet.getCell(`A${startRow}`).value = 'ID';
             sheet.mergeCells(`A${startRow + 1}:A${startRow + 5}`);
             const idCell = sheet.getCell(`A${startRow + 1}`);
             idCell.value = client.id;
             idCell.alignment = centerAlignment;
+            idCell.font = { name: 'Calibri', size: 11, bold: true };
 
+            // --- Coluna B (Dados Principais) ---
             sheet.getCell(`B${startRow}`).value = 'Nome';
             sheet.getCell(`B${startRow + 1}`).value = client.name;
-            sheet.getCell(`B${startRow + 2}`).value = 'Status';
-            sheet.getCell(`B${startRow + 3}`).value = calculateClientStatus(client);
-            sheet.getCell(`B${startRow + 4}`).value = 'Saldo';
-            const balanceCell = sheet.getCell(`B${startRow + 5}`);
-            balanceCell.value = parseFloat(client.saldo || 0);
-            balanceCell.numFmt = '"R$"#,##0.00';
+            sheet.getCell(`B${startRow + 2}`).value = 'Data Cadastro';
+            sheet.getCell(`B${startRow + 3}`).value = client.startDate ? new Date(client.startDate) : null;
+            sheet.getCell(`B${startRow + 4}`).value = 'Status';
+            sheet.getCell(`B${startRow + 5}`).value = calculateClientStatus(client);
 
+            // --- Coluna C (Valores) ---
             sheet.getCell(`C${startRow}`).value = 'Valor do Empréstimo';
             const loanCell = sheet.getCell(`C${startRow + 1}`);
             loanCell.value = parseFloat(client.loanValue || 0);
             loanCell.numFmt = '"R$"#,##0.00';
-            sheet.getCell(`C${startRow + 2}`).value = 'Data Início';
-            sheet.getCell(`C${startRow + 3}`).value = client.startDate ? new Date(client.startDate) : null;
-            sheet.getCell(`C${startRow + 4}`).value = 'Data Final Estimada';
+            sheet.getCell(`C${startRow + 2}`).value = 'Primeira Parcela';
+            sheet.getCell(`C${startRow + 3}`).value = (client.paymentDates && client.paymentDates.length > 0) ? new Date(client.paymentDates[0].date) : null;
+            sheet.getCell(`C${startRow + 4}`).value = 'Última Parcela';
             sheet.getCell(`C${startRow + 5}`).value = (client.paymentDates && client.paymentDates.length > 0) ? new Date(client.paymentDates[client.paymentDates.length - 1].date) : null;
 
+            // --- Coluna D (Condições) ---
             sheet.getCell(`D${startRow}`).value = 'Valor Parcela';
             const installmentValueCell = sheet.getCell(`D${startRow + 1}`);
             installmentValueCell.value = parseFloat(client.dailyValue || 0);
@@ -115,77 +117,77 @@ export default async function handler(req, res) {
             sheet.getCell(`D${startRow + 4}`).value = 'Frequência';
             sheet.getCell(`D${startRow + 5}`).value = client.frequency === 'daily' ? 'Diária' : 'Semanal';
 
-            sheet.getCell(`E${startRow}`).value = 'Data Quitação';
+            // --- Coluna E (Financeiro Final) ---
+            sheet.getCell(`E${startRow}`).value = 'Saldo';
+            const balanceCell = sheet.getCell(`E${startRow + 1}`);
+            balanceCell.value = parseFloat(client.saldo || 0);
+            balanceCell.numFmt = '"R$"#,##0.00';
+            sheet.getCell(`E${startRow + 2}`).value = 'Data Quitação';
+            sheet.mergeCells(`E${startRow + 3}:E${startRow + 5}`);
+            const settlementDateCell = sheet.getCell(`E${startRow + 3}`);
             if (calculateClientStatus(client) === 'Empréstimo Concluído') {
                 const paidDates = client.paymentDates.map(p => new Date(p.paidAt)).filter(d => !isNaN(d));
                 if (paidDates.length > 0) {
-                    sheet.getCell(`E${startRow + 1}`).value = new Date(Math.max.apply(null, paidDates));
+                    settlementDateCell.value = new Date(Math.max.apply(null, paidDates));
                 }
             }
+            settlementDateCell.alignment = centerAlignment;
 
-            // --- Bloco do Calendário ---
+            // --- Bloco do Calendário (Colunas F a L) ---
             sheet.mergeCells(`F${startRow}:L${startRow}`);
             const calendarTitleCell = sheet.getCell(`F${startRow}`);
             calendarTitleCell.value = 'CALENDÁRIO DE PAGAMENTOS';
             calendarTitleCell.alignment = centerAlignment;
 
             if (client.paymentDates && client.paymentDates.length > 0) {
+                // ... (lógica do calendário permanece a mesma)
                 const firstPaymentDate = new Date(client.paymentDates[0].date);
                 let calendarStartDate = new Date(firstPaymentDate);
-
                 let dayOfWeek = calendarStartDate.getUTCDay();
                 calendarStartDate.setUTCDate(calendarStartDate.getUTCDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-
                 let calendarRow = startRow + 1;
-                let calendarCol = 6; // Coluna F
-
+                let calendarCol = 6;
                 const timeZone = 'America/Cuiaba';
                 const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
                 const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
-
-                // Renderiza 5 semanas para cobrir um mês
                 for (let i = 0; i < 35; i++) {
                     const cell = sheet.getCell(calendarRow, calendarCol);
                     cell.value = new Date(calendarStartDate);
                     cell.numFmt = 'dd/mm';
-
                     const currentDayStr = calendarStartDate.toISOString().split('T')[0];
                     const payment = client.paymentDates.find(p => p.date.startsWith(currentDayStr));
                     const currentDayOfWeek = calendarStartDate.getUTCDay();
-
                     if (payment) {
                         const paymentDateTime = new Date(payment.date).getTime();
                         if (payment.status === 'paid') {
-                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D1E7DD' } }; // Verde
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D1E7DD' } };
                         } else if (paymentDateTime < cuiabaTodayUTCMidnight) {
-                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F8D7DA' } }; // Vermelho
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F8D7DA' } };
                         } else if (paymentDateTime === cuiabaTodayUTCMidnight) {
-                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3CD' } }; // Amarelo
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3CD' } };
                         }
                     } else if (currentDayOfWeek === 0 || currentDayOfWeek === 6) {
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E9ECEF' } }; // Cinza
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E9ECEF' } };
                     }
-
                     calendarStartDate.setUTCDate(calendarStartDate.getUTCDate() + 1);
                     calendarCol++;
-                    if (calendarCol > 12) { // Vai até a coluna L
-                        calendarCol = 6; // Volta para a coluna F
+                    if (calendarCol > 12) {
+                        calendarCol = 6;
                         calendarRow++;
                     }
                 }
             }
 
-            // --- Bloco de Observação ---
+            // --- Bloco de Observação (Colunas M a R) ---
             sheet.mergeCells(`M${startRow}:R${startRow}`);
             const observationTitleCell = sheet.getCell(`M${startRow}`);
             observationTitleCell.value = 'OBSERVAÇÃO';
             observationTitleCell.alignment = centerAlignment;
             sheet.mergeCells(`M${startRow + 1}:R${startRow + 5}`);
 
-
             // --- Aplica Estilos no Card Inteiro ---
             for (let r = startRow; r <= startRow + 5; r++) {
-                for (let c = 1; c <= 18; c++) { // De A a R
+                for (let c = 1; c <= 18; c++) {
                     const cell = sheet.getCell(r, c);
                     if (!cell.isMerged) {
                         cell.alignment = centerAlignment;
@@ -194,7 +196,6 @@ export default async function handler(req, res) {
                     cell.border = thinBorder;
                 }
             }
-            // Aplica negrito nos títulos
             sheet.getRow(startRow).font = headerFont;
             sheet.getCell(`B${startRow + 2}`).font = headerFont;
             sheet.getCell(`B${startRow + 4}`).font = headerFont;
@@ -202,12 +203,15 @@ export default async function handler(req, res) {
             sheet.getCell(`C${startRow + 4}`).font = headerFont;
             sheet.getCell(`D${startRow + 2}`).font = headerFont;
             sheet.getCell(`D${startRow + 4}`).font = headerFont;
-            sheet.getCell(`A${startRow + 1}`).font = { name: 'Calibri', size: 11, bold: true };
+            sheet.getCell(`E${startRow + 2}`).font = headerFont;
 
             // Formatação de datas
+            sheet.getCell(`B${startRow + 3}`).numFmt = 'dd/mm/yyyy';
             sheet.getCell(`C${startRow + 3}`).numFmt = 'dd/mm/yyyy';
             sheet.getCell(`C${startRow + 5}`).numFmt = 'dd/mm/yyyy';
-            sheet.getCell(`E${startRow + 1}`).numFmt = 'dd/mm/yyyy';
+            settlementDateCell.numFmt = 'dd/mm/yyyy';
+
+            // ######### FIM DA NOVA ESTRUTURA DE BLOCO #########
 
             // --- Linha Separadora ---
             currentRow += 6;
