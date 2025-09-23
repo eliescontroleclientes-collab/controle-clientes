@@ -16,11 +16,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadProgressBarContainer = document.getElementById('upload-progress-bar-container');
     const uploadProgressBar = document.getElementById('upload-progress-bar');
     const panelBalance = document.getElementById('panel-balance');
+    const panelProfession = document.getElementById('panel-profession');
+    const panelNeighborhood = document.getElementById('panel-neighborhood');
+    const panelLocation = document.getElementById('panel-location');
+    const settlementDateRow = document.getElementById('settlement-date-row');
+    const panelSettlementDate = document.getElementById('panel-settlement-date');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
     const clientCPFInput = document.getElementById('clientCPF');
     const clientPhoneInput = document.getElementById('clientPhone');
+    const locationInput = document.getElementById('location');
+    const neighborhoodInput = document.getElementById('neighborhood');
+    const professionInput = document.getElementById('profession');
     const loanValueInput = document.getElementById('loanValue');
     const installmentsInput = document.getElementById('installments');
     const installmentValueInput = document.getElementById('installmentValue');
@@ -34,6 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const editClientForm = document.getElementById('edit-client-form');
     const editClientCPFInput = document.getElementById('editClientCPF');
     const editClientPhoneInput = document.getElementById('editClientPhone');
+    const editLocationInput = document.getElementById('editLocation');
+    const editNeighborhoodInput = document.getElementById('editNeighborhood');
+    const editProfessionInput = document.getElementById('editProfession');
     const editLoanValueInput = document.getElementById('editLoanValue');
     const editInstallmentsInput = document.getElementById('editInstallments');
     const editInstallmentValueInput = document.getElementById('editInstallmentValue');
@@ -271,6 +282,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
         document.getElementById('panel-status').innerHTML = calculateClientStatus(client);
+
+        // ######### INÍCIO DA ALTERAÇÃO: EXIBIÇÃO DOS NOVOS CAMPOS #########
+        panelProfession.textContent = client.profissao || 'N/A';
+        panelNeighborhood.textContent = client.bairro || 'N/A';
+        if (client.localizacao) {
+            panelLocation.textContent = 'Ver no mapa';
+            panelLocation.href = client.localizacao;
+            panelLocation.parentElement.style.display = 'block';
+        } else {
+            panelLocation.parentElement.style.display = 'none';
+        }
+
+        const allPaid = client.paymentDates && client.paymentDates.every(p => p.status === 'paid');
+        if (allPaid) {
+            const paidDates = client.paymentDates.map(p => new Date(p.paidAt)).filter(d => !isNaN(d));
+            if (paidDates.length > 0) {
+                const lastPaymentDate = new Date(Math.max.apply(null, paidDates));
+                panelSettlementDate.textContent = lastPaymentDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                settlementDateRow.style.display = 'block';
+            }
+        } else {
+            settlementDateRow.style.display = 'none';
+        }
+        // ######### FIM DA ALTERAÇÃO #########
+
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
         document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'A preencher';
@@ -430,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePaymentFrequency();
     });
 
+    // ######### ADICIONAR NOVO CLIENTE ATUALIZADO COM NOVOS CAMPOS #########
     addClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const saveBtnSpinner = saveClientBtn.querySelector('.spinner-border');
@@ -449,7 +486,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dailyValue: parseCurrency(installmentValueInput.value),
             installments: installments,
             frequency: frequency,
-            paymentDates: generatePaymentDates(startDate, installments, frequency)
+            paymentDates: generatePaymentDates(startDate, installments, frequency),
+            localizacao: locationInput.value,
+            bairro: neighborhoodInput.value,
+            profissao: professionInput.value
         };
 
         try {
@@ -525,9 +565,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             await loadClients();
-            // A seleção será perdida, mas a lista estará 100% correta. O usuário pode re-selecionar.
-            // Para manter a seleção, teríamos que buscar o cliente atualizado na lista recarregada.
-            // Por simplicidade e robustez, recarregar tudo é mais seguro.
             const currentSelectedId = selectedClientId;
             renderClientPanel(currentSelectedId);
 
@@ -541,30 +578,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE CLIQUE NO CALENDÁRIO ATUALIZADA #########
     calendar.addEventListener('click', (e) => {
-        const dayDiv = e.target.closest('.calendar-day'); // Pega qualquer dia clicável
+        const dayDiv = e.target.closest('.calendar-day');
         if (!dayDiv || selectedClientId === null) return;
 
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
 
         paymentModalTitle.textContent = "Registrar Pagamento";
-        paymentValueInput.value = formatCurrency(client.dailyValue); // Sugere o valor da parcela
+        paymentValueInput.value = formatCurrency(client.dailyValue);
 
-        // Se o dia clicado tem uma data de parcela, pré-seleciona essa data
         if (dayDiv.dataset.date) {
-            const clickedDate = dayDiv.dataset.date.split('T')[0]; // Formato YYYY-MM-DD
+            const clickedDate = dayDiv.dataset.date.split('T')[0];
             paymentDateInput.value = clickedDate;
         } else {
-            // Se não, usa a data de hoje como padrão
             paymentDateInput.value = new Date().toLocaleDateString('en-CA');
         }
 
         new bootstrap.Modal(paymentModalEl).show();
     });
-    // ######### FIM DA ALTERAÇÃO #########
 
+    // ######### EDITAR CLIENTE ATUALIZADO COM NOVOS CAMPOS #########
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         const client = clients.find(c => c.id === selectedClientId);
@@ -575,6 +609,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
         editClientCPFInput.value = client.cpf ? formatCPF(client.cpf) : '';
         editClientPhoneInput.value = client.phone ? formatPhone(client.phone) : '';
+        editLocationInput.value = client.localizacao || '';
+        editNeighborhoodInput.value = client.bairro || '';
+        editProfessionInput.value = client.profissao || '';
         editLoanValueInput.value = formatCurrency(client.loanValue || 0);
         editInstallmentsInput.value = client.installments || 20;
         editInstallmentValueInput.value = formatCurrency(client.dailyValue || 0);
@@ -611,7 +648,10 @@ document.addEventListener('DOMContentLoaded', () => {
             frequency: frequency,
             paymentDates: generatePaymentDates(startDate, installments, frequency),
             files: clients[clientIndex].files || [],
-            saldo: clients[clientIndex].saldo || 0.00
+            saldo: clients[clientIndex].saldo || 0.00,
+            localizacao: editLocationInput.value,
+            bairro: editNeighborhoodInput.value,
+            profissao: editProfessionInput.value
         };
         const updatedClient = await updateClient(updatedClientData);
         if (updatedClient) {

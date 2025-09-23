@@ -56,6 +56,14 @@
                                 <div class="col-6"><strong>Status:</strong> <span id="panel-status"></span></div>
                             </div>
                             <p class="text-muted" id="panel-cpf-phone"></p>
+                            <!-- ######### NOVOS DETALHES PESSOAIS ######### -->
+                            <div id="panel-personal-details">
+                                <p class="mb-1"><strong>Profissão:</strong> <span id="panel-profession"></span></p>
+                                <p class="mb-1"><strong>Bairro:</strong> <span id="panel-neighborhood"></span></p>
+                                <p class="mb-1"><strong>Localização:</strong> <a href="#" id="panel-location"
+                                        target="_blank" rel="noopener noreferrer"></a></p>
+                            </div>
+                            <!-- ######### FIM DA ALTERAÇÃO ######### -->
                             <hr>
                             <h6>Detalhes Financeiros</h6>
                             <div class="row">
@@ -66,7 +74,9 @@
                                 <div class="col-6"><strong>Data Início:</strong> <span id="panel-start-date"></span>
                                 </div>
                                 <div class="col-6"><strong>Data Final:</strong> <span id="panel-end-date"></span></div>
-                                <!-- ######### NOVO CAMPO DE SALDO ######### -->
+                                <!-- ######### NOVA DATA DE QUITAÇÃO ######### -->
+                                <div class="col-6" id="settlement-date-row" style="display: none;"><strong>Data
+                                        Quitação:</strong> <span id="panel-settlement-date"></span></div>
                                 <div class="col-12 mt-2"><strong>Saldo (Crédito):</strong> <span id="panel-balance"
                                         class="fw-bold"></span></div>
                             </div>
@@ -138,7 +148,7 @@
         </div>
     </div>
 
-    <!-- Modal para Adicionar Novo Cliente -->
+    <!-- Modal para Adicionar Novo Cliente ATUALIZADO -->
     <div class="modal fade" id="addClientModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -164,6 +174,20 @@
                             <div class="col-md-6 mb-3">
                                 <label for="clientPhone" class="form-label">Telefone</label>
                                 <input type="text" class="form-control" id="clientPhone" placeholder="(00) 00000-0000">
+                            </div>
+                            <!-- ######### NOVOS CAMPOS DE CADASTRO ######### -->
+                            <div class="col-md-6 mb-3">
+                                <label for="profession" class="form-label">Profissão</label>
+                                <input type="text" class="form-control" id="profession">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="neighborhood" class="form-label">Bairro</label>
+                                <input type="text" class="form-control" id="neighborhood">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label for="location" class="form-label">Localização (Link do Maps)</label>
+                                <input type="url" class="form-control" id="location"
+                                    placeholder="https://maps.app.goo.gl/...">
                             </div>
                         </div>
                         <hr>
@@ -217,7 +241,7 @@
         </div>
     </div>
 
-    <!-- Modal para Editar Cliente -->
+    <!-- Modal para Editar Cliente ATUALIZADO -->
     <div class="modal fade" id="editClientModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -245,6 +269,20 @@
                                 <label for="editClientPhone" class="form-label">Telefone</label>
                                 <input type="text" class="form-control" id="editClientPhone"
                                     placeholder="(00) 00000-0000">
+                            </div>
+                            <!-- ######### NOVOS CAMPOS DE EDIÇÃO ######### -->
+                            <div class="col-md-6 mb-3">
+                                <label for="editProfession" class="form-label">Profissão</label>
+                                <input type="text" class="form-control" id="editProfession">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editNeighborhood" class="form-label">Bairro</label>
+                                <input type="text" class="form-control" id="editNeighborhood">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label for="editLocation" class="form-label">Localização (Link do Maps)</label>
+                                <input type="url" class="form-control" id="editLocation"
+                                    placeholder="https://maps.app.goo.gl/...">
                             </div>
                         </div>
                         <hr>
@@ -312,7 +350,7 @@
         </div>
     </div>
 
-    <!-- ######### MODAL DE PAGAMENTO ATUALIZADO ######### -->
+    <!-- Modal de Pagamento -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -340,8 +378,6 @@
             </div>
         </div>
     </div>
-    <!-- ######### FIM DA ALTERAÇÃO ######### -->
-
 
     <!-- Incluindo JavaScript do Bootstrap e o nosso script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
