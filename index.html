@@ -114,16 +114,35 @@
                 <div class="card shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
+                        <!-- ######### BOTÕES DE AÇÃO ATUALIZADOS COM DROPDOWN ######### -->
                         <div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-info btn-sm dropdown-toggle"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-gear-fill"></i> Ações
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#" id="downloadExcelBtn"><i
+                                                class="bi bi-file-earmark-excel"></i> Baixar Planilha Excel</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
+                                            data-bs-target="#backupRestoreModal"><i class="bi bi-database-gear"></i>
+                                            Backup / Restauração</a></li>
+                                </ul>
+                            </div>
+
                             <button class="btn btn-secondary btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#syncClientsModal">
-                                <i class="bi bi-arrow-repeat"></i> Sincronizar Clientes
+                                <i class="bi bi-arrow-repeat"></i> Sincronizar
                             </button>
                             <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#addClientModal">
-                                <i class="bi bi-plus-lg"></i> Adicionar Novo Cliente
+                                <i class="bi bi-plus-lg"></i> Adicionar Cliente
                             </button>
                         </div>
+                        <!-- ######### FIM DA ALTERAÇÃO ######### -->
                     </div>
                     <div class="card-body border-bottom">
                         <div class="input-group">
@@ -390,7 +409,7 @@
         </div>
     </div>
 
-    <!-- ######### NOVO MODAL DE SENHA ######### -->
+    <!-- Modal de Senha -->
     <div class="modal fade" id="passwordModal" tabindex="-1">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
@@ -414,6 +433,45 @@
             </div>
         </div>
     </div>
+
+    <!-- ######### NOVO MODAL DE BACKUP E RESTAURAÇÃO ######### -->
+    <div class="modal fade" id="backupRestoreModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Backup e Restauração de Dados</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6><i class="bi bi-database-down"></i> Backup</h6>
+                    <p class="small text-muted">Crie uma cópia de segurança completa de todos os seus dados. O arquivo
+                        será salvo no formato .sql.</p>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-primary" id="backupDbBtn">Gerar e Baixar Backup</button>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h6><i class="bi bi-database-up"></i> Restauração</h6>
+                    <div class="alert alert-danger" role="alert">
+                        <strong>Atenção!</strong> Esta ação é irreversível. Restaurar um backup irá <strong>apagar TODOS
+                            os dados atuais</strong> e substituí-los pelos dados do arquivo de backup.
+                    </div>
+                    <form id="restore-db-form">
+                        <div class="mb-3">
+                            <label for="backupFile" class="form-label">Selecione o arquivo de backup (.sql)</label>
+                            <input class="form-control" type="file" id="backupFile" accept=".sql" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-danger" id="restoreDbBtn">Restaurar Backup</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ######### FIM DA ALTERAÇÃO ######### -->
+
 
     <!-- Incluindo JavaScript do Bootstrap e o nosso script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
