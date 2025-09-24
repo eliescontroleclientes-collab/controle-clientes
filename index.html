@@ -132,7 +132,6 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
                         <div class="btn-toolbar">
-                            <!-- ######### BOTÕES DE AÇÃO GLOBAIS ATUALIZADOS ######### -->
                             <button class="btn btn-info btn-sm me-2" id="reminder-btn">
                                 <i class="bi bi-bell-fill"></i> Lembrete de Cobrança
                             </button>
@@ -559,6 +558,28 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Fila de Envio de Lembretes -->
+    <div class="modal fade" id="reminderQueueModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Fila de Envio de Lembretes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Clique em cada link abaixo para abrir a conversa no WhatsApp e enviar o lembrete.</p>
+                    <div class="list-group" id="reminder-queue-list">
+                        <!-- Links serão gerados aqui pelo JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Concluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Incluindo JavaScript do Bootstrap e o nosso script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const collectionResultModalEl = document.getElementById('collectionResultModal');
     const collectionResultText = document.getElementById('collectionResultText');
     const copyCollectionTextBtn = document.getElementById('copy-collection-text-btn');
+    const reminderQueueModalEl = document.getElementById('reminderQueueModal');
+    const reminderQueueList = document.getElementById('reminder-queue-list');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -1102,6 +1104,51 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
+    });
+
+    sendRemindersBtn.addEventListener('click', () => {
+        const pixKey = pixKeyDisplay.value;
+        const timeZone = 'America/Cuiaba';
+        const todayFormatted = new Date().toLocaleDateString('pt-BR', { timeZone });
+
+        // Limpa a lista anterior
+        reminderQueueList.innerHTML = '';
+
+        clientsToRemind.forEach((client, index) => {
+            const firstName = client.name.split(' ')[0];
+            const installmentValue = formatCurrency(client.dailyValue);
+
+            let message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} ainda consta como pendente em nosso sistema.\n\n`;
+            message += `Chave PIX: ${pixKey}\n\n`;
+            message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
+
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+
+            // Cria o item da lista
+            const listItem = document.createElement('a');
+            listItem.href = whatsappUrl;
+            listItem.target = '_blank';
+            listItem.rel = 'noopener noreferrer';
+            listItem.className = 'list-group-item list-group-item-action';
+            listItem.innerHTML = `<i class="bi bi-whatsapp me-2"></i> Enviar para <strong>${client.name}</strong>`;
+
+            reminderQueueList.appendChild(listItem);
+        });
+
+        // Esconde o modal de confirmação e abre o modal da fila de envio
+        bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
+        new bootstrap.Modal(reminderQueueModalEl).show();
+    });
+
+    // Novo listener para marcar links como clicados
+    reminderQueueList.addEventListener('click', (e) => {
+        const clickedLink = e.target.closest('a');
+        if (clickedLink) {
+            clickedLink.classList.add('active'); // Marca como visitado usando a classe do Bootstrap
+            clickedLink.style.backgroundColor = '#d1e7dd'; // Adiciona um fundo verde claro
+            clickedLink.style.textDecoration = 'line-through'; // Tacha o texto
+        }
     });
 
     // --- INICIALIZAÇÃO ---
