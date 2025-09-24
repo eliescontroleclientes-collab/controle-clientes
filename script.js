@@ -80,11 +80,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordForm = document.getElementById('password-form');
     const passwordInput = document.getElementById('passwordInput');
     const passwordError = document.getElementById('password-error');
+    const reminderBtn = document.getElementById('reminder-btn');
+    const pixKeySetupModalEl = document.getElementById('pixKeySetupModal');
+    const pixKeyInput = document.getElementById('pixKeyInput');
+    const savePixKeyBtn = document.getElementById('save-pix-key-btn');
+    const reminderConfirmationModalEl = document.getElementById('reminderConfirmationModal');
+    const reminderCountText = document.getElementById('reminder-count-text');
+    const pixKeyDisplay = document.getElementById('pixKeyDisplay');
+    const changePixKeyBtn = document.getElementById('change-pix-key-btn');
+    const sendRemindersBtn = document.getElementById('send-reminders-btn');
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
     let selectedClientId = null;
     let newClientFiles = [];
+    let clientsToRemind = []; // Guarda a lista de clientes para notificar
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -1003,6 +1013,95 @@ document.addEventListener('DOMContentLoaded', () => {
             copyCollectionTextBtn.classList.remove('btn-secondary');
             copyCollectionTextBtn.classList.add('btn-success');
         }, 2000);
+    });
+
+    reminderBtn.addEventListener('click', async () => {
+        // 1. Identificar clientes com pagamento pendente para hoje
+        const timeZone = 'America/Cuiaba';
+        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
+
+        clientsToRemind = clients.filter(client => {
+            const status = calculateClientStatus(client);
+            return status.includes('Pendente'); // Pega tanto 'Pendente' quanto 'Pendente Hoje'
+        });
+
+        if (clientsToRemind.length === 0) {
+            alert('Nenhum cliente com parcelas pendentes para hoje foi encontrado.');
+            return;
+        }
+
+        // 2. Tentar buscar a chave PIX salva
+        try {
+            const response = await fetch('/api/get-config?name=pix_key');
+            const data = await response.json();
+
+            if (data.value) {
+                // Se a chave existe, mostra o modal de confirmação
+                reminderCountText.textContent = `O sistema irá preparar mensagens de lembrete para ${clientsToRemind.length} cliente(s).`;
+                pixKeyDisplay.value = data.value;
+                new bootstrap.Modal(reminderConfirmationModalEl).show();
+            } else {
+                // Se a chave não existe, mostra o modal de configuração
+                new bootstrap.Modal(pixKeySetupModalEl).show();
+            }
+        } catch (error) {
+            console.error("Erro ao buscar chave PIX:", error);
+            alert("Não foi possível buscar a configuração da chave PIX.");
+        }
+    });
+
+    savePixKeyBtn.addEventListener('click', async () => {
+        const newPixKey = pixKeyInput.value.trim();
+        if (!newPixKey) {
+            alert("Por favor, insira uma chave PIX.");
+            return;
+        }
+
+        try {
+            await fetch('/api/save-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'pix_key', value: newPixKey })
+            });
+
+            // Fecha o modal de setup e abre o de confirmação
+            bootstrap.Modal.getInstance(pixKeySetupModalEl).hide();
+            reminderCountText.textContent = `O sistema irá preparar mensagens de lembrete para ${clientsToRemind.length} cliente(s).`;
+            pixKeyDisplay.value = newPixKey;
+            new bootstrap.Modal(reminderConfirmationModalEl).show();
+        } catch (error) {
+            console.error("Erro ao salvar chave PIX:", error);
+            alert("Não foi possível salvar a nova chave PIX.");
+        }
+    });
+
+    changePixKeyBtn.addEventListener('click', () => {
+        bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
+        const setupModal = new bootstrap.Modal(pixKeySetupModalEl);
+        pixKeyInput.value = pixKeyDisplay.value; // Preenche com a chave atual
+        setupModal.show();
+    });
+
+    sendRemindersBtn.addEventListener('click', () => {
+        const pixKey = pixKeyDisplay.value;
+        const timeZone = 'America/Cuiaba';
+        const todayFormatted = new Date().toLocaleDateString('pt-BR', { timeZone });
+
+        clientsToRemind.forEach(client => {
+            const firstName = client.name.split(' ')[0];
+            const installmentValue = formatCurrency(client.dailyValue);
+
+            let message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} ainda consta como pendente em nosso sistema.\n\n`;
+            message += `Chave PIX: ${pixKey}\n\n`;
+            message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
+
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+
+            window.open(whatsappUrl, '_blank');
+        });
+
+        bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
     });
 
     // --- INICIALIZAÇÃO ---

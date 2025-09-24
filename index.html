@@ -132,6 +132,10 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
                         <div class="btn-toolbar">
+                            <!-- ######### BOTÕES DE AÇÃO GLOBAIS ATUALIZADOS ######### -->
+                            <button class="btn btn-info btn-sm me-2" id="reminder-btn">
+                                <i class="bi bi-bell-fill"></i> Lembrete de Cobrança
+                            </button>
                             <button class="btn btn-success btn-sm me-2" id="download-sheet-btn">
                                 <span class="spinner-border spinner-border-sm me-1" id="download-spinner"
                                     style="display: none;"></span>
@@ -503,6 +507,58 @@
         </div>
     </div>
 
+    <!-- Modal de Configuração da Chave PIX -->
+    <div class="modal fade" id="pixKeySetupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Configurar Chave PIX</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Esta chave PIX será usada como padrão nas mensagens de cobrança.</p>
+                    <form id="pix-key-form">
+                        <div class="mb-3">
+                            <label for="pixKeyInput" class="form-label">Sua Chave PIX</label>
+                            <input type="text" class="form-control" id="pixKeyInput"
+                                placeholder="CPF, e-mail, telefone ou chave aleatória" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="save-pix-key-btn">Salvar como Padrão</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação de Envio de Lembretes -->
+    <div class="modal fade" id="reminderConfirmationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Envio de Lembretes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="reminder-count-text">O sistema irá preparar mensagens de lembrete para X clientes.</p>
+                    <div class="mb-3">
+                        <label for="pixKeyDisplay" class="form-label">Chave PIX a ser enviada:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="pixKeyDisplay" readonly>
+                            <button class="btn btn-outline-secondary" type="button"
+                                id="change-pix-key-btn">Alterar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="send-reminders-btn">Enviar Lembretes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Incluindo JavaScript do Bootstrap e o nosso script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
