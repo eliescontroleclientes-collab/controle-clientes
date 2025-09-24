@@ -331,20 +331,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
-
         document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
-
         if (client.paymentDates && client.paymentDates.length > 0) {
             const firstInstallment = new Date(client.paymentDates[0].date);
             panelFirstInstallmentDate.textContent = firstInstallment.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-
             const lastInstallment = new Date(client.paymentDates[client.paymentDates.length - 1].date);
             document.getElementById('panel-end-date').textContent = lastInstallment.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
         } else {
             panelFirstInstallmentDate.textContent = 'N/A';
             document.getElementById('panel-end-date').textContent = 'N/A';
         }
-
         panelBalance.textContent = formatCurrency(client.saldo || 0);
         panelBalance.className = (client.saldo > 0) ? 'text-success fw-bold' : 'fw-bold';
 
@@ -358,33 +354,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const paymentDates = client.paymentDates.map(p => new Date(p.date));
             const firstPaymentDate = paymentDates[0];
             const lastPaymentDate = paymentDates[paymentDates.length - 1];
-
             let currentDate = new Date(firstPaymentDate);
             while (currentDate.getUTCDay() !== 1) {
                 currentDate.setUTCDate(currentDate.getUTCDate() - 1);
             }
-
             let calendarEndDate = new Date(lastPaymentDate);
             while (calendarEndDate.getUTCDay() !== 0) {
                 calendarEndDate.setUTCDate(calendarEndDate.getUTCDate() + 1);
             }
-
             const timeZone = 'America/Cuiaba';
             const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
             const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
-
             while (currentDate <= calendarEndDate) {
                 const dayDiv = document.createElement('div');
                 const dayOfWeek = currentDate.getUTCDay();
                 dayDiv.textContent = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
                 dayDiv.classList.add('calendar-day');
-
                 const payment = client.paymentDates.find(p => new Date(p.date).setUTCHours(0, 0, 0, 0) === new Date(currentDate).setUTCHours(0, 0, 0, 0));
-
                 if (payment) {
                     dayDiv.dataset.date = payment.date;
                     const paymentDateMidnight = new Date(payment.date).getTime();
-
                     if (payment.status === 'paid') dayDiv.classList.add('status-paid');
                     else if (paymentDateMidnight < cuiabaTodayUTCMidnight) {
                         dayDiv.classList.add('status-late');
@@ -414,6 +403,21 @@ document.addEventListener('DOMContentLoaded', () => {
         observationsTextarea.readOnly = true;
         editObservationsBtn.classList.remove('d-none');
         saveObservationsBtn.classList.add('d-none');
+
+        // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DO BOTÃO DE AVISO #########
+        const timeZone = 'America/Cuiaba';
+        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
+        const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
+        const lateCount = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid').length;
+
+        if (lateCount >= 3) {
+            generateCollectionBtn.disabled = false;
+            generateCollectionBtn.title = "Gerar Aviso de Cobrança";
+        } else {
+            generateCollectionBtn.disabled = true;
+            generateCollectionBtn.title = "Disponível apenas para clientes com 3 ou mais parcelas em atraso.";
+        }
+        // ######### FIM DA ALTERAÇÃO #########
 
         renderClientList();
     }
@@ -906,8 +910,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clientIndex === -1) return;
 
         const updatedClientData = {
-            ...clients[clientIndex], // Pega todos os dados atuais do cliente
-            observacoes: observationsTextarea.value, // Adiciona a nova observação
+            ...clients[clientIndex],
+            observacoes: observationsTextarea.value,
         };
 
         saveObservationsBtn.disabled = true;
@@ -916,7 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const updatedClient = await updateClient(updatedClientData);
             if (updatedClient) {
                 clients[clientIndex] = updatedClient;
-                renderClientPanel(selectedClientId); // Re-renderiza o painel com os dados atualizados
+                renderClientPanel(selectedClientId);
                 alert('Observações salvas com sucesso!');
             }
         } catch (error) {
@@ -929,7 +933,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateCollectionBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
-        // Reseta o formulário do modal de cobrança antes de abrir
         document.getElementById('collection-form').reset();
         const modal = new bootstrap.Modal(collectionModalEl);
         modal.show();
@@ -940,7 +943,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const client = clients.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        // 1. Coleta de dados
         const chargeInterest = document.querySelector('input[name="chargeInterest"]:checked').value === 'yes';
         const customObservation = collectionObservationInput.value.trim();
 
@@ -951,7 +953,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid');
         const todayInstallment = (client.paymentDates || []).find(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
 
-        // 2. Cálculos
         let totalInterest = 0;
         if (chargeInterest && lateInstallments.length > 0) {
             totalInterest = lateInstallments.length * parseFloat(client.dailyValue) * 0.20;
@@ -964,7 +965,6 @@ document.addEventListener('DOMContentLoaded', () => {
             totalValue += parseFloat(client.dailyValue);
         }
 
-        // 3. Montagem da Mensagem
         let message = `*Cliente:* ${client.name}\n`;
         message += `*Telefone:* ${client.phone ? formatPhone(client.phone) : 'N/A'}\n`;
         message += `*Profissão:* ${client.profissao || 'N/A'}\n`;
@@ -983,7 +983,6 @@ document.addEventListener('DOMContentLoaded', () => {
         message += `_(Pra ficar em dias até hoje)_\n\n`;
         message += `*Localização:* ${client.localizacao || 'N/A'}`;
 
-        // 4. Exibição do Resultado
         collectionResultText.value = message;
         bootstrap.Modal.getInstance(collectionModalEl).hide();
         const resultModal = new bootstrap.Modal(collectionResultModalEl);
