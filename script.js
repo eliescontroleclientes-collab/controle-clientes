@@ -1100,7 +1100,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
 
-            window.open(whatsappUrl, '_blank');
         });
 
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
