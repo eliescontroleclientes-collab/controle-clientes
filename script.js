@@ -85,6 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordInput = document.getElementById('passwordInput');
     const passwordError = document.getElementById('password-error');
     const resetPaymentsBtn = document.getElementById('reset-payments-btn');
+    const confirmationModalEl = document.getElementById('confirmationModal');
+    const confirmationModalTitle = document.getElementById('confirmationModalTitle');
+    const confirmationModalBody = document.getElementById('confirmationModalBody');
+    const confirmActionBtn = document.getElementById('confirmActionBtn');
     const reminderBtn = document.getElementById('reminder-btn');
     const pixKeySetupModalEl = document.getElementById('pixKeySetupModal');
     const pixKeyInput = document.getElementById('pixKeyInput');
@@ -100,7 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedClientId = null;
     let newClientFiles = [];
     let clientsToRemind = []; // Guarda a lista de clientes para notificar
-    let pendingSecureAction = null; // Guarda a ação a ser executada após a senha   
+    let pendingSecureAction = null; // Guarda a ação a ser executada após a senha
+    let actionToConfirm = null; // Novo estado para o modal de confirmação
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -833,24 +838,19 @@ document.addEventListener('DOMContentLoaded', () => {
             clients[clientIndex] = updatedClient;
             renderClientPanel(clientId);
         }
-        bootstrap.Modal.getInstance(editClientModalEl).hide();
+
+        // Garante que o modal seja fechado corretamente
+        const editModalInstance = bootstrap.Modal.getInstance(editClientModalEl);
+        if (editModalInstance) {
+            editModalInstance.hide();
+        }
     });
 
-    deleteClientBtn.addEventListener('click', async () => {
+    deleteClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
-        const client = clients.find(c => c.id === selectedClientId);
-        if (!client) return;
-        if (confirm(`Tem certeza que deseja excluir o cliente "${client.name}"? Esta ação não pode ser desfeita.`)) {
-            try {
-                const response = await fetch(`/api/clients?id=${selectedClientId}`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('Falha ao excluir cliente.');
-                await loadClients();
-                renderClientPanel(null);
-            } catch (error) {
-                console.error("Erro ao deletar:", error);
-                alert("Não foi possível excluir o cliente.");
-            }
-        }
+        pendingSecureAction = 'delete';
+        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        passwordModal.show();
     });
 
     syncClientsForm.addEventListener('submit', async (e) => {
@@ -1272,26 +1272,38 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
+            const passwordModalInstance = bootstrap.Modal.getInstance(passwordModalEl);
 
             if (result.success) {
-                bootstrap.Modal.getInstance(passwordModalEl).hide();
-                passwordForm.reset();
+                // ######### CORREÇÃO DO BUG DA TELA ESCURA #########
+                // Garante que o modal de senha seja fechado antes de prosseguir
+                passwordModalEl.addEventListener('hidden.bs.modal', async () => {
+                    passwordForm.reset();
 
-                // Executa a ação que estava pendente
-                if (pendingSecureAction === 'unlockEdit') {
-                    document.getElementById('editClientName').readOnly = false;
-                    editClientPhoneInput.readOnly = false;
-                    editProfessionInput.readOnly = false;
-                    editNeighborhoodInput.readOnly = false;
-                    editLocationInput.readOnly = false;
-                    unlockEditBtn.classList.add('d-none');
-                    saveEditBtn.classList.remove('d-none');
-                } else if (pendingSecureAction === 'delete') {
-                    await executeDelete();
-                } else if (pendingSecureAction === 'reset') {
-                    await executeResetPayments();
-                }
-                pendingSecureAction = null; // Limpa a ação pendente
+                    if (pendingSecureAction === 'unlockEdit') {
+                        document.getElementById('editClientName').readOnly = false;
+                        editClientPhoneInput.readOnly = false;
+                        editProfessionInput.readOnly = false;
+                        editNeighborhoodInput.readOnly = false;
+                        editLocationInput.readOnly = false;
+                        unlockEditBtn.classList.add('d-none');
+                        saveEditBtn.classList.remove('d-none');
+                    } else if (pendingSecureAction === 'delete') {
+                        actionToConfirm = executeDelete;
+                        confirmationModalTitle.textContent = 'Confirmar Exclusão';
+                        confirmationModalBody.textContent = `Tem certeza que deseja excluir o cliente selecionado? Esta ação não pode ser desfeita.`;
+                        new bootstrap.Modal(confirmationModalEl).show();
+                    } else if (pendingSecureAction === 'reset') {
+                        actionToConfirm = executeResetPayments;
+                        confirmationModalTitle.textContent = 'Confirmar Reset';
+                        confirmationModalBody.textContent = `Tem certeza que deseja resetar TODOS os pagamentos e o saldo deste cliente?`;
+                        new bootstrap.Modal(confirmationModalEl).show();
+                    }
+                    pendingSecureAction = null;
+                }, { once: true }); // O listener só executa uma vez
+
+                passwordModalInstance.hide();
+                // ######### FIM DA CORREÇÃO #########
             } else {
                 passwordInput.classList.add('is-invalid');
                 passwordError.style.display = 'block';
@@ -1302,23 +1314,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Função para executar a exclusão
+    confirmActionBtn.addEventListener('click', async () => {
+        if (typeof actionToConfirm === 'function') {
+            await actionToConfirm();
+        }
+        bootstrap.Modal.getInstance(confirmationModalEl).hide();
+        actionToConfirm = null;
+    });
+
+    // Função para executar a exclusão (SEM O CONFIRM)
     async function executeDelete() {
-        if (!confirm(`Tem certeza que deseja excluir o cliente selecionado? Esta ação não pode ser desfeita.`)) return;
         try {
             const response = await fetch(`/api/clients?id=${selectedClientId}`, { method: 'DELETE' });
             if (!response.ok) throw new Error('Falha ao excluir cliente.');
             await loadClients();
-            renderClientPanel(null); // Reseta o painel
+            renderClientPanel(null);
         } catch (error) {
             console.error("Erro ao deletar:", error);
             alert("Não foi possível excluir o cliente.");
         }
     }
 
-    // Função para executar o reset de pagamentos
+    // Função para executar o reset de pagamentos (SEM O CONFIRM)
     async function executeResetPayments() {
-        if (!confirm(`Tem certeza que deseja resetar TODOS os pagamentos e o saldo deste cliente?`)) return;
         try {
             const response = await fetch('/api/clients', {
                 method: 'PUT',
