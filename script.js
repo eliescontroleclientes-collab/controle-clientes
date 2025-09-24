@@ -781,43 +781,6 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordModal.show();
     });
 
-    passwordForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const enteredPassword = passwordInput.value;
-        passwordInput.classList.remove('is-invalid');
-        passwordError.style.display = 'none';
-
-        try {
-            const response = await fetch('/api/verify-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: enteredPassword })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                document.getElementById('editClientName').readOnly = false;
-                editClientPhoneInput.readOnly = false;
-                editProfessionInput.readOnly = false;
-                editNeighborhoodInput.readOnly = false;
-                editLocationInput.readOnly = false;
-
-                unlockEditBtn.classList.add('d-none');
-                saveEditBtn.classList.remove('d-none');
-
-                bootstrap.Modal.getInstance(passwordModalEl).hide();
-                passwordForm.reset();
-            } else {
-                passwordInput.classList.add('is-invalid');
-                passwordError.style.display = 'block';
-            }
-        } catch (error) {
-            console.error("Erro ao verificar senha:", error);
-            alert("Ocorreu um erro ao tentar verificar a senha.");
-        }
-    });
-
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const clientId = parseInt(selectedClientId);
