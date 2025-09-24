@@ -24,6 +24,7 @@
     color: #333;
     border: 1px solid #ddd;
     transition: transform 0.2s ease;
+    position: relative; /* Necessário para o tooltip */
 }
 
 /* Adiciona cursor de ponteiro para dias que não são fim de semana */
@@ -49,9 +50,7 @@
     color: #6c757d;
 }
 
-/* --- NOVOS ESTILOS PARA UPLOAD NO MODAL --- */
-
-/* Estilo para a área de arrastar e soltar arquivos */
+/* --- ESTILOS PARA UPLOAD NO MODAL --- */
 .drop-zone {
     border: 2px dashed #ccc;
     border-radius: 8px;
@@ -61,26 +60,48 @@
     cursor: pointer;
     transition: border-color 0.3s ease, background-color 0.3s ease;
 }
-
 .drop-zone:hover {
     border-color: #0d6efd;
     background-color: #f8f9fa;
 }
-
-/* Efeito visual quando um arquivo está sendo arrastado sobre a área */
 .drop-zone.dragover {
     border-color: #0d6efd;
     background-color: #e9ecef;
     color: #333;
 }
-
-/* Estilo para a lista de pré-visualização de arquivos */
 #new-client-file-list li {
     font-size: 0.9rem;
 }
 
-/* --- NOVO ESTILO PARA O RELÓGIO --- */
+/* --- ESTILO PARA O RELÓGIO --- */
 #live-clock {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 500;
 }
+
+/* --- NOVOS ESTILOS PARA TOOLTIP DO CALENDÁRIO --- */
+.calendar-day .tooltip-text {
+    visibility: hidden;
+    width: 120px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Posiciona o tooltip acima do dia */
+    left: 50%;
+    margin-left: -60px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.calendar-day:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.tooltip-text.green { background-color: #198754; }
+.tooltip-text.orange { background-color: #fd7e14; }
+.tooltip-text.red { background-color: #dc3545; }

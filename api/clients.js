@@ -32,10 +32,29 @@ export default async function handler(req, res) {
             res.status(201).json(result.rows[0]);
         }
         else if (req.method === 'PUT') {
-            const { id, name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, files, saldo, localizacao, bairro, profissao, observacoes } = req.body;
+            // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DE RESET #########
+            const { id, resetPayments, ...clientData } = req.body;
             if (!id) return res.status(400).json({ error: 'Client ID is required' });
 
-            // A lógica de PUT não deve alterar o original_client_id, então o mantemos fora da atualização.
+            if (resetPayments) {
+                // LÓGICA PARA RESETAR PAGAMENTOS
+                const clientResult = await db.query('SELECT "paymentDates" FROM clients WHERE id = $1', [id]);
+                if (clientResult.rows.length === 0) throw new Error("Cliente não encontrado para reset.");
+
+                let paymentDates = clientResult.rows[0].paymentDates || [];
+                paymentDates.forEach(p => {
+                    p.status = 'pending'; // Volta todas para pendente
+                    delete p.paidAt;    // Remove a data de pagamento
+                });
+
+                const resetQuery = `UPDATE clients SET saldo = 0.00, "paymentDates" = $1 WHERE id = $2 RETURNING *`;
+                const result = await db.query(resetQuery, [JSON.stringify(paymentDates), id]);
+                return res.status(200).json(result.rows[0]);
+            }
+            // ######### FIM DA ALTERAÇÃO #########
+
+            // LÓGICA NORMAL DE ATUALIZAÇÃO (sem o reset)
+            const { name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, files, saldo, localizacao, bairro, profissao, observacoes } = clientData;
             const query = `
                 UPDATE clients 
                 SET name = $1, "startDate" = $2, cpf = $3, phone = $4, "loanValue" = $5, "dailyValue" = $6, "paymentDates" = $7, installments = $8, frequency = $9, files = $10, saldo = $11, localizacao = $12, bairro = $13, profissao = $14, observacoes = $15
@@ -45,14 +64,13 @@ export default async function handler(req, res) {
             const values = [name, startDate, cpf, phone, loanValue, dailyValue, JSON.stringify(paymentDates), installments, frequency, JSON.stringify(files || []), saldo || 0.00, localizacao, bairro, profissao, observacoes, id];
             const result = await db.query(query, values);
             res.status(200).json(result.rows[0]);
-        }
-        else if (req.method === 'DELETE') {
+
+        } else if (req.method === 'DELETE') {
             const { id } = req.query;
             if (!id) return res.status(400).json({ error: 'Client ID is required' });
             await db.query('DELETE FROM clients WHERE id = $1', [id]);
             res.status(204).send();
-        }
-        else {
+        } else {
             res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
             res.status(405).end(`Method ${req.method} Not Allowed`);
         }

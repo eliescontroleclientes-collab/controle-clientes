@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordForm = document.getElementById('password-form');
     const passwordInput = document.getElementById('passwordInput');
     const passwordError = document.getElementById('password-error');
+    const resetPaymentsBtn = document.getElementById('reset-payments-btn');
     const reminderBtn = document.getElementById('reminder-btn');
     const pixKeySetupModalEl = document.getElementById('pixKeySetupModal');
     const pixKeyInput = document.getElementById('pixKeyInput');
@@ -99,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedClientId = null;
     let newClientFiles = [];
     let clientsToRemind = []; // Guarda a lista de clientes para notificar
+    let pendingSecureAction = null; // Guarda a ação a ser executada após a senha   
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -399,14 +401,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dayOfWeek = currentDate.getUTCDay();
                 dayDiv.textContent = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
                 dayDiv.classList.add('calendar-day');
+
                 const payment = client.paymentDates.find(p => new Date(p.date).setUTCHours(0, 0, 0, 0) === new Date(currentDate).setUTCHours(0, 0, 0, 0));
+
                 if (payment) {
                     dayDiv.dataset.date = payment.date;
                     const paymentDateMidnight = new Date(payment.date).getTime();
-                    if (payment.status === 'paid') dayDiv.classList.add('status-paid');
-                    else if (paymentDateMidnight < cuiabaTodayUTCMidnight) {
+
+                    if (payment.status === 'paid') {
+                        dayDiv.classList.add('status-paid');
+
+                        // Lógica do Tooltip
+                        if (payment.paidAt) {
+                            const paidAtDate = new Date(payment.paidAt).setUTCHours(0, 0, 0, 0);
+                            const dueDate = new Date(payment.date).setUTCHours(0, 0, 0, 0);
+                            const diffDays = (paidAtDate - dueDate) / (1000 * 60 * 60 * 24);
+
+                            let tooltipText = '';
+                            let tooltipColor = '';
+
+                            if (diffDays === 0) {
+                                tooltipText = 'Pago no dia';
+                                tooltipColor = 'green';
+                            } else if (diffDays === 1) {
+                                tooltipText = 'Pago com 1 dia de atraso';
+                                tooltipColor = 'orange';
+                            } else if (diffDays > 1) {
+                                tooltipText = `Pago com ${diffDays} dias de atraso`;
+                                tooltipColor = 'red';
+                            } else { // Pagamento adiantado
+                                tooltipText = `Pago ${-diffDays} dia(s) adiantado`;
+                                tooltipColor = 'green';
+                            }
+
+                            const tooltip = document.createElement('span');
+                            tooltip.className = `tooltip-text ${tooltipColor}`;
+                            tooltip.textContent = tooltipText;
+                            dayDiv.appendChild(tooltip);
+                        }
+                    } else if (paymentDateMidnight < cuiabaTodayUTCMidnight) {
                         dayDiv.classList.add('status-late');
-                    } else dayDiv.classList.add('status-pending');
+                    } else {
+                        dayDiv.classList.add('status-pending');
+                    }
                 } else if (dayOfWeek === 0 || dayOfWeek === 6) {
                     dayDiv.classList.add('status-weekend');
                 } else {
@@ -1205,6 +1242,107 @@ document.addEventListener('DOMContentLoaded', () => {
         renderNewClientFileList();
 
         addModal.show();
+    });
+
+    deleteClientBtn.addEventListener('click', () => {
+        if (selectedClientId === null) return;
+        pendingSecureAction = 'delete';
+        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        passwordModal.show();
+    });
+
+    resetPaymentsBtn.addEventListener('click', () => {
+        if (selectedClientId === null) return;
+        pendingSecureAction = 'reset';
+        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        passwordModal.show();
+    });
+
+    passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const enteredPassword = passwordInput.value;
+        passwordInput.classList.remove('is-invalid');
+        passwordError.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: enteredPassword })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                bootstrap.Modal.getInstance(passwordModalEl).hide();
+                passwordForm.reset();
+
+                // Executa a ação que estava pendente
+                if (pendingSecureAction === 'unlockEdit') {
+                    document.getElementById('editClientName').readOnly = false;
+                    editClientPhoneInput.readOnly = false;
+                    editProfessionInput.readOnly = false;
+                    editNeighborhoodInput.readOnly = false;
+                    editLocationInput.readOnly = false;
+                    unlockEditBtn.classList.add('d-none');
+                    saveEditBtn.classList.remove('d-none');
+                } else if (pendingSecureAction === 'delete') {
+                    await executeDelete();
+                } else if (pendingSecureAction === 'reset') {
+                    await executeResetPayments();
+                }
+                pendingSecureAction = null; // Limpa a ação pendente
+            } else {
+                passwordInput.classList.add('is-invalid');
+                passwordError.style.display = 'block';
+            }
+        } catch (error) {
+            console.error("Erro ao verificar senha:", error);
+            alert("Ocorreu um erro ao tentar verificar a senha.");
+        }
+    });
+
+    // Função para executar a exclusão
+    async function executeDelete() {
+        if (!confirm(`Tem certeza que deseja excluir o cliente selecionado? Esta ação não pode ser desfeita.`)) return;
+        try {
+            const response = await fetch(`/api/clients?id=${selectedClientId}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Falha ao excluir cliente.');
+            await loadClients();
+            renderClientPanel(null); // Reseta o painel
+        } catch (error) {
+            console.error("Erro ao deletar:", error);
+            alert("Não foi possível excluir o cliente.");
+        }
+    }
+
+    // Função para executar o reset de pagamentos
+    async function executeResetPayments() {
+        if (!confirm(`Tem certeza que deseja resetar TODOS os pagamentos e o saldo deste cliente?`)) return;
+        try {
+            const response = await fetch('/api/clients', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: selectedClientId, resetPayments: true })
+            });
+            if (!response.ok) throw new Error('Falha ao resetar pagamentos.');
+
+            const updatedClient = await response.json();
+            const clientIndex = clients.findIndex(c => c.id === selectedClientId);
+            clients[clientIndex] = updatedClient;
+            renderClientPanel(selectedClientId);
+            alert('Pagamentos e saldo resetados com sucesso!');
+
+        } catch (error) {
+            console.error("Erro ao resetar pagamentos:", error);
+            alert("Não foi possível resetar os pagamentos.");
+        }
+    }
+
+    unlockEditBtn.addEventListener('click', () => {
+        pendingSecureAction = 'unlockEdit';
+        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        passwordModal.show();
     });
 
     // --- INICIALIZAÇÃO ---
