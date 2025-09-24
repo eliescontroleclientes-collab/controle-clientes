@@ -776,11 +776,6 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.show();
     });
 
-    unlockEditBtn.addEventListener('click', () => {
-        const passwordModal = new bootstrap.Modal(passwordModalEl);
-        passwordModal.show();
-    });
-
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const clientId = parseInt(selectedClientId);
@@ -807,13 +802,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (editModalInstance) {
             editModalInstance.hide();
         }
-    });
-
-    deleteClientBtn.addEventListener('click', () => {
-        if (selectedClientId === null) return;
-        pendingSecureAction = 'delete';
-        const passwordModal = new bootstrap.Modal(passwordModalEl);
-        passwordModal.show();
     });
 
     syncClientsForm.addEventListener('submit', async (e) => {
