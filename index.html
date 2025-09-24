@@ -39,7 +39,12 @@
                         <div id="panel-details" class="d-none">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h5 id="panel-name"></h5>
-                                <div>
+                                <!-- ######### BOTÕES DE AÇÃO ATUALIZADOS ######### -->
+                                <div class="btn-group">
+                                    <button id="generate-collection-btn" class="btn btn-outline-info btn-sm"
+                                        title="Gerar Aviso de Cobrança">
+                                        <i class="bi bi-whatsapp"></i> Gerar Aviso
+                                    </button>
                                     <button id="edit-client-btn" class="btn btn-outline-primary btn-sm"
                                         title="Editar Cliente">
                                         <i class="bi bi-pencil-square"></i> Editar
@@ -106,7 +111,6 @@
                                     </div>
                                 </form>
                             </div>
-                            <!-- ######### NOVA SEÇÃO DE OBSERVAÇÕES ######### -->
                             <hr>
                             <h6><i class="bi bi-pencil-fill"></i> Observações</h6>
                             <div id="observations-section">
@@ -436,6 +440,69 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Preparação do Aviso -->
+    <div class="modal fade" id="collectionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Preparar Aviso de Cobrança</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="collection-form">
+                        <div class="mb-3">
+                            <label class="form-label d-block">Cobrar Juros sobre Atrasos?</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="chargeInterest"
+                                    id="chargeInterestYes" value="yes" checked>
+                                <label class="form-check-label" for="chargeInterestYes">Sim</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="chargeInterest" id="chargeInterestNo"
+                                    value="no">
+                                <label class="form-check-label" for="chargeInterestNo">Não</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="collectionObservation" class="form-label">Observação Adicional (para o
+                                motoqueiro)</label>
+                            <textarea class="form-control" id="collectionObservation" rows="3"
+                                placeholder="Ex: Cliente pediu para ir após as 18h..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="generate-collection-text-btn">Gerar Texto de
+                        Cobrança</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Resultado do Aviso -->
+    <div class="modal fade" id="collectionResultModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Texto de Cobrança Gerado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">A mensagem abaixo está pronta. Clique no botão para copiar e enviar ao
+                        motoqueiro.</p>
+                    <textarea class="form-control" id="collectionResultText" rows="12" readonly></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="copy-collection-text-btn">
+                        <i class="bi bi-clipboard-check"></i> Copiar para Área de Transferência
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Incluindo JavaScript do Bootstrap e o nosso script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

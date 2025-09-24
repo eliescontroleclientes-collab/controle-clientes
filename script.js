@@ -28,6 +28,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const observationsTextarea = document.getElementById('observations-textarea');
     const editObservationsBtn = document.getElementById('edit-observations-btn');
     const saveObservationsBtn = document.getElementById('save-observations-btn');
+    const generateCollectionBtn = document.getElementById('generate-collection-btn');
+    const collectionModalEl = document.getElementById('collectionModal');
+    const generateCollectionTextBtn = document.getElementById('generate-collection-text-btn');
+    const collectionObservationInput = document.getElementById('collectionObservation');
+    const collectionResultModalEl = document.getElementById('collectionResultModal');
+    const collectionResultText = document.getElementById('collectionResultText');
+    const copyCollectionTextBtn = document.getElementById('copy-collection-text-btn');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -918,6 +925,85 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             saveObservationsBtn.disabled = false;
         }
+    });
+
+    generateCollectionBtn.addEventListener('click', () => {
+        if (selectedClientId === null) return;
+        // Reseta o formulário do modal de cobrança antes de abrir
+        document.getElementById('collection-form').reset();
+        const modal = new bootstrap.Modal(collectionModalEl);
+        modal.show();
+    });
+
+    generateCollectionTextBtn.addEventListener('click', () => {
+        if (selectedClientId === null) return;
+        const client = clients.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        // 1. Coleta de dados
+        const chargeInterest = document.querySelector('input[name="chargeInterest"]:checked').value === 'yes';
+        const customObservation = collectionObservationInput.value.trim();
+
+        const timeZone = 'America/Cuiaba';
+        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
+        const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
+
+        const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid');
+        const todayInstallment = (client.paymentDates || []).find(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
+
+        // 2. Cálculos
+        let totalInterest = 0;
+        if (chargeInterest && lateInstallments.length > 0) {
+            totalInterest = lateInstallments.length * parseFloat(client.dailyValue) * 0.20;
+        }
+
+        let totalValue = 0;
+        totalValue += lateInstallments.length * parseFloat(client.dailyValue);
+        totalValue += totalInterest;
+        if (todayInstallment) {
+            totalValue += parseFloat(client.dailyValue);
+        }
+
+        // 3. Montagem da Mensagem
+        let message = `*Cliente:* ${client.name}\n`;
+        message += `*Telefone:* ${client.phone ? formatPhone(client.phone) : 'N/A'}\n`;
+        message += `*Profissão:* ${client.profissao || 'N/A'}\n`;
+        message += `*Bairro:* ${client.bairro || 'N/A'}\n\n`;
+
+        message += `*Data da Cobrança:* ${new Date().toLocaleDateString('pt-BR', { timeZone })}\n\n`;
+
+        if (customObservation) {
+            message += `*Obs:* ${customObservation}\n\n`;
+        }
+
+        message += `${lateInstallments.length} Parcela(s) de ${formatCurrency(client.dailyValue)} em atraso\n`;
+        message += `Parcela de Hoje Pendente? ${todayInstallment ? 'Sim' : 'Não'}\n`;
+        message += `Juros por atraso: ${formatCurrency(totalInterest)}\n\n`;
+        message += `*Valor total: ${formatCurrency(totalValue)}*\n`;
+        message += `_(Pra ficar em dias até hoje)_\n\n`;
+        message += `*Localização:* ${client.localizacao || 'N/A'}`;
+
+        // 4. Exibição do Resultado
+        collectionResultText.value = message;
+        bootstrap.Modal.getInstance(collectionModalEl).hide();
+        const resultModal = new bootstrap.Modal(collectionResultModalEl);
+        resultModal.show();
+    });
+
+    copyCollectionTextBtn.addEventListener('click', () => {
+        collectionResultText.select();
+        document.execCommand('copy');
+
+        const originalText = copyCollectionTextBtn.innerHTML;
+        copyCollectionTextBtn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
+        copyCollectionTextBtn.classList.remove('btn-success');
+        copyCollectionTextBtn.classList.add('btn-secondary');
+
+        setTimeout(() => {
+            copyCollectionTextBtn.innerHTML = originalText;
+            copyCollectionTextBtn.classList.remove('btn-secondary');
+            copyCollectionTextBtn.classList.add('btn-success');
+        }, 2000);
     });
 
     // --- INICIALIZAÇÃO ---
