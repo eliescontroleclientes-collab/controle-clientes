@@ -39,8 +39,12 @@
                         <div id="panel-details" class="d-none">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h5 id="panel-name"></h5>
-                                <!-- ######### BOTÕES DE AÇÃO ATUALIZADOS ######### -->
                                 <div class="btn-group">
+                                    <!-- ######### NOVO BOTÃO DE RENOVAÇÃO ######### -->
+                                    <button id="renew-client-btn" class="btn btn-outline-success btn-sm d-none"
+                                        title="Renovar Empréstimo">
+                                        <i class="bi bi-arrow-clockwise"></i> Renovar
+                                    </button>
                                     <button id="generate-collection-btn" class="btn btn-outline-info btn-sm"
                                         title="Gerar Aviso de Cobrança">
                                         <i class="bi bi-whatsapp"></i> Gerar Aviso
@@ -189,6 +193,8 @@
                 </div>
                 <div class="modal-body">
                     <form id="add-client-form">
+                        <!-- ######### NOVO CAMPO OCULTO PARA RENOVAÇÃO ######### -->
+                        <input type="hidden" id="originalClientId">
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label for="clientId" class="form-label">ID do Cliente</label>

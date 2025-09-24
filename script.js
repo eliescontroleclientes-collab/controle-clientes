@@ -70,6 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
     const unlockEditBtn = document.getElementById('unlock-edit-btn');
     const saveEditBtn = document.getElementById('save-edit-btn');
+    const renewClientBtn = document.getElementById('renew-client-btn');
+    const originalClientIdInput = document.getElementById('originalClientId');
     // --- ELEMENTOS DO RELÓGIO E MODAIS DE PAGAMENTO/SENHA ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
@@ -206,11 +208,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!client.paymentDates || client.paymentDates.length === 0) {
             return '<span class="badge bg-secondary">Sem dados</span>';
         }
+
         const allPaid = client.paymentDates.every(p => p.status === 'paid');
         if (allPaid) {
             return '<span class="badge bg-dark">Empréstimo Concluído</span>';
         }
 
+        // ######### INÍCIO DA LÓGICA DE STATUS DE RENOVAÇÃO #########
+        if (client.original_client_id) {
+            // Conta quantas renovações existem para o ID original
+            const renewalCount = clients.filter(c => c.original_client_id === client.original_client_id).length;
+            const baseStatus = getFinancialStatus(client);
+            return `<span class="badge bg-primary">${renewalCount}ª Renovação</span> ${baseStatus}`;
+        }
+        // ######### FIM DA LÓGICA DE STATUS DE RENOVAÇÃO #########
+
+        return getFinancialStatus(client);
+    }
+
+    // Nova função auxiliar para separar o cálculo financeiro
+    function getFinancialStatus(client) {
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
@@ -416,6 +433,15 @@ document.addEventListener('DOMContentLoaded', () => {
         editObservationsBtn.classList.remove('d-none');
         saveObservationsBtn.classList.add('d-none');
 
+        // ######### INÍCIO DA LÓGICA DO BOTÃO DE RENOVAÇÃO #########
+        const isCompleted = client.paymentDates && client.paymentDates.every(p => p.status === 'paid');
+        if (isCompleted) {
+            renewClientBtn.classList.remove('d-none');
+        } else {
+            renewClientBtn.classList.add('d-none');
+        }
+        // ######### FIM DA LÓGICA DO BOTÃO DE RENOVAÇÃO #########
+
         // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DO BOTÃO DE AVISO #########
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
@@ -556,7 +582,8 @@ document.addEventListener('DOMContentLoaded', () => {
             paymentDates: generatePaymentDates(startDate, installments, frequency),
             localizacao: locationInput.value,
             bairro: neighborhoodInput.value,
-            profissao: professionInput.value
+            profissao: professionInput.value,
+            original_client_id: originalClientIdInput.value ? parseInt(originalClientIdInput.value, 10) : null
         };
 
         try {
@@ -1148,6 +1175,36 @@ document.addEventListener('DOMContentLoaded', () => {
             clickedLink.style.backgroundColor = '#d1e7dd'; // Adiciona um fundo verde claro
             clickedLink.style.textDecoration = 'line-through'; // Tacha o texto
         }
+    });
+
+    renewClientBtn.addEventListener('click', () => {
+        if (selectedClientId === null) return;
+        const clientToRenew = clients.find(c => c.id === selectedClientId);
+        if (!clientToRenew) return;
+
+        const addModal = new bootstrap.Modal(addClientModalEl);
+
+        // Pré-preenche os dados pessoais
+        document.getElementById('clientName').value = clientToRenew.name;
+        clientCPFInput.value = clientToRenew.cpf ? formatCPF(clientToRenew.cpf) : '';
+        clientPhoneInput.value = clientToRenew.phone ? formatPhone(clientToRenew.phone) : '';
+        professionInput.value = clientToRenew.profissao || '';
+        neighborhoodInput.value = clientToRenew.bairro || '';
+        locationInput.value = clientToRenew.localizacao || '';
+
+        // Guarda o ID do cliente original (ou o ID original do cliente que já é uma renovação)
+        originalClientIdInput.value = clientToRenew.original_client_id || clientToRenew.id;
+
+        // Limpa os campos que precisam ser novos
+        clientIdInput.value = '';
+        document.getElementById('startDate').value = '';
+        loanValueInput.value = '';
+        installmentsInput.value = 20; // Valor padrão
+        installmentValueInput.value = '';
+        newClientFiles = [];
+        renderNewClientFileList();
+
+        addModal.show();
     });
 
     // --- INICIALIZAÇÃO ---
