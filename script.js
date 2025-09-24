@@ -781,6 +781,43 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordModal.show();
     });
 
+    passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const enteredPassword = passwordInput.value;
+        passwordInput.classList.remove('is-invalid');
+        passwordError.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: enteredPassword })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                document.getElementById('editClientName').readOnly = false;
+                editClientPhoneInput.readOnly = false;
+                editProfessionInput.readOnly = false;
+                editNeighborhoodInput.readOnly = false;
+                editLocationInput.readOnly = false;
+
+                unlockEditBtn.classList.add('d-none');
+                saveEditBtn.classList.remove('d-none');
+
+                bootstrap.Modal.getInstance(passwordModalEl).hide();
+                passwordForm.reset();
+            } else {
+                passwordInput.classList.add('is-invalid');
+                passwordError.style.display = 'block';
+            }
+        } catch (error) {
+            console.error("Erro ao verificar senha:", error);
+            alert("Ocorreu um erro ao tentar verificar a senha.");
+        }
+    });
+
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const clientId = parseInt(selectedClientId);
@@ -1235,15 +1272,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json();
+            const passwordModalInstance = bootstrap.Modal.getInstance(passwordModalEl);
 
             if (result.success) {
-                const passwordModalInstance = bootstrap.Modal.getInstance(passwordModalEl);
-                // Primeiro, esconda o modal de senha.
-                passwordModalInstance.hide();
-                passwordForm.reset();
+                // ######### CORREÇÃO DO BUG DA TELA ESCURA #########
+                // Garante que o modal de senha seja fechado antes de prosseguir
+                passwordModalEl.addEventListener('hidden.bs.modal', async () => {
+                    passwordForm.reset();
 
-                // Use um pequeno timeout para permitir que a animação de fechar e a limpeza do DOM terminem.
-                setTimeout(() => {
                     if (pendingSecureAction === 'unlockEdit') {
                         document.getElementById('editClientName').readOnly = false;
                         editClientPhoneInput.readOnly = false;
@@ -1264,8 +1300,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         new bootstrap.Modal(confirmationModalEl).show();
                     }
                     pendingSecureAction = null;
-                }, 200); // 200ms é geralmente seguro para a animação de fade do Bootstrap.
+                }, { once: true }); // O listener só executa uma vez
 
+                passwordModalInstance.hide();
+                // ######### FIM DA CORREÇÃO #########
             } else {
                 passwordInput.classList.add('is-invalid');
                 passwordError.style.display = 'block';
