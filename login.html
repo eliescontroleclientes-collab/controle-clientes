@@ -12,43 +12,48 @@
 
 <body class="login-body">
 
-    <!-- ######### DIV PARA A ANIMAÇÃO DE PARTÍCULAS ######### -->
+    <!-- Camada de Animação de Partículas -->
     <div id="particles-js"></div>
 
-    <div class="login-container">
-        <div class="login-box">
-            <h2 class="text-center mb-4">Acessar Painel</h2>
-            <form id="login-form">
-                <div class="form-floating mb-3">
-                    <input type="text" class="form-control" id="username" placeholder="Usuário" required>
-                    <label for="username">Usuário</label>
-                </div>
-                <div class="form-floating mb-3">
-                    <input type="password" class="form-control" id="password" placeholder="Senha" required>
-                    <label for="password">Senha</label>
-                </div>
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary btn-lg" id="login-btn">
-                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
-                            style="display: none;"></span>
-                        Entrar
-                    </button>
-                </div>
-                <div id="login-error" class="text-danger text-center mt-3" style="display: none;">
-                    Usuário ou senha inválidos.
-                </div>
-            </form>
+    <!-- ######### NOVO WRAPPER PARA O CONTEÚDO PRINCIPAL ######### -->
+    <div class="login-wrapper">
+
+        <div class="login-container">
+            <div class="login-box">
+                <h2 class="text-center mb-4">Acessar Painel</h2>
+                <form id="login-form">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="username" placeholder="Usuário" required>
+                        <label for="username">Usuário</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="password" class="form-control" id="password" placeholder="Senha" required>
+                        <label for="password">Senha</label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="login-btn">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
+                                style="display: none;"></span>
+                            Entrar
+                        </button>
+                    </div>
+                    <div id="login-error" class="text-danger text-center mt-3" style="display: none;">
+                        Usuário ou senha inválidos.
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <!-- Player de Música -->
-    <audio id="background-music" src="/musica.mp3" autoplay loop muted></audio>
-    <div class="music-player">
-        <button id="volume-btn" class="btn btn-dark"><i class="bi bi-volume-mute-fill"></i></button>
-        <input type="range" id="volume-slider" class="form-range" min="0" max="100" value="0">
-    </div>
+        <!-- Player de Música -->
+        <audio id="background-music" src="/musica.mp3" autoplay loop muted></audio>
+        <div class="music-player">
+            <button id="volume-btn" class="btn btn-dark"><i class="bi bi-volume-mute-fill"></i></button>
+            <input type="range" id="volume-slider" class="form-range" min="0" max="100" value="0">
+        </div>
 
-    <!-- ######### SCRIPTS ATUALIZADOS ######### -->
+    </div>
+    <!-- ######### FIM DO WRAPPER ######### -->
+
     <script src="/libs/particles.min.js"></script>
     <script src="login.js"></script>
 </body>
