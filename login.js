@@ -8,11 +8,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const volumeBtn = document.getElementById('volume-btn');
     const volumeSlider = document.getElementById('volume-slider');
 
-    // Tenta dar play na música (navegadores modernos podem bloquear)
-    music.play().catch(error => console.log("Autoplay bloqueado pelo navegador. O usuário precisa interagir."));
+    // ######### INÍCIO DA LÓGICA DE AUTOPLAY CORRIGIDA #########
+    let hasInteracted = false;
+
+    // Função para tentar iniciar a música
+    const startMusic = () => {
+        if (!hasInteracted) {
+            hasInteracted = true;
+            music.play().catch(error => {
+                // Se ainda falhar, o navegador é muito restritivo. O usuário terá que clicar no botão de volume.
+                console.log("Autoplay falhou mesmo após interação. O usuário deve controlar manualmente.");
+            });
+        }
+    };
+
+    // Ouve o primeiro clique em qualquer lugar da página para iniciar a música
+    document.body.addEventListener('click', startMusic, { once: true });
+    // Também ouve a primeira vez que o usuário digita algo
+    usernameInput.addEventListener('keydown', startMusic, { once: true });
+    passwordInput.addEventListener('keydown', startMusic, { once: true });
+    // ######### FIM DA LÓGICA DE AUTOPLAY CORRIGIDA #########
+
 
     // Lógica do Player de Música
     volumeBtn.addEventListener('click', () => {
+        // Garante que a música tente tocar se for a primeira interação
+        startMusic();
+
         music.muted = !music.muted;
         if (music.muted) {
             volumeSlider.value = 0;
