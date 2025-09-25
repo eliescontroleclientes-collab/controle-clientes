@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // ######### NOVO: GUARDIÃO DE AUTENTICAÇÃO #########
+    if (sessionStorage.getItem('isAuthenticated') !== 'true') {
+        // Se não estiver autenticado, redireciona para a página de login.
+        window.location.href = '/login.html';
+        return; // Impede a execução do resto do script do painel.
+    }
     // --- ELEMENTOS DO DOM ---
     const clientListBody = document.getElementById('client-list-body');
     const panelPlaceholder = document.getElementById('panel-placeholder');

@@ -105,3 +105,51 @@
 .tooltip-text.green { background-color: #198754; }
 .tooltip-text.orange { background-color: #fd7e14; }
 .tooltip-text.red { background-color: #dc3545; }
+
+/* --- NOVOS ESTILOS PARA A PÁGINA DE LOGIN --- */
+.login-body {
+    background-image: url('/background.jpeg');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-container {
+    max-width: 400px;
+    width: 100%;
+}
+
+.login-box {
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 2.5rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(5px);
+}
+
+/* Player de Música */
+.music-player {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 10px 15px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    backdrop-filter: blur(5px);
+}
+
+.music-player .btn {
+    border-radius: 50%;
+}
+
+.music-player .form-range {
+    width: 100px;
+}
