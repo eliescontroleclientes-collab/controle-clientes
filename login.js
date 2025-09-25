@@ -8,31 +8,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const volumeBtn = document.getElementById('volume-btn');
     const volumeSlider = document.getElementById('volume-slider');
 
-    // ######### INÍCIO DA LÓGICA DE AUTOPLAY CORRIGIDA #########
     let hasInteracted = false;
 
-    // Função para tentar iniciar a música
     const startMusic = () => {
         if (!hasInteracted) {
             hasInteracted = true;
             music.play().catch(error => {
-                // Se ainda falhar, o navegador é muito restritivo. O usuário terá que clicar no botão de volume.
                 console.log("Autoplay falhou mesmo após interação. O usuário deve controlar manualmente.");
             });
         }
     };
 
-    // Ouve o primeiro clique em qualquer lugar da página para iniciar a música
     document.body.addEventListener('click', startMusic, { once: true });
-    // Também ouve a primeira vez que o usuário digita algo
     usernameInput.addEventListener('keydown', startMusic, { once: true });
     passwordInput.addEventListener('keydown', startMusic, { once: true });
-    // ######### FIM DA LÓGICA DE AUTOPLAY CORRIGIDA #########
 
 
     // Lógica do Player de Música
     volumeBtn.addEventListener('click', () => {
-        // Garante que a música tente tocar se for a primeira interação
         startMusic();
 
         music.muted = !music.muted;
@@ -40,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
             volumeSlider.value = 0;
             volumeBtn.innerHTML = '<i class="bi bi-volume-mute-fill"></i>';
         } else {
-            // Se o volume era 0, define um padrão
             if (music.volume === 0) {
                 music.volume = 0.5;
             }
@@ -94,4 +86,58 @@ document.addEventListener('DOMContentLoaded', () => {
             spinner.style.display = 'none';
         }
     });
+
+    // ######### INÍCIO DA INICIALIZAÇÃO DO PARTICLES.JS #########
+    particlesJS('particles-js', {
+        "particles": {
+            "number": {
+                "value": 160, // Quantidade de flocos
+                "density": {
+                    "enable": true,
+                    "value_area": 800
+                }
+            },
+            "color": {
+                "value": "#ffffff"
+            },
+            "shape": {
+                "type": "circle",
+            },
+            "opacity": {
+                "value": 0.5,
+                "random": true,
+            },
+            "size": {
+                "value": 3,
+                "random": true,
+            },
+            "line_linked": {
+                "enable": false
+            },
+            "move": {
+                "enable": true,
+                "speed": 1, // Velocidade da queda
+                "direction": "bottom",
+                "random": false,
+                "straight": false,
+                "out_mode": "out",
+                "bounce": false
+            }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": {
+                "onhover": {
+                    "enable": false
+                },
+                "onclick": {
+                    "enable": false
+                },
+                "resize": true
+            }
+        },
+        "retina_detect": true
+    });
+    // ######### FIM DA INICIALIZAÇÃO #########
+
 });
