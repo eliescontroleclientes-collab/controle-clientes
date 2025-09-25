@@ -1,10 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // INÍCIO: LÓGICA DO MODAL DE INSTRUÇÕES TEMPORÁRIAS
+    // Esta lógica exibe o modal de instruções uma vez por sessão.
+    const instructionsModalKey = 'instructionsModalShown';
+
+    if (sessionStorage.getItem(instructionsModalKey) !== 'true') {
+        // Usa um pequeno atraso para garantir que a interface principal carregue primeiro
+        setTimeout(() => {
+            const instructionsModalEl = document.getElementById('instructionsModal');
+            if (instructionsModalEl) {
+                const instructionsModal = new bootstrap.Modal(instructionsModalEl);
+                instructionsModal.show();
+            }
+        }, 500); // 500ms de atraso
+        sessionStorage.setItem(instructionsModalKey, 'true');
+    }
+    // FIM: LÓGICA DO MODAL DE INSTRUÇÕES TEMPORÁRIAS
+
     // ######### NOVO: GUARDIÃO DE AUTENTICAÇÃO #########
     if (sessionStorage.getItem('isAuthenticated') !== 'true') {
         // Se não estiver autenticado, redireciona para a página de login.
         window.location.href = '/login.html';
         return; // Impede a execução do resto do script do painel.
     }
+
     // --- ELEMENTOS DO DOM ---
     const clientListBody = document.getElementById('client-list-body');
     const panelPlaceholder = document.getElementById('panel-placeholder');

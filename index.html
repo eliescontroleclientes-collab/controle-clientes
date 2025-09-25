@@ -141,6 +141,12 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
                         <div class="btn-toolbar">
+                            <!-- COLE O BOTÃO AQUI -->
+                            <button class="btn btn-warning btn-sm me-2" id="show-instructions-btn"
+                                data-bs-toggle="modal" data-bs-target="#instructionsModal">
+                                <i class="bi bi-info-circle-fill"></i> Instruções
+                            </button>
+
                             <button class="btn btn-info btn-sm me-2" id="reminder-btn">
                                 <i class="bi bi-bell-fill"></i> Lembrete de Cobrança
                             </button>
@@ -606,6 +612,47 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- INÍCIO: MODAL DE INSTRUÇÕES TEMPORÁRIAS -->
+    <div class="modal fade" id="instructionsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="bi bi-info-circle-fill"></i> Instruções Importantes do Thony</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="lead">Eu (Thony) provavelmente estou dormindo, então sigam essas regras até eu acordar:
+                    </p>
+                    <ol>
+                        <li><strong>Não façam login os dois ao mesmo tempo</strong> para evitar conflitos de dados.</li>
+                        <li>Se quiserem, podem apagar os contratos de exemplo que estão aí.</li>
+                        <li>A senha para <strong>Excluir</strong> ou <strong>Resetar Pagamentos</strong> é a mesma senha
+                            do login.</li>
+                        <li>Preencham o <strong>ID do Cliente</strong> na ordem correta, de acordo com a planilha de
+                            vocês.</li>
+                        <li>Coloquem a <strong>Data do Cadastro</strong> original de cada cliente, mesmo para os que já
+                            estão em renovação (depois explico como funciona para renovar).</li>
+                        <li>O botão <strong>Lembrete de Cobrança</strong> só funciona para clientes com status
+                            "Pendente". Ele gera a mensagem e o link do WhatsApp.</li>
+                        <li>Para o Lembrete funcionar, o cliente precisa estar com o <strong>número de celular
+                                correto</strong> no cadastro e salvo no celular que vai enviar a mensagem.</li>
+                        <li>Sugiro começarem adicionando os clientes mais recentes, ou aqueles que têm parcelas
+                            pendentes ou começaram a pagar há pouco tempo. Assim já podem ir atualizando o calendário de
+                            pagamentos deles.</li>
+                        <li>Podem preencher os dados dos clientes sem medo. Depois eu ajudo a arrumar qualquer detalhe
+                            do calendário se for preciso.</li>
+                    </ol>
+                    <hr>
+                    <p class="text-center text-muted">Qualquer dúvida, me chame quando eu acordar. Bom trabalho!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi, fechar</button>
                 </div>
             </div>
         </div>
