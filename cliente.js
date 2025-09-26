@@ -85,25 +85,30 @@ document.addEventListener('DOMContentLoaded', () => {
         calendar.innerHTML = '';
         if (!paymentDates || paymentDates.length === 0) return;
 
+        // ### INÍCIO DA CORREÇÃO - LÓGICA DE DATA IDÊNTICA AO script.js ###
         const timeZone = 'America/Cuiaba';
-        const today = new Date(new Date().toLocaleString("en-US", { timeZone }));
-        today.setHours(0, 0, 0, 0); // Data de hoje (sem hora)
-        const todayTime = today.getTime();
+        // 1. Pega a data de hoje em Cuiabá como string 'YYYY-MM-DD'
+        const todayInCuiabaStr = new Date().toLocaleDateString('en-CA', { timeZone });
+        // 2. Cria um objeto Date representando a meia-noite UTC desse dia.
+        //    Isso garante uma comparação precisa com as datas do banco (que são UTC).
+        const cuiabaTodayUTCMidnight = new Date(todayInCuiabaStr + 'T00:00:00.000Z').getTime();
+        // ### FIM DA CORREÇÃO ###
 
         paymentDates.forEach(payment => {
             const dayDiv = document.createElement('div');
+            // As datas de pagamento já vêm como UTC do banco, então podemos criar o objeto Date diretamente
             const installmentDate = new Date(payment.date);
             const installmentTime = installmentDate.getTime();
 
             dayDiv.textContent = installmentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
             dayDiv.classList.add('calendar-day');
 
-            // ### LÓGICA DE CORES CORRIGIDA ###
+            // ### LÓGICA DE CORES USANDO A NOVA VARIÁVEL PRECISA ###
             if (payment.status === 'paid') {
                 dayDiv.classList.add('status-paid'); // Verde para pago
-            } else if (installmentTime < todayTime) {
+            } else if (installmentTime < cuiabaTodayUTCMidnight) {
                 dayDiv.classList.add('status-late'); // Vermelho para atrasado
-            } else if (installmentTime === todayTime) {
+            } else if (installmentTime === cuiabaTodayUTCMidnight) {
                 dayDiv.classList.add('status-pending'); // Amarelo para hoje (se pendente)
             } else {
                 // Nenhuma classe de cor especial para dias futuros pendentes
