@@ -101,6 +101,49 @@
     </div>
 
     <script src="cliente.js"></script>
+
+    <!-- ### INÍCIO DA ADIÇÃO: MODAL DE PAGAMENTO ### -->
+    <div class="modal fade" id="paymentDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-wallet-fill me-2"></i>Detalhes para Pagamento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Para regularizar sua situação até a data de hoje, realize o pagamento do valor
+                        total abaixo.</p>
+
+                    <div class="text-center my-4">
+                        <small class="text-uppercase">Valor Total a Pagar</small>
+                        <h1 class="display-4 fw-bold" id="modal-total-to-pay">R$ 0,00</h1>
+                        <p class="mb-0">(Valor das parcelas em atraso + juros acumulados)</p>
+                    </div>
+
+                    <hr>
+
+                    <h5 class="mb-3">Chave PIX para Pagamento</h5>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="modal-pix-key" readonly>
+                        <button class="btn btn-outline-secondary" type="button" id="copy-pix-key-btn">
+                            <i class="bi bi-clipboard"></i> Copiar
+                        </button>
+                    </div>
+
+                    <div class="alert alert-success mt-4" role="alert">
+                        <h4 class="alert-heading"><i class="bi bi-whatsapp"></i> Tudo Certo!</h4>
+                        <p>Após realizar o pagamento, por favor, envie o comprovante via WhatsApp para que possamos
+                            registrar e atualizar seu calendário.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ### FIM DA ADIÇÃO ### -->
+
 </body>
 
 </html>

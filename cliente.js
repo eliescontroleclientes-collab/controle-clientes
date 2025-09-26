@@ -5,6 +5,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardContent = document.getElementById('dashboard-content');
     const logoutBtn = document.getElementById('logout-btn');
 
+    // ### INÍCIO DA ADIÇÃO: CONSTANTES DO MODAL DE PAGAMENTO ###
+    const payNowBtn = document.getElementById('pay-now-btn');
+    const paymentDetailsModalEl = document.getElementById('paymentDetailsModal');
+    const modalTotalToPayEl = document.getElementById('modal-total-to-pay');
+    const modalPixKeyEl = document.getElementById('modal-pix-key');
+    const copyPixKeyBtn = document.getElementById('copy-pix-key-btn');
+    // ### FIM DA ADIÇÃO ###
+
     // Guardião de Autenticação
     if (!clientId) {
         window.location.href = '/cliente-login.html';
@@ -121,6 +129,51 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
         sessionStorage.removeItem('client_id');
         window.location.href = '/cliente-login.html';
+    });
+
+    // ### INÍCIO DA ADIÇÃO: LISTENERS DO MODAL DE PAGAMENTO ###
+    payNowBtn.addEventListener('click', async () => {
+        // Pega o valor total que já foi calculado e está no botão
+        const totalToPayText = document.getElementById('total-to-pay-now').textContent;
+        modalTotalToPayEl.textContent = totalToPayText;
+
+        // Limpa o campo da chave PIX e mostra um "carregando"
+        modalPixKeyEl.value = 'Buscando...';
+
+        const paymentModal = new bootstrap.Modal(paymentDetailsModalEl);
+        paymentModal.show();
+
+        // Busca a chave PIX da API
+        try {
+            const response = await fetch('/api/get-config?name=pix_key');
+            const data = await response.json();
+
+            if (data.value) {
+                modalPixKeyEl.value = data.value;
+            } else {
+                modalPixKeyEl.value = 'Chave PIX não configurada.';
+            }
+        } catch (error) {
+            console.error('Erro ao buscar chave PIX:', error);
+            modalPixKeyEl.value = 'Erro ao buscar a chave.';
+        }
+    });
+
+    copyPixKeyBtn.addEventListener('click', () => {
+        modalPixKeyEl.select();
+        document.execCommand('copy');
+
+        // Feedback visual para o usuário
+        const originalText = copyPixKeyBtn.innerHTML;
+        copyPixKeyBtn.innerHTML = '<i class="bi bi-clipboard-check"></i> Copiado!';
+        copyPixKeyBtn.classList.remove('btn-outline-secondary');
+        copyPixKeyBtn.classList.add('btn-success');
+
+        setTimeout(() => {
+            copyPixKeyBtn.innerHTML = originalText;
+            copyPixKeyBtn.classList.remove('btn-success');
+            copyPixKeyBtn.classList.add('btn-outline-secondary');
+        }, 2000);
     });
 
     // ### INÍCIO DA ADIÇÃO: INICIALIZAÇÃO DO RELÓGIO ###
