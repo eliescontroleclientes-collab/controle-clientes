@@ -63,6 +63,18 @@ export default async function handler(req, res) {
             }
         });
 
+        // ### INÍCIO DA ADIÇÃO DA LÓGICA ###
+        let todayInstallmentStatus = 'Em Dia'; // Padrão
+        const todayInstallment = client.paymentDates.find(p => {
+            const installmentDate = new Date(p.date);
+            return installmentDate.getTime() === today.getTime();
+        });
+
+        if (todayInstallment && todayInstallment.status !== 'paid') {
+            todayInstallmentStatus = 'Pendente';
+        }
+        // ### FIM DA ADIÇÃO DA LÓGICA ###
+
         const totalToPayNow = totalPrincipalLate + totalInterest;
         const totalInstallments = client.installments;
 
@@ -77,7 +89,8 @@ export default async function handler(req, res) {
             totalInstallments: totalInstallments,
             lateInstallments: lateInstallmentsCount,
             totalInterest: totalInterest,
-            totalToPayNow: totalToPayNow
+            totalToPayNow: totalToPayNow,
+            todayInstallmentStatus: todayInstallmentStatus
         };
 
         res.status(200).json(responseData);
