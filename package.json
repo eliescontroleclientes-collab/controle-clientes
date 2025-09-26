@@ -5,6 +5,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.893.0",
     "@aws-sdk/s3-request-presigner": "^3.893.0",
+    "bcryptjs": "^3.0.2",
     "exceljs": "^4.4.0",
     "multiparty": "^4.2.3",
     "pg": "^8.11.3"

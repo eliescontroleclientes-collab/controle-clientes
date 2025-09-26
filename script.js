@@ -35,6 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
     const downloadSheetBtn = document.getElementById('download-sheet-btn');
     const downloadSpinner = document.getElementById('download-spinner');
+    const configInterestBtn = document.getElementById('config-interest-btn');
+    const interestConfigModalEl = document.getElementById('interestConfigModal');
+    const interestRateInput = document.getElementById('interestRateInput');
+    const saveInterestBtn = document.getElementById('save-interest-btn');
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -1273,6 +1277,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmationModalTitle.textContent = 'Confirmar Reset';
                         confirmationModalBody.textContent = `Tem certeza que deseja resetar TODOS os pagamentos e o saldo deste cliente?`;
                         new bootstrap.Modal(confirmationModalEl).show();
+
+                        // ### INÍCIO DA ADIÇÃO: LÓGICA PARA ABRIR MODAL DE JUROS ###
+                    } else if (pendingSecureAction === 'configInterest') {
+                        // Busca o valor atual para preencher o campo
+                        try {
+                            const response = await fetch('/api/get-config?name=juros_cliente');
+                            const data = await response.json();
+                            interestRateInput.value = data.value || '';
+                        } catch (error) {
+                            console.error("Erro ao buscar taxa de juros:", error);
+                            interestRateInput.value = ''; // Limpa em caso de erro
+                        }
+                        new bootstrap.Modal(interestConfigModalEl).show();
                     }
                     pendingSecureAction = null;
                 }, { once: true }); // O listener só executa uma vez
@@ -1336,6 +1353,38 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingSecureAction = 'unlockEdit';
         const passwordModal = new bootstrap.Modal(passwordModalEl);
         passwordModal.show();
+    });
+
+    configInterestBtn.addEventListener('click', () => {
+        pendingSecureAction = 'configInterest';
+        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        passwordModal.show();
+    });
+
+    saveInterestBtn.addEventListener('click', async () => {
+        const newInterestRate = interestRateInput.value;
+        if (newInterestRate === '' || isNaN(parseFloat(newInterestRate))) {
+            alert('Por favor, insira um valor numérico válido para os juros.');
+            return;
+        }
+
+        saveInterestBtn.disabled = true;
+        try {
+            await fetch('/api/save-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'juros_cliente', value: newInterestRate })
+            });
+
+            alert('Taxa de juros salva com sucesso!');
+            bootstrap.Modal.getInstance(interestConfigModalEl).hide();
+
+        } catch (error) {
+            console.error("Erro ao salvar taxa de juros:", error);
+            alert("Não foi possível salvar a nova taxa de juros.");
+        } finally {
+            saveInterestBtn.disabled = false;
+        }
     });
 
     // --- INICIALIZAÇÃO ---
