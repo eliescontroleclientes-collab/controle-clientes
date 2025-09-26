@@ -243,6 +243,23 @@
                                 <input type="url" class="form-control" id="location"
                                     placeholder="https://maps.app.goo.gl/...">
                             </div>
+
+                            <!-- ### INÍCIO DA ADIÇÃO: CREDENCIAIS DO CLIENTE ### -->
+                            <div class="col-12">
+                                <p class="text-muted small mb-1">Opcional: Crie um acesso para o cliente no portal.</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="clientUsername" class="form-label">Usuário do Cliente</label>
+                                <input type="text" class="form-control" id="clientUsername"
+                                    placeholder="Ex: nome.sobrenome">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="clientPassword" class="form-label">Senha do Cliente</label>
+                                <input type="password" class="form-control" id="clientPassword"
+                                    placeholder="Mínimo 6 caracteres">
+                            </div>
+                            <!-- ### FIM DA ADIÇÃO ### -->
+
                         </div>
                         <hr>
                         <div class="row">
@@ -341,6 +358,22 @@
                                 <input type="url" class="form-control" id="editLocation"
                                     placeholder="https://maps.app.goo.gl/...">
                             </div>
+
+                            <!-- ### INÍCIO DA ADIÇÃO: CREDENCIAIS DO CLIENTE ### -->
+                            <div class="col-12">
+                                <p class="text-muted small mb-1">Acesso do cliente ao portal.</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editClientUsername" class="form-label">Usuário do Cliente</label>
+                                <input type="text" class="form-control" id="editClientUsername" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editClientPassword" class="form-label">Nova Senha</label>
+                                <input type="password" class="form-control" id="editClientPassword"
+                                    placeholder="Deixe em branco para não alterar" readonly>
+                            </div>
+                            <!-- ### FIM DA ADIÇÃO ### -->
+
                         </div>
                         <hr>
                         <div class="row">

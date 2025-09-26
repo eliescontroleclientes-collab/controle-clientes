@@ -83,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const newClientFileInput = document.getElementById('new-client-file-input');
     const newClientFileList = document.getElementById('new-client-file-list');
     const saveClientBtn = document.getElementById('save-client-btn');
+    const clientUsernameInput = document.getElementById('clientUsername');
+    const clientPasswordInput = document.getElementById('clientPassword');
     // --- ELEMENTOS DO MODAL DE EDIÇÃO ---
     const editClientModalEl = document.getElementById('editClientModal');
     const editClientForm = document.getElementById('edit-client-form');
@@ -100,6 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveEditBtn = document.getElementById('save-edit-btn');
     const renewClientBtn = document.getElementById('renew-client-btn');
     const originalClientIdInput = document.getElementById('originalClientId');
+    const editClientUsernameInput = document.getElementById('editClientUsername');
+    const editClientPasswordInput = document.getElementById('editClientPassword');
     // --- ELEMENTOS DO RELÓGIO E MODAIS DE PAGAMENTO/SENHA ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
@@ -624,6 +628,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     addClientModalEl.addEventListener('hidden.bs.modal', () => {
         addClientForm.reset();
+        clientUsernameInput.value = '';
+        clientPasswordInput.value = '';
         newClientFiles = [];
         renderNewClientFileList();
         togglePaymentFrequency();
@@ -667,6 +673,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(err.error || 'Falha ao criar o registro do cliente.');
             }
             const newClient = await response.json();
+
+            // ### INÍCIO DA ADIÇÃO: LÓGICA PARA CRIAR LOGIN DO CLIENTE ###
+            const clientUsername = clientUsernameInput.value.trim();
+            const clientPassword = clientPasswordInput.value.trim();
+
+            if (clientUsername && clientPassword) {
+                try {
+                    const loginResponse = await fetch('/api/client-auth', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            clientId: newClient.id,
+                            username: clientUsername,
+                            password: clientPassword
+                        })
+                    });
+                    if (!loginResponse.ok) {
+                        const loginError = await loginResponse.json();
+                        // Alerta o admin se o cliente foi criado mas o login falhou
+                        alert(`Cliente #${newClient.id} criado, mas falha ao criar o login: ${loginError.error}`);
+                    }
+                } catch (loginError) {
+                    alert(`Cliente #${newClient.id} criado, mas ocorreu um erro de conexão ao criar o login.`);
+                }
+            }
+            // ### FIM DA ADIÇÃO ###
+
             if (newClientFiles.length > 0) {
                 const uploadPromises = newClientFiles.map(file => {
                     const formData = new FormData();
@@ -801,6 +834,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editFreqDaily').checked = true;
         }
 
+        // ### INÍCIO DA ADIÇÃO ###
+        // Limpa os campos de login para uma nova edição
+        editClientUsernameInput.value = ''; // Poderíamos buscar o user atual no futuro
+        editClientPasswordInput.value = '';
+        // ### FIM DA ADIÇÃO ###
+
         modal.show();
     });
 
@@ -824,6 +863,33 @@ document.addEventListener('DOMContentLoaded', () => {
             clients[clientIndex] = updatedClient;
             renderClientPanel(clientId);
         }
+
+        // ### INÍCIO DA ADIÇÃO: LÓGICA PARA ATUALIZAR LOGIN DO CLIENTE ###
+        const clientUsername = editClientUsernameInput.value.trim();
+        const clientPassword = editClientPasswordInput.value.trim();
+
+        // Só atualiza se o usuário e senha (opcional) foram preenchidos
+        if (clientUsername) {
+            try {
+                const loginResponse = await fetch('/api/client-auth', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        clientId: clientId,
+                        username: clientUsername,
+                        password: clientPassword // A API vai ignorar a senha se ela for vazia
+                    })
+                });
+                if (!loginResponse.ok) {
+                    const loginError = await loginResponse.json();
+                    alert(`Falha ao atualizar o login do cliente: ${loginError.error}`);
+                }
+            } catch (loginError) {
+                alert(`Ocorreu um erro de conexão ao atualizar o login do cliente.`);
+            }
+        }
+        // ### FIM DA ADIÇÃO ###
+
 
         // Garante que o modal seja fechado corretamente
         const editModalInstance = bootstrap.Modal.getInstance(editClientModalEl);
@@ -1265,6 +1331,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         editProfessionInput.readOnly = false;
                         editNeighborhoodInput.readOnly = false;
                         editLocationInput.readOnly = false;
+                        editClientUsernameInput.readOnly = false;
+                        editClientPasswordInput.readOnly = false;
                         unlockEditBtn.classList.add('d-none');
                         saveEditBtn.classList.remove('d-none');
                     } else if (pendingSecureAction === 'delete') {
