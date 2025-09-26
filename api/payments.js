@@ -31,58 +31,43 @@ export default async function handler(req, res) {
         let paymentDates = client.paymentDates || [];
         const installmentValue = parseFloat(client.dailyValue);
 
-        // ######### INÍCIO DA NOVA LÓGICA HIERÁRQUICA E CONTEXTUAL #########
+        // ######### INÍCIO DA LÓGICA CORRIGIDA #########
 
-        // Helper function para quitar uma parcela e evitar repetição de código
+        // Helper para quitar uma parcela. Continua igual.
         const payInstallment = (installment) => {
-            // Garante que a parcela existe, não está paga e que há saldo suficiente
             if (installment && installment.status !== 'paid' && currentBalance >= installmentValue) {
                 currentBalance -= installmentValue;
                 installment.status = 'paid';
                 installment.paidAt = new Date(paymentDate + 'T00:00:00.000Z').toISOString();
+                return true; // Retorna true se a parcela foi paga
             }
+            return false; // Retorna false se não foi paga
         };
 
-        // Define as datas de referência
         const referenceDateTime = new Date(paymentDate + 'T00:00:00.000Z').getTime();
-        const timeZone = 'America/Cuiaba';
-        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
 
-        // 1. Separa todas as parcelas pendentes em categorias baseadas na data de referência
-        const allPendingInstallments = paymentDates.filter(p => p.status !== 'paid');
-
-        const referenceInstallment = allPendingInstallments.find(p => new Date(p.date).getTime() === referenceDateTime);
-        const pastDueInstallments = allPendingInstallments
-            .filter(p => new Date(p.date).getTime() < referenceDateTime)
-            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Mais antigas primeiro
-
-        const todayInstallment = allPendingInstallments.find(p => p.date.startsWith(todayInCuiaba) && new Date(p.date).getTime() !== referenceDateTime);
-
-        const futureInstallments = allPendingInstallments
-            .filter(p => ![referenceInstallment, ...pastDueInstallments, todayInstallment].includes(p))
-            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Mais próximas primeiro
-
-        // 2. Aplica o pagamento seguindo a hierarquia definitiva
-
-        // Prioridade 1: A parcela da data de referência
+        // 1. Tenta pagar a parcela da data de referência primeiro, se ela existir e estiver pendente.
+        const referenceInstallment = paymentDates.find(p => new Date(p.date).getTime() === referenceDateTime);
         payInstallment(referenceInstallment);
 
-        // Prioridade 2: Todas as parcelas ANTERIORES à data de referência (da mais antiga para a mais nova)
-        for (const payment of pastDueInstallments) {
+        // 2. Cria UMA ÚNICA LISTA com TODAS as outras parcelas pendentes.
+        //    Isso remove a separação complexa e fonte do bug entre passado, hoje e futuro.
+        let remainingPendingInstallments = paymentDates
+            .filter(p => p.status !== 'paid')
+            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Ordena da mais antiga para a mais nova.
+
+        // 3. Itera sobre a fila ordenada, pagando uma por uma até o saldo acabar.
+        //    Esta é a correção principal: ele sempre pagará a próxima parcela cronológica disponível.
+        for (const payment of remainingPendingInstallments) {
+            if (currentBalance < installmentValue) {
+                break; // Para o loop se não houver mais saldo para a próxima parcela.
+            }
             payInstallment(payment);
         }
 
-        // Prioridade 3: A parcela do dia atual (se ainda não foi paga e sobrar saldo)
-        payInstallment(todayInstallment);
+        // ######### FIM DA LÓGICA CORRIGIDA #########
 
-        // Prioridade 4: Todas as parcelas futuras (da mais próxima para a mais distante)
-        for (const payment of futureInstallments) {
-            payInstallment(payment);
-        }
-
-        // ######### FIM DA NOVA LÓGICA #########
-
-        // 3. Atualiza o cliente com o novo saldo e o status das parcelas
+        // 4. Atualiza o cliente com o novo saldo e o status das parcelas
         const updateQuery = 'UPDATE clients SET saldo = $1, "paymentDates" = $2 WHERE id = $3 RETURNING *';
         const updatedResult = await db.query(updateQuery, [currentBalance.toFixed(2), JSON.stringify(paymentDates), clientId]);
 
