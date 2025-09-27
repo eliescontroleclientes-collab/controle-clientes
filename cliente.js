@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalTotalToPayEl = document.getElementById('modal-total-to-pay');
     const modalPixKeyEl = document.getElementById('modal-pix-key');
     const copyPixKeyBtn = document.getElementById('copy-pix-key-btn');
+    const faqSection = document.getElementById('faq-section');
 
     const formatCurrency = (value) => {
         if (isNaN(value)) return "R$ 0,00";
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Mostra o conteúdo e esconde o spinner
             loadingSpinner.classList.add('d-none');
             dashboardContent.classList.remove('d-none');
+            faqSection.classList.add('show');
 
             // ### CORREÇÃO: LIGAR OS EVENTOS DEPOIS QUE O DASHBOARD ESTÁ VISÍVEL ###
             setupEventListeners();
