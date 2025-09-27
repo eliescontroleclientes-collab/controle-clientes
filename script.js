@@ -130,10 +130,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const pixKeyDisplay = document.getElementById('pixKeyDisplay');
     const changePixKeyBtn = document.getElementById('change-pix-key-btn');
     const sendRemindersBtn = document.getElementById('send-reminders-btn');
+    const paginationControls = document.getElementById('pagination-controls');
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
     let selectedClientId = null;
+    let allClientsForSearch = []; // Guarda todos os clientes para a busca funcionar
+    let currentPage = 1;
+    const clientsPerPage = 15; // Você pode ajustar este número
+    let totalClients = 0;
     let newClientFiles = [];
     let clientsToRemind = []; // Guarda a lista de clientes para notificar
     let pendingSecureAction = null; // Guarda a ação a ser executada após a senha
@@ -309,10 +314,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE API ---
     async function loadClients() {
         try {
-            const response = await fetch('/api/clients');
+            // Agora busca os dados da página atual
+            const response = await fetch(`/api/clients?page=${currentPage}&limit=${clientsPerPage}`);
             if (!response.ok) throw new Error('Falha ao carregar clientes.');
-            clients = await response.json();
+
+            // A resposta agora é um objeto com 'clients' e 'total'
+            const data = await response.json();
+            clients = data.clients;
+            totalClients = data.total;
+
             renderClientList();
+            renderPaginationControls(); // Chama a nova função para criar os botões
+
+            // Carrega todos os clientes em segundo plano para a busca
+            fetchAllClientsForSearch();
         } catch (error) {
             console.error('Erro em loadClients:', error);
             alert('Não foi possível carregar os clientes do servidor.');
@@ -564,7 +579,96 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Esta função busca todos os clientes uma vez para a busca funcionar em todas as páginas
+    async function fetchAllClientsForSearch() {
+        try {
+            // Usamos uma página com um limite muito alto para simular "buscar todos"
+            // Em um sistema com milhares de clientes, uma rota de API específica para busca seria melhor
+            const response = await fetch(`/api/clients?page=1&limit=9999`);
+            const data = await response.json();
+            allClientsForSearch = data.clients;
+        } catch (error) {
+            console.error('Erro ao buscar todos os clientes para pesquisa:', error);
+        }
+    }
+
+    // Esta função cria os botões de navegação da página
+    function renderPaginationControls() {
+        paginationControls.innerHTML = '';
+        const totalPages = Math.ceil(totalClients / clientsPerPage);
+
+        if (totalPages <= 1) return; // Não mostra controles se houver apenas uma página
+
+        // Botão "Anterior"
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}">Anterior</a>`;
+        paginationControls.appendChild(prevLi);
+
+        // Botões de Página
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+            paginationControls.appendChild(li);
+        }
+
+        // Botão "Próximo"
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}">Próximo</a>`;
+        paginationControls.appendChild(nextLi);
+    }
+
+    // Modificamos a função de filtro para usar a lista completa e não a paginada
+    function filterClientList() {
+        const searchTerm = searchInput.value.toLowerCase();
+
+        // Se a busca estiver vazia, mostramos a lista paginada normal
+        if (!searchTerm) {
+            renderClientList(); // Re-renderiza a página atual
+            paginationControls.style.display = 'flex'; // Garante que a paginação esteja visível
+            return;
+        }
+
+        // Se houver busca, esconde a paginação e mostra os resultados
+        paginationControls.style.display = 'none';
+        clientListBody.innerHTML = '';
+
+        const filteredClients = allClientsForSearch.filter(client => {
+            const idMatch = client.id.toString().toLowerCase().includes(searchTerm);
+            const nameMatch = client.name.toLowerCase().includes(searchTerm);
+            return idMatch || nameMatch;
+        });
+
+        if (filteredClients.length === 0) {
+            clientListBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum cliente encontrado.</td></tr>';
+            return;
+        }
+
+        // Renderiza apenas os clientes filtrados
+        filteredClients.forEach(client => {
+            const tr = document.createElement('tr');
+            tr.dataset.clientId = client.id;
+            tr.className = client.id === selectedClientId ? 'table-active' : '';
+            const status = calculateClientStatus(client); // Usamos a função global
+            const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
+            tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
+            clientListBody.appendChild(tr);
+        });
+    }
+
     // --- EVENT LISTENERS ---
+
+    paginationControls.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = e.target.closest('a');
+        if (!target || target.parentElement.classList.contains('disabled') || target.parentElement.classList.contains('active')) {
+            return;
+        }
+        currentPage = parseInt(target.dataset.page, 10);
+        loadClients();
+    });
 
     clientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     clientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));

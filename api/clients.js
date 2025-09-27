@@ -12,8 +12,22 @@ export default async function handler(req, res) {
         const db = await pool.connect();
 
         if (req.method === 'GET') {
-            const result = await db.query('SELECT * FROM clients ORDER BY id ASC');
-            res.status(200).json(result.rows);
+            // 1. Pega os parâmetros da URL ou usa valores padrão
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 15; // Define 15 clientes por página como padrão
+            const offset = (page - 1) * limit;
+
+            // 2. Faz duas consultas: uma para pegar o total de clientes e outra para pegar a página atual
+            const totalResult = await db.query('SELECT COUNT(*) AS total FROM clients');
+            const totalClients = parseInt(totalResult.rows[0].total, 10);
+
+            const result = await db.query('SELECT * FROM clients ORDER BY id ASC LIMIT $1 OFFSET $2', [limit, offset]);
+
+            // 3. Retorna um objeto contendo os clientes da página e o total
+            res.status(200).json({
+                clients: result.rows,
+                total: totalClients
+            });
         }
         else if (req.method === 'POST') {
             const { id, name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, localizacao, bairro, profissao, original_client_id } = req.body;
