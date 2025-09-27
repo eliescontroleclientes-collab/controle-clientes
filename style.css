@@ -177,3 +177,24 @@
     z-index: 9999; 
     pointer-events: none;
 }
+
+/* Para tablets (telas com menos de 992px de largura) */
+@media (max-width: 991.98px) {
+    .calendar-grid {
+        /* Mostra 4 dias por linha, mais legível */
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px; /* Espaçamento um pouco menor */
+    }
+    .calendar-day {
+        padding: 8px; /* Padding um pouco menor */
+        font-size: 0.9rem; /* Fonte um pouco menor */
+    }
+}
+
+/* Para celulares (telas com menos de 576px de largura) */
+@media (max-width: 575.98px) {
+    .calendar-grid {
+        /* Mostra 3 dias por linha, ideal para celulares */
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
