@@ -54,24 +54,32 @@ export default async function handler(req, res) {
                 lateInstallmentsCount++;
                 totalPrincipalLate += installmentValue;
 
+                // Calcula a diferença de dias (incluindo fins de semana)
                 const diffTime = Math.abs(today - installmentDate);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                // Calcula o juro para esta parcela e adiciona ao total
                 totalInterest += diffDays * installmentValue * (interestRate / 100);
             }
         });
 
-        // ### INÍCIO DA CORREÇÃO ###
-        // 1. A base do pagamento são as parcelas atrasadas e seus juros.
-        let totalToPayNow = totalPrincipalLate + totalInterest;
-
-        // 2. Verifica se existe uma parcela para hoje e se ela está pendente.
+        // ### INÍCIO DA ADIÇÃO DA LÓGICA ###
+        let todayInstallmentStatus = 'Em Dia'; // Padrão
         const todayInstallment = client.paymentDates.find(p => {
             const installmentDate = new Date(p.date);
-            return installmentDate.getTime() === today.getTime() && p.status !== 'paid';
+            return installmentDate.getTime() === today.getTime();
         });
 
-        // 3. Se existir, adiciona o valor dela ao total a pagar.
-        if (todayInstallment) {
+        if (todayInstallment && todayInstallment.status !== 'paid') {
+            todayInstallmentStatus = 'Pendente';
+        }
+        // ### FIM DA ADIÇÃO DA LÓGICA ###
+
+        // ### INÍCIO DA CORREÇÃO: CÁLCULO DO VALOR TOTAL ###
+        let totalToPayNow = totalPrincipalLate + totalInterest;
+
+        // Adiciona o valor da parcela de hoje, se ela estiver pendente
+        if (todayInstallmentStatus === 'Pendente') {
             totalToPayNow += installmentValue;
         }
         // ### FIM DA CORREÇÃO ###
