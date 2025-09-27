@@ -567,18 +567,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function filterClientList() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const rows = clientListBody.querySelectorAll('tr');
-
-        rows.forEach(row => {
-            const idCell = row.cells[0].textContent.toLowerCase();
-            const nameCell = row.cells[1].textContent.toLowerCase();
-            const isVisible = idCell.includes(searchTerm) || nameCell.includes(searchTerm);
-            row.style.display = isVisible ? '' : 'none';
-        });
-    }
-
     // Esta função busca todos os clientes uma vez para a busca funcionar em todas as páginas
     async function fetchAllClientsForSearch() {
         try {
