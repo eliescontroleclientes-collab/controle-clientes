@@ -368,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
             clientListBody.appendChild(tr);
         });
-        filterClientList();
     }
 
     function renderClientPanel(clientId) {
