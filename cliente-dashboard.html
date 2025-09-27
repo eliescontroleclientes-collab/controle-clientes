@@ -108,63 +108,62 @@
         <div class="card-body">
             <div class="accordion" id="faqAccordion">
 
-                <!-- Item 1: O que acontece se eu atrasar 1 dia? -->
+                <!-- Item 1: Atraso de 1 dia -->
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingOne">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                            <strong>1. O que acontece se eu atrasar o pagamento da minha parcela por 1 dia?</strong>
+                        <button class="accordion-button collapsed justify-content-center" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false"
+                            aria-controls="collapseOne">
+                            <strong>1. O que acontece se eu atrasar o pagamento da minha parcela?</strong>
                         </button>
                     </h2>
                     <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne"
                         data-bs-parent="#faqAccordion">
                         <div class="accordion-body">
-                            <p>Se sua parcela é de, por exemplo, R$ 50,00 e você atrasa um dia, o cálculo será:</p>
-                            <ul>
-                                <li>O valor da parcela: <strong>R$ 50,00</strong></li>
-                                <li>Juros de 1 dia de atraso (20% de R$ 50,00): <strong>R$ 10,00</strong></li>
-                                <li><strong>Total a pagar por essa parcela: R$ 60,00</strong></li>
-                            </ul>
+                            <p>A partir do primeiro dia de atraso, o sistema calcula um juro diário sobre o valor da
+                                parcela pendente. Esse juro será adicionado ao montante total que você deve.</p>
+                            <p class="mb-0"><strong>Exemplo:</strong> Se sua taxa de juros é de 20% e a parcela é de R$
+                                100,00, a cada dia de atraso serão somados R$ 20,00 de juros a essa parcela específica.
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Item 2: E se eu atrasar por mais dias? -->
+                <!-- Item 2: Atraso de vários dias -->
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingTwo">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                            <strong>2. E se eu atrasar o pagamento por 3 dias?</strong>
+                        <button class="accordion-button collapsed justify-content-center" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false"
+                            aria-controls="collapseTwo">
+                            <strong>2. O juro aumenta a cada dia?</strong>
                         </button>
                     </h2>
                     <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
                         data-bs-parent="#faqAccordion">
                         <div class="accordion-body">
-                            <p>O juro é calculado por dia. Usando o mesmo exemplo da parcela de R$ 50,00:</p>
-                            <ul>
-                                <li>O valor da parcela: <strong>R$ 50,00</strong></li>
-                                <li>Juros de 3 dias de atraso (3 dias x R$ 10,00 de juro diário): <strong>R$
-                                        30,00</strong></li>
-                                <li><strong>Total a pagar por essa parcela: R$ 80,00</strong></li>
-                            </ul>
+                            Sim, os juros são cumulativos. O valor do juro diário é fixo (uma porcentagem do valor da
+                            parcela), mas ele é somado a cada novo dia de atraso.
+                            <p class="mt-2 mb-0"><strong>Exemplo:</strong> Para uma parcela de R$ 100,00 com juro diário
+                                de R$ 20,00, um atraso de 3 dias resultará em R$ 60,00 de juros totais (3 dias x R$
+                                20,00).</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Item 3: Juros nos fins de semana -->
+                <!-- Item 3: Fins de semana -->
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingThree">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                            <strong>3. Os juros são cobrados nos fins de semana também?</strong>
+                        <button class="accordion-button collapsed justify-content-center" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false"
+                            aria-controls="collapseThree">
+                            <strong>3. Os juros são cobrados nos fins de semana?</strong>
                         </button>
                     </h2>
                     <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree"
                         data-bs-parent="#faqAccordion">
                         <div class="accordion-body">
-                            <strong>Sim.</strong> O cálculo considera todos os dias do calendário, incluindo sábados e
-                            domingos. Se uma parcela vence na sexta-feira e você paga na segunda-feira, serão contados 3
-                            dias de atraso (sexta, sábado e domingo).
+                            <strong>Sim.</strong> O sistema conta todos os dias do calendário para o cálculo do atraso,
+                            incluindo sábados, domingos e feriados.
                         </div>
                     </div>
                 </div>
@@ -172,23 +171,18 @@
                 <!-- Item 4: Várias parcelas atrasadas -->
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingFour">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
-                            <strong>4. Se eu tiver várias parcelas atrasadas, como o juro é calculado?</strong>
+                        <button class="accordion-button collapsed justify-content-center" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false"
+                            aria-controls="collapseFour">
+                            <strong>4. Como o juro é calculado para várias parcelas atrasadas?</strong>
                         </button>
                     </h2>
                     <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour"
                         data-bs-parent="#faqAccordion">
                         <div class="accordion-body">
-                            <p>O sistema calcula os juros para <strong>cada parcela atrasada individualmente</strong> e
-                                depois soma tudo. Por exemplo:</p>
-                            <ul>
-                                <li>Você tem uma parcela de R$ 50,00 atrasada há 5 dias (Juros: 5 x R$ 10 = R$ 50,00).
-                                </li>
-                                <li>E outra parcela de R$ 50,00 atrasada há 2 dias (Juros: 2 x R$ 10 = R$ 20,00).</li>
-                            </ul>
-                            <p>Para ficar em dia, você precisaria pagar as duas parcelas (R$ 100,00) mais a soma dos
-                                juros (R$ 70,00), totalizando <strong>R$ 170,00</strong>.</p>
+                            O sistema calcula os dias de atraso e os juros correspondentes para <strong>cada parcela
+                                individualmente</strong> e depois soma tudo. O valor total a pagar será a soma de todas
+                            as parcelas atrasadas mais a soma de todos os juros calculados.
                         </div>
                     </div>
                 </div>
@@ -196,9 +190,10 @@
                 <!-- Item 5: Botão Pagar Agora -->
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingFive">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
-                            <strong>5. O valor que aparece no botão "Pagar Agora" já inclui tudo?</strong>
+                        <button class="accordion-button collapsed justify-content-center" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false"
+                            aria-controls="collapseFive">
+                            <strong>5. O que está incluído no valor do botão "Pagar Agora"?</strong>
                         </button>
                     </h2>
                     <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive"
@@ -207,21 +202,18 @@
                             <strong>Sim.</strong> O valor no botão "Pagar Agora" é a <strong>soma de tudo o que está
                                 pendente até o dia de hoje</strong>:
                             <ul>
-                                <li>Todas as suas parcelas que venceram e não foram pagas.</li>
-                                <li>Todos os juros calculados sobre essas parcelas atrasadas.</li>
-                                <li>O valor da sua parcela do dia de hoje (se ela ainda não foi paga).</li>
+                                <li>O valor principal de todas as suas parcelas vencidas e não pagas.</li>
+                                <li>A soma de todos os juros calculados sobre essas parcelas atrasadas.</li>
+                                <li>O valor da sua parcela do dia de hoje (se houver uma e ela não foi paga).</li>
                             </ul>
-                            Ao pagar o valor total exibido, você quita todas as suas pendências e deixa sua situação
-                            regularizada.
+                            Pagar este valor total regulariza completamente sua situação até a data atual.
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    <!-- ### FIM DA ADIÇÃO: SEÇÃO DE DÚVIDAS FREQUENTES (FAQ) ### -->
+            <!-- FIM DA SUBSTITUIÇÃO -->
 
-    </div> <!-- FIM DO #DASHBOARD-CONTENT -->
+        </div> <!-- FIM DO #DASHBOARD-CONTENT -->
     </div> <!-- FIM DO CONTAINER -->
 
     <!-- ### INÍCIO DA ADIÇÃO: MODAL DE PAGAMENTO ### -->
