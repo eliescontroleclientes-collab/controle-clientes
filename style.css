@@ -1,5 +1,6 @@
 /* Estilo para que a lista de clientes tenha rolagem se for muito grande */
 .table-responsive {
+    min-height: 70vh;
     max-height: 75vh;
     overflow-y: auto;
 }
