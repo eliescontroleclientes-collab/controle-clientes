@@ -100,6 +100,130 @@
         </div>
     </div>
 
+    <!-- ### INÍCIO DA ADIÇÃO: SEÇÃO DE DÚVIDAS FREQUENTES (FAQ) ### -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="bi bi-question-circle-fill me-2"></i>Dúvidas Frequentes sobre Juros</h5>
+        </div>
+        <div class="card-body">
+            <div class="accordion" id="faqAccordion">
+
+                <!-- Item 1: O que acontece se eu atrasar 1 dia? -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingOne">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                            <strong>1. O que acontece se eu atrasar o pagamento da minha parcela por 1 dia?</strong>
+                        </button>
+                    </h2>
+                    <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne"
+                        data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <p>Se sua parcela é de, por exemplo, R$ 50,00 e você atrasa um dia, o cálculo será:</p>
+                            <ul>
+                                <li>O valor da parcela: <strong>R$ 50,00</strong></li>
+                                <li>Juros de 1 dia de atraso (20% de R$ 50,00): <strong>R$ 10,00</strong></li>
+                                <li><strong>Total a pagar por essa parcela: R$ 60,00</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 2: E se eu atrasar por mais dias? -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingTwo">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                            <strong>2. E se eu atrasar o pagamento por 3 dias?</strong>
+                        </button>
+                    </h2>
+                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
+                        data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <p>O juro é calculado por dia. Usando o mesmo exemplo da parcela de R$ 50,00:</p>
+                            <ul>
+                                <li>O valor da parcela: <strong>R$ 50,00</strong></li>
+                                <li>Juros de 3 dias de atraso (3 dias x R$ 10,00 de juro diário): <strong>R$
+                                        30,00</strong></li>
+                                <li><strong>Total a pagar por essa parcela: R$ 80,00</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 3: Juros nos fins de semana -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingThree">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                            <strong>3. Os juros são cobrados nos fins de semana também?</strong>
+                        </button>
+                    </h2>
+                    <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree"
+                        data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <strong>Sim.</strong> O cálculo considera todos os dias do calendário, incluindo sábados e
+                            domingos. Se uma parcela vence na sexta-feira e você paga na segunda-feira, serão contados 3
+                            dias de atraso (sexta, sábado e domingo).
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 4: Várias parcelas atrasadas -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingFour">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                            <strong>4. Se eu tiver várias parcelas atrasadas, como o juro é calculado?</strong>
+                        </button>
+                    </h2>
+                    <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour"
+                        data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <p>O sistema calcula os juros para <strong>cada parcela atrasada individualmente</strong> e
+                                depois soma tudo. Por exemplo:</p>
+                            <ul>
+                                <li>Você tem uma parcela de R$ 50,00 atrasada há 5 dias (Juros: 5 x R$ 10 = R$ 50,00).
+                                </li>
+                                <li>E outra parcela de R$ 50,00 atrasada há 2 dias (Juros: 2 x R$ 10 = R$ 20,00).</li>
+                            </ul>
+                            <p>Para ficar em dia, você precisaria pagar as duas parcelas (R$ 100,00) mais a soma dos
+                                juros (R$ 70,00), totalizando <strong>R$ 170,00</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 5: Botão Pagar Agora -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingFive">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                            <strong>5. O valor que aparece no botão "Pagar Agora" já inclui tudo?</strong>
+                        </button>
+                    </h2>
+                    <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive"
+                        data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <strong>Sim.</strong> O valor no botão "Pagar Agora" é a <strong>soma de tudo o que está
+                                pendente até o dia de hoje</strong>:
+                            <ul>
+                                <li>Todas as suas parcelas que venceram e não foram pagas.</li>
+                                <li>Todos os juros calculados sobre essas parcelas atrasadas.</li>
+                                <li>O valor da sua parcela do dia de hoje (se ela ainda não foi paga).</li>
+                            </ul>
+                            Ao pagar o valor total exibido, você quita todas as suas pendências e deixa sua situação
+                            regularizada.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ### FIM DA ADIÇÃO: SEÇÃO DE DÚVIDAS FREQUENTES (FAQ) ### -->
+
+    </div> <!-- FIM DO #DASHBOARD-CONTENT -->
+    </div> <!-- FIM DO CONTAINER -->
+
     <!-- ### INÍCIO DA ADIÇÃO: MODAL DE PAGAMENTO ### -->
     <div class="modal fade" id="paymentDetailsModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
