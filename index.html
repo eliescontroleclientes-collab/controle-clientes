@@ -201,6 +201,49 @@
                 </div>
             </div>
         </div>
+
+        <!-- ### INÍCIO DA ADIÇÃO: RESUMO FINANCEIRO GERAL ### -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Resumo Financeiro Geral</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-cash-stack me-2 text-primary"></i>Total Emprestado</span>
+                                <strong id="summary-total-loaned">
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                </strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-arrow-down-circle-fill me-2 text-success"></i>Valor Total Recebido
+                                    (Principal)</span>
+                                <strong id="summary-total-received" class="text-success">
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                </strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>Valor Total em
+                                    Atraso (Principal)</span>
+                                <strong id="summary-total-overdue" class="text-danger">
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                </strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-percent me-2 text-warning"></i>Taxa de Inadimplência
+                                    (Parcelas)</span>
+                                <strong id="summary-default-rate" class="text-warning">
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                </strong>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ### FIM DA ADIÇÃO ### -->
     </div>
 
     <!-- Modal para Adicionar Novo Cliente -->

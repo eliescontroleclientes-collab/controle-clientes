@@ -1546,6 +1546,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    async function loadFinancialSummary() {
+        // Seleciona os elementos onde os valores serão exibidos
+        const totalLoanedEl = document.getElementById('summary-total-loaned');
+        const totalReceivedEl = document.getElementById('summary-total-received');
+        const totalOverdueEl = document.getElementById('summary-total-overdue');
+        const defaultRateEl = document.getElementById('summary-default-rate');
+
+        try {
+            const response = await fetch('/api/financial-summary');
+            if (!response.ok) {
+                throw new Error('Falha ao buscar dados do resumo.');
+            }
+            const data = await response.json();
+
+            // Preenche os elementos com os dados formatados
+            totalLoanedEl.textContent = formatCurrency(data.totalLoaned);
+            totalReceivedEl.textContent = formatCurrency(data.totalReceived);
+            totalOverdueEl.textContent = formatCurrency(data.totalOverduePrincipal);
+            defaultRateEl.textContent = `${data.defaultRate.toFixed(2)}%`;
+
+        } catch (error) {
+            console.error('Erro ao carregar resumo financeiro:', error);
+            // Em caso de erro, exibe uma mensagem no painel
+            const errorMessage = 'Erro ao carregar';
+            totalLoanedEl.textContent = errorMessage;
+            totalReceivedEl.textContent = errorMessage;
+            totalOverdueEl.textContent = errorMessage;
+            defaultRateEl.textContent = errorMessage;
+        }
+    }
+
     // --- INICIALIZAÇÃO ---
     function updateClock() {
         if (!clockTimeEl || !clockDateEl) return;
@@ -1566,4 +1597,5 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateClock, 1000);
 
     loadClients();
+    loadFinancialSummary();
 });
