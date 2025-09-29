@@ -801,6 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await Promise.all(uploadPromises);
             }
             await loadClients();
+            loadFinancialSummary();
             bootstrap.Modal.getInstance(addClientModalEl).hide();
         } catch (error) {
             console.error('Erro ao adicionar cliente:', error);
@@ -863,6 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderClientPanel(null);
             }
 
+            loadFinancialSummary();
             bootstrap.Modal.getInstance(paymentModalEl).hide();
 
         } catch (error) {
@@ -1480,6 +1482,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Falha ao excluir cliente.');
             await loadClients();
             renderClientPanel(null);
+            loadFinancialSummary();
         } catch (error) {
             console.error("Erro ao deletar:", error);
             alert("Não foi possível excluir o cliente.");
@@ -1501,6 +1504,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clients[clientIndex] = updatedClient;
             renderClientPanel(selectedClientId);
             alert('Pagamentos e saldo resetados com sucesso!');
+            loadFinancialSummary();
 
         } catch (error) {
             console.error("Erro ao resetar pagamentos:", error);
@@ -1578,6 +1582,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- INICIALIZAÇÃO ---
+
+    // ### INÍCIO DA ADIÇÃO: INICIALIZAÇÃO DOS TOOLTIPS DO BOOTSTRAP ###
+    // Este código procura por todos os elementos com o atributo 'data-bs-toggle="tooltip"'
+    // e ativa a funcionalidade de tooltip para eles.
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    // ### FIM DA ADIÇÃO ###
+
     function updateClock() {
         if (!clockTimeEl || !clockDateEl) return;
         const now = new Date();

@@ -218,22 +218,36 @@
                                 </strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-arrow-down-circle-fill me-2 text-success"></i>Valor Total Recebido
-                                    (Principal)</span>
+                                <span>
+                                    <i class="bi bi-arrow-down-circle-fill me-2 text-success"></i>Valor Total Recebido
+                                    (Principal)
+                                    <i class="bi bi-question-circle ms-1" data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="Soma de todas as parcelas marcadas como 'pagas' no sistema. Não inclui juros ou saldo de crédito."></i>
+                                </span>
                                 <strong id="summary-total-received" class="text-success">
                                     <span class="spinner-border spinner-border-sm" role="status"></span>
                                 </strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>Valor Total em
-                                    Atraso (Principal)</span>
+                                <span>
+                                    <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>Valor Total em
+                                    Atraso (Principal)
+                                    <i class="bi bi-question-circle ms-1" data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="Soma de todas as parcelas com data de vencimento anterior a hoje que ainda não foram pagas."></i>
+                                </span>
                                 <strong id="summary-total-overdue" class="text-danger">
                                     <span class="spinner-border spinner-border-sm" role="status"></span>
                                 </strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-percent me-2 text-warning"></i>Taxa de Inadimplência
-                                    (Parcelas)</span>
+                                <span>
+                                    <i class="bi bi-percent me-2 text-warning"></i>Taxa de Inadimplência (Parcelas)
+                                    <i class="bi bi-question-circle ms-1" data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="Porcentagem de parcelas em atraso em relação ao número total de parcelas de todos os clientes."></i>
+                                </span>
                                 <strong id="summary-default-rate" class="text-warning">
                                     <span class="spinner-border spinner-border-sm" role="status"></span>
                                 </strong>
