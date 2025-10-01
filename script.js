@@ -258,14 +258,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return '<span class="badge bg-dark">Empréstimo Concluído</span>';
         }
 
-        // ######### INÍCIO DA LÓGICA DE STATUS DE RENOVAÇÃO #########
         if (client.original_client_id) {
-            // Conta quantas renovações existem para o ID original
-            const renewalCount = clients.filter(c => c.original_client_id === client.original_client_id).length;
+            // CORREÇÃO: Usa a lista completa de clientes para garantir a contagem correta das renovações.
+            const renewalCount = allClientsForSearch.filter(c => c.original_client_id === client.original_client_id).length;
             const baseStatus = getFinancialStatus(client);
             return `<span class="badge bg-primary">${renewalCount}ª Renovação</span> ${baseStatus}`;
         }
-        // ######### FIM DA LÓGICA DE STATUS DE RENOVAÇÃO #########
 
         return getFinancialStatus(client);
     }
@@ -371,12 +369,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderClientPanel(clientId) {
-        const client = clients.find(c => c.id === clientId);
+        // 1. CORREÇÃO: Busca o cliente na lista completa para garantir que seja sempre encontrado.
+        const client = allClientsForSearch.find(c => c.id === clientId);
+
         if (!client) {
             panelPlaceholder.classList.remove('d-none');
             panelDetails.classList.add('d-none');
             selectedClientId = null;
-            renderClientList();
+
+            // 2. CORREÇÃO: Só redesenha a lista se a busca estiver vazia.
+            if (searchInput.value === '') {
+                renderClientList();
+            }
             return;
         }
         selectedClientId = clientId;
@@ -462,7 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (payment.status === 'paid') {
                         dayDiv.classList.add('status-paid');
 
-                        // Lógica do Tooltip
                         if (payment.paidAt) {
                             const paidAtDate = new Date(payment.paidAt).setUTCHours(0, 0, 0, 0);
                             const dueDate = new Date(payment.date).setUTCHours(0, 0, 0, 0);
@@ -480,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else if (diffDays > 1) {
                                 tooltipText = `Pago com ${diffDays} dias de atraso`;
                                 tooltipColor = 'red';
-                            } else { // Pagamento adiantado
+                            } else {
                                 tooltipText = `Pago ${-diffDays} dia(s) adiantado`;
                                 tooltipColor = 'green';
                             }
@@ -521,16 +524,13 @@ document.addEventListener('DOMContentLoaded', () => {
         editObservationsBtn.classList.remove('d-none');
         saveObservationsBtn.classList.add('d-none');
 
-        // ######### INÍCIO DA LÓGICA DO BOTÃO DE RENOVAÇÃO #########
         const isCompleted = client.paymentDates && client.paymentDates.every(p => p.status === 'paid');
         if (isCompleted) {
             renewClientBtn.classList.remove('d-none');
         } else {
             renewClientBtn.classList.add('d-none');
         }
-        // ######### FIM DA LÓGICA DO BOTÃO DE RENOVAÇÃO #########
 
-        // ######### INÍCIO DA ALTERAÇÃO: LÓGICA DO BOTÃO DE AVISO #########
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
@@ -543,9 +543,13 @@ document.addEventListener('DOMContentLoaded', () => {
             generateCollectionBtn.disabled = true;
             generateCollectionBtn.title = "Disponível apenas para clientes com 3 ou mais parcelas em atraso.";
         }
-        // ######### FIM DA ALTERAÇÃO #########
 
-        renderClientList();
+        // 3. CORREÇÃO: Atualiza a lista exibida (seja filtrada ou paginada) para marcar a linha ativa.
+        if (searchInput.value !== '') {
+            filterClientList();
+        } else {
+            renderClientList();
+        }
     }
 
     function handleNewFiles(files) {
@@ -814,7 +818,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     clientListBody.addEventListener('click', (e) => {
         const row = e.target.closest('tr');
-        if (row && row.dataset.clientId) renderClientPanel(parseInt(row.dataset.clientId));
+        if (row && row.dataset.clientId) {
+            const clientId = parseInt(row.dataset.clientId);
+            // Atualiza o ID selecionado antes de renderizar, para garantir a marcação correta.
+            selectedClientId = clientId;
+            renderClientPanel(clientId);
+        }
     });
 
     markPaidBtn.addEventListener('click', () => {
