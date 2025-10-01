@@ -169,8 +169,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateInstallmentValue() {
         const loanValue = parseCurrency(loanValueInput.value);
         const installments = parseInt(installmentsInput.value, 10);
+
+        // ### MODIFICAÇÃO 1: Lê a taxa de juros do novo campo ###
+        const interestRatePercent = parseFloat(interestRateClientInput.value) || 20;
+
         if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
-            const totalLoan = loanValue * 1.20;
+            // ### MODIFICAÇÃO 2: Calcula o multiplicador com base na taxa digitada ###
+            const interestMultiplier = 1 + (interestRatePercent / 100);
+            const totalLoan = loanValue * interestMultiplier;
+
             const installmentValue = totalLoan / installments;
             installmentValueInput.value = formatCurrency(installmentValue);
         } else {
@@ -680,6 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateInstallmentValue();
         togglePaymentFrequency();
     });
+    interestRateClientInput.addEventListener('input', updateInstallmentValue);
     editClientCPFInput.addEventListener('input', (e) => e.target.value = formatCPF(e.target.value));
     editClientPhoneInput.addEventListener('input', (e) => e.target.value = formatPhone(e.target.value));
     editLoanValueInput.addEventListener('input', (e) => {
