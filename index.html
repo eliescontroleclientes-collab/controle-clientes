@@ -391,7 +391,7 @@
 
     <!-- Modal para Editar Cliente -->
     <div class="modal fade" id="editClientModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Editar Cliente</h5>
@@ -411,7 +411,9 @@
                             <!-- ######### ALTERAÇÃO DE NOMENCLATURA ######### -->
                             <div class="col-md-4 mb-3">
                                 <label for="editStartDate" class="form-label">Data do Cadastro</label>
-                                <input type="date" class="form-control" id="editStartDate" required readonly>
+                                <input type="date" class="form-control" id="editStartDate" required readonly
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="Alterar este campo irá resetar e refazer o Calendário de Pagamentos.">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label for="editClientCPF" class="form-label">CPF</label>
@@ -454,21 +456,38 @@
                         </div>
                         <hr>
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <!-- ### MODIFICAÇÃO: Ajusta layout das colunas ### -->
+                            <div class="col-md-3 mb-3">
                                 <label for="editLoanValue" class="form-label">Valor do Empréstimo (R$)</label>
                                 <input type="text" class="form-control" id="editLoanValue" placeholder="R$ 0,00"
-                                    required>
+                                    required data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="Alterar este campo irá resetar e refazer o Calendário de Pagamentos.">
                             </div>
-                            <div class="col-md-4 mb-3">
+
+                            <!-- ### ADIÇÃO: Novo campo de Taxa de Juros ### -->
+                            <div class="col-md-3 mb-3">
+                                <label for="editInterestRateClientInput" class="form-label">Taxa de Juros (%)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="editInterestRateClientInput" required
+                                        min="0" step="0.1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="Alterar este campo irá resetar e refazer o Calendário de Pagamentos.">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 mb-3">
                                 <label for="editInstallments" class="form-label">Número de Parcelas</label>
-                                <input type="number" class="form-control" id="editInstallments" required>
+                                <input type="number" class="form-control" id="editInstallments" required
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="Alterar este campo irá resetar e refazer o Calendário de Pagamentos.">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <label for="editInstallmentValue" class="form-label">Valor da Parcela (R$)</label>
                                 <input type="text" class="form-control" id="editInstallmentValue" placeholder="R$ 0,00"
                                     readonly>
                             </div>
-                            <div class="col-12 mb-3">
+                            <div class="col-12 mb-3" data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Alterar este campo irá resetar e refazer o Calendário de Pagamentos.">
                                 <label class="form-label d-block">Frequência de Pagamento</label>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="editPaymentFrequency"

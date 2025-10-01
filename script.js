@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalClientIdInput = document.getElementById('originalClientId');
     const editClientUsernameInput = document.getElementById('editClientUsername');
     const editClientPasswordInput = document.getElementById('editClientPassword');
+    const editInterestRateClientInput = document.getElementById('editInterestRateClientInput');
     // --- ELEMENTOS DO RELÓGIO E MODAIS DE PAGAMENTO/SENHA ---
     const clockTimeEl = document.getElementById('clock-time');
     const clockDateEl = document.getElementById('clock-date');
@@ -144,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let clientsToRemind = []; // Guarda a lista de clientes para notificar
     let pendingSecureAction = null; // Guarda a ação a ser executada após a senha
     let actionToConfirm = null; // Novo estado para o modal de confirmação
+    let originalFinancialData = {};
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -199,8 +201,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateEditInstallmentValue() {
         const loanValue = parseCurrency(editLoanValueInput.value);
         const installments = parseInt(editInstallmentsInput.value, 10);
+        // ### MODIFICAÇÃO: Lê a taxa de juros do campo de edição ###
+        const interestRatePercent = parseFloat(editInterestRateClientInput.value) || 20;
+
         if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
-            const totalLoan = loanValue * 1.20;
+            // ### MODIFICAÇÃO: Usa a taxa de juros dinâmica no cálculo ###
+            const interestMultiplier = 1 + (interestRatePercent / 100);
+            const totalLoan = loanValue * interestMultiplier;
             const installmentValue = totalLoan / installments;
             editInstallmentValueInput.value = formatCurrency(installmentValue);
         } else {
@@ -705,6 +712,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updateEditInstallmentValue();
         toggleEditPaymentFrequency();
     });
+
+    editInterestRateClientInput.addEventListener('input', updateEditInstallmentValue);
+
     paymentValueInput.addEventListener('input', (e) => {
         let digits = e.target.value.replace(/\D/g, '');
         if (digits === "") {
@@ -917,17 +927,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
-        const client = clients.find(c => c.id === selectedClientId);
+        // ### MODIFICAÇÃO: Busca na lista completa de clientes para garantir dados corretos ###
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
         const modal = new bootstrap.Modal(editClientModalEl);
 
+        // Bloqueia os campos inicialmente
         saveEditBtn.classList.add('d-none');
         unlockEditBtn.classList.remove('d-none');
         const formElements = Array.from(editClientForm.elements);
         formElements.forEach(el => el.readOnly = true);
         document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(radio => radio.disabled = true);
 
+        // Preenche os campos do formulário
         editClientIdDisplay.value = `#${client.id}`;
         document.getElementById('editClientName').value = client.name;
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
@@ -937,6 +950,8 @@ document.addEventListener('DOMContentLoaded', () => {
         editNeighborhoodInput.value = client.bairro || '';
         editProfessionInput.value = client.profissao || '';
         editLoanValueInput.value = formatCurrency(client.loanValue || 0);
+        // ### ADIÇÃO: Preenche o novo campo de juros ###
+        editInterestRateClientInput.value = parseFloat(client.taxa_juros || 20).toFixed(1);
         editInstallmentsInput.value = client.installments || 20;
         editInstallmentValueInput.value = formatCurrency(client.dailyValue || 0);
 
@@ -947,11 +962,17 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editFreqDaily').checked = true;
         }
 
-        // ### INÍCIO DA ADIÇÃO ###
-        // Limpa os campos de login para uma nova edição
-        editClientUsernameInput.value = ''; // Poderíamos buscar o user atual no futuro
+        editClientUsernameInput.value = '';
         editClientPasswordInput.value = '';
-        // ### FIM DA ADIÇÃO ###
+
+        // ### ADIÇÃO: Guarda os valores originais para comparar depois ###
+        originalFinancialData = {
+            startDate: document.getElementById('editStartDate').value,
+            loanValue: editLoanValueInput.value,
+            interestRate: editInterestRateClientInput.value,
+            installments: editInstallmentsInput.value,
+            frequency: document.querySelector('input[name="editPaymentFrequency"]:checked').value
+        };
 
         modal.show();
     });
@@ -959,29 +980,73 @@ document.addEventListener('DOMContentLoaded', () => {
     editClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const clientId = parseInt(selectedClientId);
-        const clientIndex = clients.findIndex(c => c.id === clientId);
+        const clientIndex = allClientsForSearch.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
 
+        // ### LÓGICA DE VERIFICAÇÃO E RECÁLCULO ###
+        const currentFinancialData = {
+            startDate: document.getElementById('editStartDate').value,
+            loanValue: editLoanValueInput.value,
+            interestRate: editInterestRateClientInput.value,
+            installments: editInstallmentsInput.value,
+            frequency: document.querySelector('input[name="editPaymentFrequency"]:checked').value
+        };
+
+        const hasFinancialChanges =
+            currentFinancialData.startDate !== originalFinancialData.startDate ||
+            currentFinancialData.loanValue !== originalFinancialData.loanValue ||
+            currentFinancialData.interestRate !== originalFinancialData.interestRate ||
+            currentFinancialData.installments !== originalFinancialData.installments ||
+            currentFinancialData.frequency !== originalFinancialData.frequency;
+
+        let newPaymentDates = allClientsForSearch[clientIndex].paymentDates; // Padrão: mantém o calendário atual
+
+        if (hasFinancialChanges) {
+            if (!confirm('Você alterou dados financeiros críticos. Isso irá resetar e refazer o calendário de pagamentos do cliente. Deseja continuar?')) {
+                return; // Cancela a operação se o usuário clicar em "Cancelar"
+            }
+            // Gera um novo calendário se houve mudanças
+            newPaymentDates = generatePaymentDates(
+                currentFinancialData.startDate,
+                parseInt(currentFinancialData.installments, 10),
+                currentFinancialData.frequency
+            );
+        }
+
+        // Monta o objeto com todos os dados para enviar à API
         const updatedClientData = {
-            ...clients[clientIndex],
+            ...allClientsForSearch[clientIndex], // Pega a base de dados do cliente
+            // Atualiza os dados pessoais
             name: document.getElementById('editClientName').value,
             phone: editClientPhoneInput.value.replace(/\D/g, ''),
             localizacao: editLocationInput.value,
             bairro: editNeighborhoodInput.value,
-            profissao: editProfessionInput.value
+            profissao: editProfessionInput.value,
+            // Atualiza os dados financeiros
+            startDate: currentFinancialData.startDate,
+            loanValue: parseCurrency(currentFinancialData.loanValue),
+            taxa_juros: parseFloat(currentFinancialData.interestRate),
+            installments: parseInt(currentFinancialData.installments, 10),
+            dailyValue: parseCurrency(editInstallmentValueInput.value),
+            frequency: currentFinancialData.frequency,
+            // Inclui o calendário (novo ou o antigo)
+            paymentDates: newPaymentDates
         };
 
         const updatedClient = await updateClient(updatedClientData);
         if (updatedClient) {
-            clients[clientIndex] = updatedClient;
+            allClientsForSearch[clientIndex] = updatedClient; // Atualiza a lista completa
+            if (clients.some(c => c.id === clientId)) {
+                const paginatedIndex = clients.findIndex(c => c.id === clientId);
+                clients[paginatedIndex] = updatedClient; // Atualiza a lista paginada se o cliente estiver nela
+            }
             renderClientPanel(clientId);
         }
 
-        // ### INÍCIO DA ADIÇÃO: LÓGICA PARA ATUALIZAR LOGIN DO CLIENTE ###
+        // ... (o resto da lógica de login do cliente permanece a mesma) ...
         const clientUsername = editClientUsernameInput.value.trim();
         const clientPassword = editClientPasswordInput.value.trim();
 
-        // Só atualiza se o usuário e senha (opcional) foram preenchidos
         if (clientUsername) {
             try {
                 const loginResponse = await fetch('/api/client-auth', {
@@ -990,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         clientId: clientId,
                         username: clientUsername,
-                        password: clientPassword // A API vai ignorar a senha se ela for vazia
+                        password: clientPassword
                     })
                 });
                 if (!loginResponse.ok) {
@@ -1001,10 +1066,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(`Ocorreu um erro de conexão ao atualizar o login do cliente.`);
             }
         }
-        // ### FIM DA ADIÇÃO ###
 
-
-        // Garante que o modal seja fechado corretamente
         const editModalInstance = bootstrap.Modal.getInstance(editClientModalEl);
         if (editModalInstance) {
             editModalInstance.hide();
@@ -1440,6 +1502,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     passwordForm.reset();
 
                     if (pendingSecureAction === 'unlockEdit') {
+                        // ### MODIFICAÇÃO: Libera todos os campos para edição ###
                         document.getElementById('editClientName').readOnly = false;
                         editClientPhoneInput.readOnly = false;
                         editProfessionInput.readOnly = false;
@@ -1447,6 +1510,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         editLocationInput.readOnly = false;
                         editClientUsernameInput.readOnly = false;
                         editClientPasswordInput.readOnly = false;
+
+                        // Libera os campos financeiros críticos
+                        document.getElementById('editStartDate').readOnly = false;
+                        editLoanValueInput.readOnly = false;
+                        editInterestRateClientInput.readOnly = false;
+                        editInstallmentsInput.readOnly = false;
+                        document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(radio => radio.disabled = false);
+
                         unlockEditBtn.classList.add('d-none');
                         saveEditBtn.classList.remove('d-none');
                     } else if (pendingSecureAction === 'delete') {
