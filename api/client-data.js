@@ -18,16 +18,15 @@ export default async function handler(req, res) {
 
     const db = await pool.connect();
     try {
-        // 1. Buscar a taxa de juros da configuração
-        const configResult = await db.query("SELECT config_value FROM configurations WHERE config_name = 'juros_cliente'");
-        const interestRate = parseFloat(configResult.rows[0]?.config_value) || 0; // Padrão 0 se não configurado
-
-        // 2. Buscar os dados do cliente
+        // 1. Buscar os dados do cliente
         const clientResult = await db.query('SELECT * FROM clients WHERE id = $1', [clientId]);
         if (clientResult.rows.length === 0) {
             return res.status(404).json({ error: 'Cliente não encontrado.' });
         }
         const client = clientResult.rows[0];
+
+        // 2. ### MODIFICAÇÃO: Usar a taxa de juros do próprio cliente ###
+        const interestRate = parseFloat(client.taxa_juros) || 0; // Pega o juro individual, com padrão 0 se não existir.
 
         // 3. Calcular Juros e totais
         const installmentValue = parseFloat(client.dailyValue);

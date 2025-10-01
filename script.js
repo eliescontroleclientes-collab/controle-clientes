@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveClientBtn = document.getElementById('save-client-btn');
     const clientUsernameInput = document.getElementById('clientUsername');
     const clientPasswordInput = document.getElementById('clientPassword');
+    const interestRateClientInput = document.getElementById('interestRateClientInput');
     // --- ELEMENTOS DO MODAL DE EDIÇÃO ---
     const editClientModalEl = document.getElementById('editClientModal');
     const editClientForm = document.getElementById('edit-client-form');
@@ -417,6 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
+        document.getElementById('panel-interest-rate').textContent = `${parseFloat(client.taxa_juros || 20).toFixed(2)}%`;
         document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
         if (client.paymentDates && client.paymentDates.length > 0) {
             const firstInstallment = new Date(client.paymentDates[0].date);
@@ -754,6 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localizacao: locationInput.value,
             bairro: neighborhoodInput.value,
             profissao: professionInput.value,
+            taxa_juros: parseFloat(interestRateClientInput.value) || 20,
             original_client_id: originalClientIdInput.value ? parseInt(originalClientIdInput.value, 10) : null
         };
 
@@ -1178,7 +1181,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let totalInterest = 0;
         if (chargeInterest && lateInstallments.length > 0) {
-            totalInterest = lateInstallments.length * parseFloat(client.dailyValue) * 0.20;
+            const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
+            totalInterest = lateInstallments.length * parseFloat(client.dailyValue) * clientInterestRate;
         }
 
         let totalValue = 0;

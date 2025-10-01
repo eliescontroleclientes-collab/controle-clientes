@@ -30,18 +30,18 @@ export default async function handler(req, res) {
             });
         }
         else if (req.method === 'POST') {
-            const { id, name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, localizacao, bairro, profissao, original_client_id } = req.body;
+            const { id, name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, localizacao, bairro, profissao, original_client_id, taxa_juros } = req.body;
 
             if (!id) {
                 return res.status(400).json({ error: 'O ID do cliente é obrigatório.' });
             }
 
             const query = `
-                INSERT INTO clients (id, name, "startDate", cpf, phone, "loanValue", "dailyValue", "paymentDates", installments, frequency, files, saldo, localizacao, bairro, profissao, observacoes, original_client_id) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, '[]'::jsonb, 0.00, $11, $12, $13, '', $14) 
+                INSERT INTO clients (id, name, "startDate", cpf, phone, "loanValue", "dailyValue", "paymentDates", installments, frequency, files, saldo, localizacao, bairro, profissao, observacoes, original_client_id, taxa_juros) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, '[]'::jsonb, 0.00, $11, $12, $13, '', $14, $15) 
                 RETURNING *
             `;
-            const values = [id, name, startDate, cpf, phone, loanValue, dailyValue, JSON.stringify(paymentDates), installments, frequency, localizacao, bairro, profissao, original_client_id || null];
+            const values = [id, name, startDate, cpf, phone, loanValue, dailyValue, JSON.stringify(paymentDates), installments, frequency, localizacao, bairro, profissao, original_client_id || null, taxa_juros];
             const result = await db.query(query, values);
             res.status(201).json(result.rows[0]);
         }

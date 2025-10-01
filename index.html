@@ -76,6 +76,9 @@
                                 </div>
                                 <div class="col-6"><strong>Valor Parcela:</strong> <span id="panel-daily-value"></span>
                                 </div>
+                                <div class="col-6"><strong>Taxa de Juros:</strong> <span
+                                        id="panel-interest-rate"></span>
+                                </div>
                                 <div class="col-6"><strong>Data Cadastro:</strong> <span id="panel-start-date"></span>
                                 </div>
                                 <div class="col-6"><strong>Primeira Parcela:</strong> <span
@@ -327,15 +330,25 @@
                         </div>
                         <hr>
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <label for="loanValue" class="form-label">Valor do Empréstimo (R$)</label>
                                 <input type="text" class="form-control" id="loanValue" placeholder="R$ 0,00" required>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <!-- ### ADIÇÃO ### -->
+                            <div class="col-md-3 mb-3">
+                                <label for="interestRateClientInput" class="form-label">Taxa de Juros (%)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="interestRateClientInput" value="20"
+                                        required min="0" step="0.1">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <!-- ### FIM DA ADIÇÃO ### -->
+                            <div class="col-md-3 mb-3">
                                 <label for="installments" class="form-label">Número de Parcelas</label>
                                 <input type="number" class="form-control" id="installments" value="20" required>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <label for="installmentValue" class="form-label">Valor da Parcela (R$)</label>
                                 <input type="text" class="form-control" id="installmentValue" placeholder="R$ 0,00"
                                     readonly>
