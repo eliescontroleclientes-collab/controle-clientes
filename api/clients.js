@@ -51,15 +51,20 @@ export default async function handler(req, res) {
             if (!id) return res.status(400).json({ error: 'Client ID is required' });
 
             if (resetPayments) {
-                // LÓGICA PARA RESETAR PAGAMENTOS
                 const clientResult = await db.query('SELECT "paymentDates" FROM clients WHERE id = $1', [id]);
                 if (clientResult.rows.length === 0) throw new Error("Cliente não encontrado para reset.");
 
                 let paymentDates = clientResult.rows[0].paymentDates || [];
+
+                // ### INÍCIO DA CORREÇÃO DO BUG ###
+                // A lógica agora limpa todos os campos relacionados ao pagamento.
                 paymentDates.forEach(p => {
-                    p.status = 'pending'; // Volta todas para pendente
-                    delete p.paidAt;    // Remove a data de pagamento
+                    p.status = 'pending';       // 1. Volta o status para pendente
+                    delete p.paidAt;            // 2. Remove a data de pagamento antiga (se houver)
+                    delete p.paidValue;         // 3. Remove o valor pago antigo (se houver)
+                    delete p.payments;          // 4. Remove a lista de pagamentos (CRÍTICO)
                 });
+                // ### FIM DA CORREÇÃO DO BUG ###
 
                 const resetQuery = `UPDATE clients SET saldo = 0.00, "paymentDates" = $1 WHERE id = $2 RETURNING *`;
                 const result = await db.query(resetQuery, [JSON.stringify(paymentDates), id]);
