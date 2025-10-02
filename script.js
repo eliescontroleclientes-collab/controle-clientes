@@ -886,13 +886,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(err.error || 'Falha ao registrar pagamento.');
             }
 
-            await loadClients();
-            const currentSelectedId = selectedClientId;
-            if (clients.some(c => c.id === currentSelectedId)) {
-                renderClientPanel(currentSelectedId);
-            } else {
-                renderClientPanel(null);
+            const updatedClient = await response.json();
+
+            // Atualiza as listas de clientes em memória com os novos dados
+            const clientId = selectedClientId;
+            const clientIndexAll = allClientsForSearch.findIndex(c => c.id === clientId);
+            if (clientIndexAll !== -1) {
+                allClientsForSearch[clientIndexAll] = updatedClient;
             }
+
+            const clientIndexPaginated = clients.findIndex(c => c.id === clientId);
+            if (clientIndexPaginated !== -1) {
+                clients[clientIndexPaginated] = updatedClient;
+            }
+
+            // Renderiza o painel e a lista para refletir a mudança instantaneamente
+            renderClientPanel(clientId);
+            renderClientList();
 
             loadFinancialSummary();
             bootstrap.Modal.getInstance(paymentModalEl).hide();
