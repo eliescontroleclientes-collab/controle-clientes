@@ -849,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     markPaidBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
-        const client = clients.find(c => c.id === selectedClientId);
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
         paymentModalTitle.textContent = "Registrar Pagamento";
@@ -919,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dayDiv = e.target.closest('.calendar-day');
         if (!dayDiv || selectedClientId === null) return;
 
-        const client = clients.find(c => c.id === selectedClientId);
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
         paymentModalTitle.textContent = "Registrar Pagamento";
@@ -1246,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateCollectionTextBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
-        const client = clients.find(c => c.id === selectedClientId);
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
         const chargeInterest = document.querySelector('input[name="chargeInterest"]:checked').value === 'yes';
@@ -1447,7 +1447,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renewClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
-        const clientToRenew = clients.find(c => c.id === selectedClientId);
+        const clientToRenew = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!clientToRenew) return;
 
         const addModal = new bootstrap.Modal(addClientModalEl);
