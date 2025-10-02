@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerPaymentForm = document.getElementById('register-payment-form');
     const paymentDetailsView = document.getElementById('payment-details-view');
     const paymentDetailsInfo = document.getElementById('payment-details-info');
+    const paymentDetailsValue = document.getElementById('payment-details-value');
     const deletePaymentBtn = document.getElementById('delete-payment-btn');
     const passwordModalEl = document.getElementById('passwordModal');
     const passwordForm = document.getElementById('password-form');
@@ -922,29 +923,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     calendar.addEventListener('click', (e) => {
         const dayDiv = e.target.closest('.calendar-day');
-        // Apenas continua se um dia com data associada for clicado
         if (!dayDiv || !dayDiv.dataset.date || selectedClientId === null) return;
 
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
         const clickedDateISO = dayDiv.dataset.date;
-        currentInstallmentDate = clickedDateISO; // Salva a data da parcela clicada
+        currentInstallmentDate = clickedDateISO;
         const payment = client.paymentDates.find(p => p.date === clickedDateISO);
 
         const modal = new bootstrap.Modal(paymentModalEl);
 
         if (payment && payment.status === 'paid') {
-            // CENÁRIO 1: A PARCELA JÁ ESTÁ PAGA
             paymentModalTitle.textContent = "Detalhes do Pagamento";
             const paidAtDate = new Date(payment.paidAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-            paymentDetailsInfo.textContent = `Este pagamento foi registrado em: ${paidAtDate}.`;
+            paymentDetailsInfo.textContent = `Pagamento registrado em: ${paidAtDate}.`;
 
-            // Mostra a view de detalhes e esconde o formulário
+            // ### INÍCIO DA ADIÇÃO: Exibe o valor registrado ###
+            // Usa o 'paidValue' se existir, ou o 'dailyValue' como fallback para registros antigos
+            const valuePaid = payment.paidValue || client.dailyValue;
+            paymentDetailsValue.textContent = `Valor registrado: ${formatCurrency(valuePaid)}`;
+            // ### FIM DA ADIÇÃO ###
+
             paymentDetailsView.classList.remove('d-none');
             registerPaymentForm.classList.add('d-none');
 
-            // Mostra o botão de excluir e esconde o de registrar
             deletePaymentBtn.classList.remove('d-none');
             registerPaymentBtn.classList.add('d-none');
 

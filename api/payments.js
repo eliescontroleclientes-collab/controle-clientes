@@ -6,16 +6,13 @@ const pool = new Pool({
 });
 
 export default async function handler(req, res) {
-    // ### INÍCIO DA MODIFICAÇÃO: Permitir o método DELETE ###
     if (req.method !== 'POST' && req.method !== 'DELETE') {
         res.setHeader('Allow', ['POST', 'DELETE']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
-    // ### FIM DA MODIFICAÇÃO ###
 
     const db = await pool.connect();
     try {
-        // ### INÍCIO DA MODIFICAÇÃO: Lógica separada para POST e DELETE ###
         if (req.method === 'POST') {
             const { clientId, paymentValue, paymentDate } = req.body;
             if (!clientId || !paymentValue || !paymentDate) {
@@ -37,6 +34,9 @@ export default async function handler(req, res) {
                     currentBalance -= installmentValue;
                     installment.status = 'paid';
                     installment.paidAt = new Date(paymentDate + 'T00:00:00.000Z').toISOString();
+                    // ### INÍCIO DA ADIÇÃO: Salva o valor da parcela no registro ###
+                    installment.paidValue = installmentValue;
+                    // ### FIM DA ADIÇÃO ###
                     return true;
                 }
                 return false;
@@ -62,7 +62,6 @@ export default async function handler(req, res) {
             res.status(200).json(updatedResult.rows[0]);
 
         } else if (req.method === 'DELETE') {
-            // ### INÍCIO DA ADIÇÃO: Lógica para excluir um pagamento ###
             const { clientId, paymentDate } = req.body;
             if (!clientId || !paymentDate) {
                 return res.status(400).json({ error: 'ID do cliente e data da parcela são obrigatórios.' });
@@ -74,9 +73,7 @@ export default async function handler(req, res) {
             if (clientResult.rows.length === 0) throw new Error('Cliente não encontrado.');
 
             let client = clientResult.rows[0];
-            let currentBalance = parseFloat(client.saldo);
             let paymentDates = client.paymentDates || [];
-            const installmentValue = parseFloat(client.dailyValue);
 
             const installmentToRevert = paymentDates.find(p => p.date === paymentDate);
 
@@ -84,22 +81,24 @@ export default async function handler(req, res) {
                 throw new Error('Parcela não encontrada ou não está paga.');
             }
 
-            // Reverte o status da parcela e remove a data de pagamento
+            // Reverte o status da parcela e remove os dados do pagamento
             installmentToRevert.status = 'pending';
             delete installmentToRevert.paidAt;
+            // ### INÍCIO DA ADIÇÃO: Remove o valor pago também ###
+            delete installmentToRevert.paidValue;
+            // ### FIM DA ADIÇÃO ###
 
-            // Devolve o valor da parcela para o saldo do cliente
-            currentBalance += installmentValue;
+            // ### INÍCIO DA MODIFICAÇÃO: A linha que devolvia o saldo foi REMOVIDA ###
+            // A variável 'currentBalance' não é mais necessária aqui, pois o saldo não muda.
+            // ### FIM DA MODIFICAÇÃO ###
 
-            // Atualiza o banco de dados
-            const updateQuery = 'UPDATE clients SET saldo = $1, "paymentDates" = $2 WHERE id = $3 RETURNING *';
-            const updatedResult = await db.query(updateQuery, [currentBalance.toFixed(2), JSON.stringify(paymentDates), clientId]);
+            // Atualiza o banco de dados APENAS com as datas de pagamento alteradas
+            const updateQuery = 'UPDATE clients SET "paymentDates" = $1 WHERE id = $2 RETURNING *';
+            const updatedResult = await db.query(updateQuery, [JSON.stringify(paymentDates), clientId]);
 
             await db.query('COMMIT');
             res.status(200).json(updatedResult.rows[0]);
-            // ### FIM DA ADIÇÃO ###
         }
-        // ### FIM DA MODIFICAÇÃO ###
     } catch (error) {
         await db.query('ROLLBACK');
         console.error('API /payments error:', error);
