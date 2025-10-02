@@ -114,6 +114,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentValueInput = document.getElementById('paymentValueInput');
     const paymentDateInput = document.getElementById('paymentDateInput');
     const registerPaymentBtn = document.getElementById('registerPaymentBtn');
+    const registerPaymentForm = document.getElementById('register-payment-form');
+    const paymentDetailsView = document.getElementById('payment-details-view');
+    const paymentDetailsInfo = document.getElementById('payment-details-info');
+    const deletePaymentBtn = document.getElementById('delete-payment-btn');
     const passwordModalEl = document.getElementById('passwordModal');
     const passwordForm = document.getElementById('password-form');
     const passwordInput = document.getElementById('passwordInput');
@@ -146,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let pendingSecureAction = null; // Guarda a ação a ser executada após a senha
     let actionToConfirm = null; // Novo estado para o modal de confirmação
     let originalFinancialData = {};
+    let currentInstallmentDate = null;
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -917,22 +922,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     calendar.addEventListener('click', (e) => {
         const dayDiv = e.target.closest('.calendar-day');
-        if (!dayDiv || selectedClientId === null) return;
+        // Apenas continua se um dia com data associada for clicado
+        if (!dayDiv || !dayDiv.dataset.date || selectedClientId === null) return;
 
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        paymentModalTitle.textContent = "Registrar Pagamento";
-        paymentValueInput.value = formatCurrency(client.dailyValue);
+        const clickedDateISO = dayDiv.dataset.date;
+        currentInstallmentDate = clickedDateISO; // Salva a data da parcela clicada
+        const payment = client.paymentDates.find(p => p.date === clickedDateISO);
 
-        if (dayDiv.dataset.date) {
-            const clickedDate = dayDiv.dataset.date.split('T')[0];
-            paymentDateInput.value = clickedDate;
+        const modal = new bootstrap.Modal(paymentModalEl);
+
+        if (payment && payment.status === 'paid') {
+            // CENÁRIO 1: A PARCELA JÁ ESTÁ PAGA
+            paymentModalTitle.textContent = "Detalhes do Pagamento";
+            const paidAtDate = new Date(payment.paidAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+            paymentDetailsInfo.textContent = `Este pagamento foi registrado em: ${paidAtDate}.`;
+
+            // Mostra a view de detalhes e esconde o formulário
+            paymentDetailsView.classList.remove('d-none');
+            registerPaymentForm.classList.add('d-none');
+
+            // Mostra o botão de excluir e esconde o de registrar
+            deletePaymentBtn.classList.remove('d-none');
+            registerPaymentBtn.classList.add('d-none');
+
         } else {
-            paymentDateInput.value = new Date().toLocaleDateString('en-CA');
+            // CENÁRIO 2: A PARCELA NÃO ESTÁ PAGA (comportamento original)
+            paymentModalTitle.textContent = "Registrar Pagamento";
+            paymentValueInput.value = formatCurrency(client.dailyValue);
+            paymentDateInput.value = clickedDateISO.split('T')[0];
+
+            // Mostra o formulário e esconde a view de detalhes
+            registerPaymentForm.classList.remove('d-none');
+            paymentDetailsView.classList.add('d-none');
+
+            // Mostra o botão de registrar e esconde o de excluir
+            registerPaymentBtn.classList.remove('d-none');
+            deletePaymentBtn.classList.add('d-none');
         }
 
-        new bootstrap.Modal(paymentModalEl).show();
+        modal.show();
     });
 
     editClientBtn.addEventListener('click', () => {
@@ -985,6 +1016,58 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         modal.show();
+    });
+
+    // ### INÍCIO DA ADIÇÃO: Listener para o novo botão de exclusão ###
+    deletePaymentBtn.addEventListener('click', async () => {
+        if (!selectedClientId || !currentInstallmentDate) return;
+
+        if (!confirm('Tem certeza que deseja excluir este registro de pagamento?')) {
+            return;
+        }
+
+        deletePaymentBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/payments', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clientId: selectedClientId,
+                    paymentDate: currentInstallmentDate,
+                }),
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Falha ao excluir o registro de pagamento.');
+            }
+
+            const updatedClient = await response.json();
+
+            // Lógica para atualizar a UI (similar ao registro de pagamento)
+            const clientId = selectedClientId;
+            const clientIndexAll = allClientsForSearch.findIndex(c => c.id === clientId);
+            if (clientIndexAll !== -1) {
+                allClientsForSearch[clientIndexAll] = updatedClient;
+            }
+
+            const clientIndexPaginated = clients.findIndex(c => c.id === clientId);
+            if (clientIndexPaginated !== -1) {
+                clients[clientIndexPaginated] = updatedClient;
+            }
+
+            renderClientPanel(clientId);
+            renderClientList();
+            loadFinancialSummary();
+            bootstrap.Modal.getInstance(paymentModalEl).hide();
+
+        } catch (error) {
+            console.error('Erro ao excluir pagamento:', error);
+            alert(`Erro: ${error.message}`);
+        } finally {
+            deletePaymentBtn.disabled = false;
+        }
     });
 
     editClientForm.addEventListener('submit', async (e) => {

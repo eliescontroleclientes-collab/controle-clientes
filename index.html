@@ -547,6 +547,17 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- ### INÍCIO DA ADIÇÃO: Seção para ver detalhes de um pagamento existente ### -->
+                    <div id="payment-details-view" class="d-none">
+                        <p class="fs-5">Detalhes do Pagamento Registrado</p>
+                        <p id="payment-details-info">Este pagamento foi registrado em: --/--/----.</p>
+                        <div class="alert alert-warning" role="alert">
+                            <strong>Atenção:</strong> Excluir este registro irá reverter o status da parcela para
+                            "pendente" e devolver o valor correspondente ao saldo (crédito) do cliente.
+                        </div>
+                    </div>
+                    <!-- ### FIM DA ADIÇÃO ### -->
+
                     <form id="register-payment-form">
                         <div class="mb-3">
                             <label for="paymentValueInput" class="form-label">Valor Recebido (R$)</label>
@@ -561,6 +572,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <!-- ### INÍCIO DA ADIÇÃO: Novo botão de exclusão ### -->
+                    <button type="button" class="btn btn-danger d-none" id="delete-payment-btn">Excluir
+                        Registro</button>
+                    <!-- ### FIM DA ADIÇÃO ### -->
                     <button type="button" class="btn btn-primary" id="registerPaymentBtn">Registrar Pagamento</button>
                 </div>
             </div>

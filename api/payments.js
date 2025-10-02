@@ -6,75 +6,100 @@ const pool = new Pool({
 });
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        res.setHeader('Allow', ['POST']);
+    // ### INÍCIO DA MODIFICAÇÃO: Permitir o método DELETE ###
+    if (req.method !== 'POST' && req.method !== 'DELETE') {
+        res.setHeader('Allow', ['POST', 'DELETE']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
-
-    const { clientId, paymentValue, paymentDate } = req.body;
-    if (!clientId || !paymentValue || !paymentDate) {
-        return res.status(400).json({ error: 'Dados do pagamento incompletos.' });
-    }
+    // ### FIM DA MODIFICAÇÃO ###
 
     const db = await pool.connect();
     try {
-        await db.query('BEGIN');
-
-        // 1. Busca o cliente e trava a linha para a transação
-        const clientResult = await db.query('SELECT * FROM clients WHERE id = $1 FOR UPDATE', [clientId]);
-        if (clientResult.rows.length === 0) {
-            throw new Error('Cliente não encontrado.');
-        }
-
-        let client = clientResult.rows[0];
-        let currentBalance = parseFloat(client.saldo) + paymentValue;
-        let paymentDates = client.paymentDates || [];
-        const installmentValue = parseFloat(client.dailyValue);
-
-        // ######### INÍCIO DA LÓGICA CORRIGIDA #########
-
-        // Helper para quitar uma parcela. Continua igual.
-        const payInstallment = (installment) => {
-            if (installment && installment.status !== 'paid' && currentBalance >= installmentValue) {
-                currentBalance -= installmentValue;
-                installment.status = 'paid';
-                installment.paidAt = new Date(paymentDate + 'T00:00:00.000Z').toISOString();
-                return true; // Retorna true se a parcela foi paga
+        // ### INÍCIO DA MODIFICAÇÃO: Lógica separada para POST e DELETE ###
+        if (req.method === 'POST') {
+            const { clientId, paymentValue, paymentDate } = req.body;
+            if (!clientId || !paymentValue || !paymentDate) {
+                return res.status(400).json({ error: 'Dados do pagamento incompletos.' });
             }
-            return false; // Retorna false se não foi paga
-        };
 
-        const referenceDateTime = new Date(paymentDate + 'T00:00:00.000Z').getTime();
+            await db.query('BEGIN');
 
-        // 1. Tenta pagar a parcela da data de referência primeiro, se ela existir e estiver pendente.
-        const referenceInstallment = paymentDates.find(p => new Date(p.date).getTime() === referenceDateTime);
-        payInstallment(referenceInstallment);
+            const clientResult = await db.query('SELECT * FROM clients WHERE id = $1 FOR UPDATE', [clientId]);
+            if (clientResult.rows.length === 0) throw new Error('Cliente não encontrado.');
 
-        // 2. Cria UMA ÚNICA LISTA com TODAS as outras parcelas pendentes.
-        //    Isso remove a separação complexa e fonte do bug entre passado, hoje e futuro.
-        let remainingPendingInstallments = paymentDates
-            .filter(p => p.status !== 'paid')
-            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Ordena da mais antiga para a mais nova.
+            let client = clientResult.rows[0];
+            let currentBalance = parseFloat(client.saldo) + paymentValue;
+            let paymentDates = client.paymentDates || [];
+            const installmentValue = parseFloat(client.dailyValue);
 
-        // 3. Itera sobre a fila ordenada, pagando uma por uma até o saldo acabar.
-        //    Esta é a correção principal: ele sempre pagará a próxima parcela cronológica disponível.
-        for (const payment of remainingPendingInstallments) {
-            if (currentBalance < installmentValue) {
-                break; // Para o loop se não houver mais saldo para a próxima parcela.
+            const payInstallment = (installment) => {
+                if (installment && installment.status !== 'paid' && currentBalance >= installmentValue) {
+                    currentBalance -= installmentValue;
+                    installment.status = 'paid';
+                    installment.paidAt = new Date(paymentDate + 'T00:00:00.000Z').toISOString();
+                    return true;
+                }
+                return false;
+            };
+
+            const referenceDateTime = new Date(paymentDate + 'T00:00:00.000Z').getTime();
+            const referenceInstallment = paymentDates.find(p => new Date(p.date).getTime() === referenceDateTime);
+            payInstallment(referenceInstallment);
+
+            let remainingPendingInstallments = paymentDates
+                .filter(p => p.status !== 'paid')
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            for (const payment of remainingPendingInstallments) {
+                if (currentBalance < installmentValue) break;
+                payInstallment(payment);
             }
-            payInstallment(payment);
+
+            const updateQuery = 'UPDATE clients SET saldo = $1, "paymentDates" = $2 WHERE id = $3 RETURNING *';
+            const updatedResult = await db.query(updateQuery, [currentBalance.toFixed(2), JSON.stringify(paymentDates), clientId]);
+
+            await db.query('COMMIT');
+            res.status(200).json(updatedResult.rows[0]);
+
+        } else if (req.method === 'DELETE') {
+            // ### INÍCIO DA ADIÇÃO: Lógica para excluir um pagamento ###
+            const { clientId, paymentDate } = req.body;
+            if (!clientId || !paymentDate) {
+                return res.status(400).json({ error: 'ID do cliente e data da parcela são obrigatórios.' });
+            }
+
+            await db.query('BEGIN');
+
+            const clientResult = await db.query('SELECT * FROM clients WHERE id = $1 FOR UPDATE', [clientId]);
+            if (clientResult.rows.length === 0) throw new Error('Cliente não encontrado.');
+
+            let client = clientResult.rows[0];
+            let currentBalance = parseFloat(client.saldo);
+            let paymentDates = client.paymentDates || [];
+            const installmentValue = parseFloat(client.dailyValue);
+
+            const installmentToRevert = paymentDates.find(p => p.date === paymentDate);
+
+            if (!installmentToRevert || installmentToRevert.status !== 'paid') {
+                throw new Error('Parcela não encontrada ou não está paga.');
+            }
+
+            // Reverte o status da parcela e remove a data de pagamento
+            installmentToRevert.status = 'pending';
+            delete installmentToRevert.paidAt;
+
+            // Devolve o valor da parcela para o saldo do cliente
+            currentBalance += installmentValue;
+
+            // Atualiza o banco de dados
+            const updateQuery = 'UPDATE clients SET saldo = $1, "paymentDates" = $2 WHERE id = $3 RETURNING *';
+            const updatedResult = await db.query(updateQuery, [currentBalance.toFixed(2), JSON.stringify(paymentDates), clientId]);
+
+            await db.query('COMMIT');
+            res.status(200).json(updatedResult.rows[0]);
+            // ### FIM DA ADIÇÃO ###
         }
-
-        // ######### FIM DA LÓGICA CORRIGIDA #########
-
-        // 4. Atualiza o cliente com o novo saldo e o status das parcelas
-        const updateQuery = 'UPDATE clients SET saldo = $1, "paymentDates" = $2 WHERE id = $3 RETURNING *';
-        const updatedResult = await db.query(updateQuery, [currentBalance.toFixed(2), JSON.stringify(paymentDates), clientId]);
-
-        await db.query('COMMIT');
-
-        res.status(200).json(updatedResult.rows[0]);
-
+        // ### FIM DA MODIFICAÇÃO ###
     } catch (error) {
         await db.query('ROLLBACK');
         console.error('API /payments error:', error);
