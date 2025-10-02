@@ -1601,10 +1601,27 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (!response.ok) throw new Error('Falha ao resetar pagamentos.');
 
+            // ### INÍCIO DA CORREÇÃO ###
             const updatedClient = await response.json();
-            const clientIndex = clients.findIndex(c => c.id === selectedClientId);
-            clients[clientIndex] = updatedClient;
-            renderClientPanel(selectedClientId);
+            const clientId = selectedClientId;
+
+            // Atualiza a lista principal (allClientsForSearch)
+            const clientIndexAll = allClientsForSearch.findIndex(c => c.id === clientId);
+            if (clientIndexAll !== -1) {
+                allClientsForSearch[clientIndexAll] = updatedClient;
+            }
+
+            // Atualiza a lista da página atual (clients)
+            const clientIndexPaginated = clients.findIndex(c => c.id === clientId);
+            if (clientIndexPaginated !== -1) {
+                clients[clientIndexPaginated] = updatedClient;
+            }
+
+            // Renderiza o painel e a lista para atualização instantânea
+            renderClientPanel(clientId);
+            renderClientList();
+            // ### FIM DA CORREÇÃO ###
+
             alert('Pagamentos e saldo resetados com sucesso!');
             loadFinancialSummary();
 
