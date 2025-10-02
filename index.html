@@ -540,45 +540,43 @@
 
     <!-- Modal de Pagamento -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg"> <!-- MODIFICAÇÃO: Aumentado para modal-lg -->
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="paymentModalTitle">Registrar Pagamento</h5>
+                    <h5 class="modal-title" id="paymentModalTitle">Gerenciar Pagamentos</h5> <!-- Título genérico -->
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="payment-details-view" class="d-none">
-                        <p class="fs-5">Detalhes do Pagamento Registrado</p>
-                        <p id="payment-details-info">Este pagamento foi registrado em: --/--/----.</p>
-                        <!-- ### INÍCIO DA ADIÇÃO: Novo campo para valor ### -->
-                        <p id="payment-details-value" class="fw-bold"></p>
-                        <!-- ### FIM DA ADIÇÃO ### -->
-                        <div class="alert alert-warning" role="alert">
-                            <!-- ### INÍCIO DA MODIFICAÇÃO: Texto do alerta atualizado ### -->
-                            <strong>Atenção:</strong> Excluir este registro irá reverter o status da parcela para
-                            "pendente". Esta ação <strong>não</strong> devolve o valor ao saldo do cliente.
-                            <!-- ### FIM DA MODIFICAÇÃO ### -->
-                        </div>
-                    </div>
-
+                    <!-- Formulário de registro sempre visível -->
                     <form id="register-payment-form">
-                        <div class="mb-3">
-                            <label for="paymentValueInput" class="form-label">Valor Recebido (R$)</label>
-                            <input type="text" class="form-control" id="paymentValueInput" placeholder="R$ 0,00"
-                                required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="paymentDateInput" class="form-label">Data do Recebimento</label>
-                            <input type="date" class="form-control" id="paymentDateInput" required>
+                        <h6><i class="bi bi-plus-circle-fill me-2"></i>Registrar Novo Pagamento</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="paymentValueInput" class="form-label">Valor Recebido (R$)</label>
+                                <input type="text" class="form-control" id="paymentValueInput" placeholder="R$ 0,00"
+                                    required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="paymentDateInput" class="form-label">Data do Recebimento</label>
+                                <input type="date" class="form-control" id="paymentDateInput" required>
+                            </div>
                         </div>
                     </form>
+
+                    <hr>
+
+                    <!-- Seção para listar pagamentos existentes -->
+                    <div id="payment-details-view">
+                        <h6><i class="bi bi-list-task me-2"></i>Pagamentos Registrados Neste Dia</h6>
+                        <div id="payment-list-container">
+                            <!-- A lista de pagamentos será inserida aqui pelo JavaScript -->
+                            <p class="text-muted">Nenhum pagamento registrado para esta data.</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <!-- ### INÍCIO DA ADIÇÃO: Novo botão de exclusão ### -->
-                    <button type="button" class="btn btn-danger d-none" id="delete-payment-btn">Excluir
-                        Registro</button>
-                    <!-- ### FIM DA ADIÇÃO ### -->
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <!-- O botão de registrar agora fica sempre aqui -->
                     <button type="button" class="btn btn-primary" id="registerPaymentBtn">Registrar Pagamento</button>
                 </div>
             </div>
