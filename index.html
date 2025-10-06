@@ -40,7 +40,6 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h5 id="panel-name"></h5>
                                 <div class="btn-group">
-                                    <!-- REMOVIDO O BOTÃO RENOVAR DAQUI -->
                                     <button id="generate-collection-btn" class="btn btn-outline-info btn-sm"
                                         title="Gerar Aviso de Cobrança">
                                         <i class="bi bi-whatsapp"></i> Gerar Aviso
@@ -141,14 +140,7 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
                         <div class="btn-toolbar">
-                            <!-- COLE O BOTÃO AQUI -->
-                            <button class="btn btn-warning btn-sm me-2" id="show-instructions-btn"
-                                data-bs-toggle="modal" data-bs-target="#instructionsModal">
-                                <i class="bi bi-info-circle-fill"></i> Instruções
-                            </button>
-                            <button class="btn btn-secondary btn-sm me-2" id="config-interest-btn">
-                                <i class="bi bi-percent"></i> Configurar Juros
-                            </button>
+                            <!-- BOTÕES REMOVIDOS DESTA SEÇÃO -->
                             <button class="btn btn-info btn-sm me-2" id="reminder-btn">
                                 <i class="bi bi-bell-fill"></i> Lembrete de Cobrança
                             </button>
@@ -157,16 +149,10 @@
                                     style="display: none;"></span>
                                 <i class="bi bi-file-earmark-excel"></i> Baixar Planilha
                             </button>
-                            <div class="btn-group">
-                                <button class="btn btn-secondary btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#syncClientsModal">
-                                    <i class="bi bi-arrow-repeat"></i> Sincronizar
-                                </button>
-                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#addClientModal">
-                                    <i class="bi bi-plus-lg"></i> Adicionar Novo
-                                </button>
-                            </div>
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#addClientModal">
+                                <i class="bi bi-plus-lg"></i> Adicionar Novo
+                            </button>
                         </div>
                     </div>
                     <div class="card-body border-bottom">
@@ -270,7 +256,6 @@
                 </div>
                 <div class="modal-body">
                     <form id="add-client-form">
-                        <!-- REMOVIDO o campo oculto 'originalClientId' que causava o bug -->
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label for="clientId" class="form-label">ID do Cliente</label>
@@ -280,7 +265,6 @@
                                 <label for="clientName" class="form-label">Nome Completo</label>
                                 <input type="text" class="form-control" id="clientName" required>
                             </div>
-                            <!-- ######### ALTERAÇÃO DE NOMENCLATURA ######### -->
                             <div class="col-md-4 mb-3">
                                 <label for="startDate" class="form-label">Data do Cadastro</label>
                                 <input type="date" class="form-control" id="startDate" required>
@@ -307,7 +291,6 @@
                                     placeholder="https://maps.app.goo.gl/...">
                             </div>
 
-                            <!-- ### INÍCIO DA ADIÇÃO: CREDENCIAIS DO CLIENTE ### -->
                             <div class="col-12">
                                 <p class="text-muted small mb-1">Opcional: Crie um acesso para o cliente no portal.</p>
                             </div>
@@ -321,7 +304,6 @@
                                 <input type="password" class="form-control" id="clientPassword"
                                     placeholder="Mínimo 6 caracteres">
                             </div>
-                            <!-- ### FIM DA ADIÇÃO ### -->
 
                         </div>
                         <hr>
@@ -330,7 +312,6 @@
                                 <label for="loanValue" class="form-label">Valor do Empréstimo (R$)</label>
                                 <input type="text" class="form-control" id="loanValue" placeholder="R$ 0,00" required>
                             </div>
-                            <!-- ### ADIÇÃO ### -->
                             <div class="col-md-3 mb-3">
                                 <label for="interestRateClientInput" class="form-label">Taxa de Juros (%)</label>
                                 <div class="input-group">
@@ -339,7 +320,6 @@
                                     <span class="input-group-text">%</span>
                                 </div>
                             </div>
-                            <!-- ### FIM DA ADIÇÃO ### -->
                             <div class="col-md-3 mb-3">
                                 <label for="installments" class="form-label">Número de Parcelas</label>
                                 <input type="number" class="form-control" id="installments" value="20" required>
@@ -404,7 +384,6 @@
                                 <label for="editClientName" class="form-label">Nome Completo</label>
                                 <input type="text" class="form-control" id="editClientName" required>
                             </div>
-                            <!-- ######### ALTERAÇÃO DE NOMENCLATURA ######### -->
                             <div class="col-md-4 mb-3">
                                 <label for="editStartDate" class="form-label">Data do Cadastro</label>
                                 <input type="date" class="form-control" id="editStartDate" required readonly
@@ -434,7 +413,6 @@
                                     placeholder="https://maps.app.goo.gl/...">
                             </div>
 
-                            <!-- ### INÍCIO DA ADIÇÃO: CREDENCIAIS DO CLIENTE ### -->
                             <div class="col-12">
                                 <p class="text-muted small mb-1">Acesso do cliente ao portal.</p>
                             </div>
@@ -447,12 +425,10 @@
                                 <input type="password" class="form-control" id="editClientPassword"
                                     placeholder="Deixe em branco para não alterar" readonly>
                             </div>
-                            <!-- ### FIM DA ADIÇÃO ### -->
 
                         </div>
                         <hr>
                         <div class="row">
-                            <!-- ### MODIFICAÇÃO: Ajusta layout das colunas ### -->
                             <div class="col-md-3 mb-3">
                                 <label for="editLoanValue" class="form-label">Valor do Empréstimo (R$)</label>
                                 <input type="text" class="form-control" id="editLoanValue" placeholder="R$ 0,00"
@@ -460,7 +436,6 @@
                                     title="Alterar este campo irá resetar e refazer o Calendário de Pagamentos.">
                             </div>
 
-                            <!-- ### ADIÇÃO: Novo campo de Taxa de Juros ### -->
                             <div class="col-md-3 mb-3">
                                 <label for="editInterestRateClientInput" class="form-label">Taxa de Juros (%)</label>
                                 <div class="input-group">
@@ -509,41 +484,17 @@
         </div>
     </div>
 
-    <!-- Modal para Sincronizar Clientes -->
-    <div class="modal fade" id="syncClientsModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Sincronizar Clientes</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="sync-clients-form">
-                        <div class="mb-3">
-                            <label for="clientNameList" class="form-label">Lista de Nomes de Clientes</label>
-                            <textarea class="form-control" id="clientNameList" rows="10"
-                                placeholder="Cole aqui os nomes dos clientes, um por linha. O sistema irá adicionar apenas os que ainda não existem."></textarea>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Sincronizar</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- MODAIS REMOVIDOS: Modal de Sincronizar, Instruções e Configurar Juros -->
 
     <!-- Modal de Pagamento -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
-        <div class="modal-dialog modal-lg"> <!-- MODIFICAÇÃO: Aumentado para modal-lg -->
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="paymentModalTitle">Gerenciar Pagamentos</h5> <!-- Título genérico -->
+                    <h5 class="modal-title" id="paymentModalTitle">Gerenciar Pagamentos</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Formulário de registro sempre visível -->
                     <form id="register-payment-form">
                         <h6><i class="bi bi-plus-circle-fill me-2"></i>Registrar Novo Pagamento</h6>
                         <div class="row">
@@ -561,18 +512,15 @@
 
                     <hr>
 
-                    <!-- Seção para listar pagamentos existentes -->
                     <div id="payment-details-view">
                         <h6><i class="bi bi-list-task me-2"></i>Pagamentos Registrados Neste Dia</h6>
                         <div id="payment-list-container">
-                            <!-- A lista de pagamentos será inserida aqui pelo JavaScript -->
                             <p class="text-muted">Nenhum pagamento registrado para esta data.</p>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <!-- O botão de registrar agora fica sempre aqui -->
                     <button type="button" class="btn btn-primary" id="registerPaymentBtn">Registrar Pagamento</button>
                 </div>
             </div>
@@ -740,7 +688,6 @@
         </div>
     </div>
 
-
     <!-- ######### NOVO MODAL DE CONFIRMAÇÃO GENÉRICO ######### -->
     <div class="modal fade" id="confirmationModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -755,77 +702,6 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirmar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- INÍCIO: MODAL DE INSTRUÇÕES TEMPORÁRIAS -->
-    <div class="modal fade" id="instructionsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title"><i class="bi bi-info-circle-fill"></i> Instruções Importantes do Thony</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="lead">Eu (Thony) provavelmente estou dormindo, então sigam essas regras até eu acordar:
-                    </p>
-                    <ol>
-                        <li><strong>Não façam login os dois ao mesmo tempo</strong> para evitar conflitos de dados.</li>
-                        <li>Se quiserem, podem apagar os contratos de exemplo que estão aí.</li>
-                        <li>A senha para <strong>Excluir</strong> ou <strong>Resetar Pagamentos</strong> é a mesma senha
-                            do login.</li>
-                        <li>Preencham o <strong>ID do Cliente</strong> na ordem correta, de acordo com a planilha de
-                            vocês.</li>
-                        <li>Coloquem a <strong>Data do Cadastro</strong> original de cada cliente, mesmo para os que já
-                            estão em renovação (depois explico como funciona para renovar).</li>
-                        <li>O botão <strong>Lembrete de Cobrança</strong> só funciona para clientes com status
-                            "Pendente". Ele gera a mensagem e o link do WhatsApp.</li>
-                        <li>Para o Lembrete funcionar, o cliente precisa estar com o <strong>número de celular
-                                correto</strong> no cadastro e salvo no celular que vai enviar a mensagem.</li>
-                        <li>Sugiro começarem adicionando os clientes mais recentes, ou aqueles que têm parcelas
-                            pendentes ou começaram a pagar há pouco tempo. Assim já podem ir atualizando o calendário de
-                            pagamentos deles.</li>
-                        <li>Podem preencher os dados dos clientes sem medo. Depois eu ajudo a arrumar qualquer detalhe
-                            do calendário se for preciso.</li>
-                    </ol>
-                    <hr>
-                    <p class="text-center text-muted">Qualquer dúvida, me chame quando eu acordar. Bom trabalho!</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi, fechar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Configuração de Juros -->
-    <div class="modal fade" id="interestConfigModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Configurar Juros do Portal do Cliente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted">Defina a taxa de juros diária (em %) que será aplicada sobre parcelas em
-                        atraso no portal do cliente.</p>
-                    <form id="interest-config-form">
-                        <div class="mb-3">
-                            <label for="interestRateInput" class="form-label">Taxa de Juros (%)</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="interestRateInput" placeholder="Ex: 20"
-                                    required min="0" step="0.1">
-                                <span class="input-group-text">%</span>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="save-interest-btn">Salvar Taxa</button>
                 </div>
             </div>
         </div>

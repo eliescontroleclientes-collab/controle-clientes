@@ -1,21 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // INÍCIO: LÓGICA DO MODAL DE INSTRUÇÕES TEMPORÁRIAS
-    // Esta lógica exibe o modal de instruções uma vez por sessão.
-    const instructionsModalKey = 'instructionsModalShown';
-
-    if (sessionStorage.getItem(instructionsModalKey) !== 'true') {
-        // Usa um pequeno atraso para garantir que a interface principal carregue primeiro
-        setTimeout(() => {
-            const instructionsModalEl = document.getElementById('instructionsModal');
-            if (instructionsModalEl) {
-                const instructionsModal = new bootstrap.Modal(instructionsModalEl);
-                instructionsModal.show();
-            }
-        }, 500); // 500ms de atraso
-        sessionStorage.setItem(instructionsModalKey, 'true');
-    }
-    // FIM: LÓGICA DO MODAL DE INSTRUÇÕES TEMPORÁRIAS
-
+    // ### REMOVIDO ### Bloco de código do modal de instruções temporárias
+    
     // ######### NOVO: GUARDIÃO DE AUTENTICAÇÃO #########
     if (sessionStorage.getItem('isAuthenticated') !== 'true') {
         // Se não estiver autenticado, redireciona para a página de login.
@@ -31,14 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendar = document.getElementById('payment-calendar');
     const editClientBtn = document.getElementById('edit-client-btn');
     const deleteClientBtn = document.getElementById('delete-client-btn');
-    const syncClientsForm = document.getElementById('sync-clients-form');
+    // ### REMOVIDO ### Declaração de 'syncClientsForm'
     const searchInput = document.getElementById('searchInput');
     const downloadSheetBtn = document.getElementById('download-sheet-btn');
     const downloadSpinner = document.getElementById('download-spinner');
-    const configInterestBtn = document.getElementById('config-interest-btn');
-    const interestConfigModalEl = document.getElementById('interestConfigModal');
-    const interestRateInput = document.getElementById('interestRateInput');
-    const saveInterestBtn = document.getElementById('save-interest-btn');
+    // ### REMOVIDO ### Declarações de 'configInterestBtn', 'interestConfigModalEl', 'interestRateInput', 'saveInterestBtn'
+    
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -137,14 +120,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
     let selectedClientId = null;
-    let allClientsForSearch = []; // Guarda todos os clientes para a busca funcionar
+    let allClientsForSearch = [];
     let currentPage = 1;
-    const clientsPerPage = 15; // Você pode ajustar este número
+    const clientsPerPage = 15;
     let totalClients = 0;
     let newClientFiles = [];
-    let clientsToRemind = []; // Guarda a lista de clientes para notificar
-    let pendingSecureAction = null; // Guarda a ação a ser executada após a senha
-    let actionToConfirm = null; // Novo estado para o modal de confirmação
+    let clientsToRemind = [];
+    let pendingSecureAction = null;
+    let actionToConfirm = null;
     let originalFinancialData = {};
     let currentInstallmentDate = null;
 
@@ -169,16 +152,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
-
-    // ### INÍCIO DA ALTERAÇÃO: Nova função para calcular dias úteis ###
     function calculateBusinessDays(startDate, endDate) {
         let count = 0;
-        // Usa UTC para evitar problemas com fuso horário durante a iteração
         const curDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
         const lastDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
         
         while (curDate < lastDate) {
-            const dayOfWeek = curDate.getUTCDay(); // 0 = Domingo, 6 = Sábado
+            const dayOfWeek = curDate.getUTCDay();
             if (dayOfWeek !== 0 && dayOfWeek !== 6) {
                 count++;
             }
@@ -186,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return count;
     }
-    // ### FIM DA ALTERAÇÃO ###
 
     function updateInstallmentValue() {
         const loanValue = parseCurrency(loanValueInput.value);
@@ -1132,33 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    syncClientsForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const nameList = document.getElementById('clientNameList').value;
-        const names = nameList.split('\n').map(name => name.trim()).filter(name => name.length > 0);
-        if (names.length === 0) {
-            alert('Por favor, insira pelo menos um nome.');
-            return;
-        }
-        let newClientsAddedCount = 0;
-        const existingNames = clients.map(c => c.name.toLowerCase());
-        for (const name of names) {
-            if (!existingNames.includes(name.toLowerCase())) {
-                const newClient = { name: name, startDate: null, cpf: '', phone: '', loanValue: 0, dailyValue: 0, paymentDates: [] };
-                try {
-                    const response = await fetch('/api/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newClient) });
-                    if (response.ok) newClientsAddedCount++;
-                } catch (error) { console.error(`Erro ao adicionar ${name}:`, error); }
-            }
-        }
-        if (newClientsAddedCount > 0) {
-            await loadClients();
-            alert(`${newClientsAddedCount} novo(s) cliente(s) foram adicionado(s) com sucesso!`);
-        } else alert('Nenhum cliente novo foi encontrado na lista para adicionar.');
-        bootstrap.Modal.getInstance(document.getElementById('syncClientsModal')).hide();
-        syncClientsForm.reset();
-    });
-
+    // ### REMOVIDO ### O 'event listener' do formulário 'Sincronizar'
     uploadFileForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedClientId || fileInput.files.length === 0) return;
@@ -1311,13 +1264,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalInterest = 0;
         if (chargeInterest && lateInstallments.length > 0) {
             const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-            // ### INÍCIO DA ALTERAÇÃO: Cálculo de juros para o aviso ###
             lateInstallments.forEach(p => {
                 const installmentDate = new Date(p.date);
                 const businessDaysLate = calculateBusinessDays(installmentDate, today);
                 totalInterest += businessDaysLate * parseFloat(client.dailyValue) * clientInterestRate;
             });
-            // ### FIM DA ALTERAÇÃO ###
         }
 
         let totalValue = 0;
@@ -1367,7 +1318,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
     });
 
-    // ### INÍCIO DA ALTERAÇÃO - LÓGICA DE LEMBRETES ###
     reminderBtn.addEventListener('click', async () => {
         clientsToRemind = allClientsForSearch.filter(client => {
             const status = calculateClientStatus(client);
@@ -1395,8 +1345,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Não foi possível buscar a configuração da chave PIX.");
         }
     });
-    // ### FIM DA ALTERAÇÃO ###
-
 
     savePixKeyBtn.addEventListener('click', async () => {
         const newPixKey = pixKeyInput.value.trim();
@@ -1429,7 +1377,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setupModal.show();
     });
 
-    // ### INÍCIO DA ALTERAÇÃO - LÓGICA DE GERAÇÃO DAS MENSAGENS ###
     sendRemindersBtn.addEventListener('click', () => {
         const pixKey = pixKeyDisplay.value;
         const timeZone = 'America/Cuiaba';
@@ -1496,7 +1443,6 @@ document.addEventListener('DOMContentLoaded', () => {
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
         new bootstrap.Modal(reminderQueueModalEl).show();
     });
-    // ### FIM DA ALTERAÇÃO ###
 
     reminderQueueList.addEventListener('click', (e) => {
         const clickedLink = e.target.closest('a');
@@ -1567,17 +1513,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmationModalTitle.textContent = 'Confirmar Reset';
                         confirmationModalBody.textContent = `Tem certeza que deseja resetar TODOS os pagamentos e o saldo deste cliente?`;
                         new bootstrap.Modal(confirmationModalEl).show();
-                    } else if (pendingSecureAction === 'configInterest') {
-                        try {
-                            const response = await fetch('/api/get-config?name=juros_cliente');
-                            const data = await response.json();
-                            interestRateInput.value = data.value || '';
-                        } catch (error) {
-                            console.error("Erro ao buscar taxa de juros:", error);
-                            interestRateInput.value = '';
-                        }
-                        new bootstrap.Modal(interestConfigModalEl).show();
                     }
+                    // ### REMOVIDO ### O 'else if' para 'configInterest'
                     pendingSecureAction = null;
                 }, { once: true });
 
@@ -1653,37 +1590,8 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordModal.show();
     });
 
-    configInterestBtn.addEventListener('click', () => {
-        pendingSecureAction = 'configInterest';
-        const passwordModal = new bootstrap.Modal(passwordModalEl);
-        passwordModal.show();
-    });
-
-    saveInterestBtn.addEventListener('click', async () => {
-        const newInterestRate = interestRateInput.value;
-        if (newInterestRate === '' || isNaN(parseFloat(newInterestRate))) {
-            alert('Por favor, insira um valor numérico válido para os juros.');
-            return;
-        }
-
-        saveInterestBtn.disabled = true;
-        try {
-            await fetch('/api/save-config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'juros_cliente', value: newInterestRate })
-            });
-
-            alert('Taxa de juros salva com sucesso!');
-            bootstrap.Modal.getInstance(interestConfigModalEl).hide();
-
-        } catch (error) {
-            console.error("Erro ao salvar taxa de juros:", error);
-            alert("Não foi possível salvar a nova taxa de juros.");
-        } finally {
-            saveInterestBtn.disabled = false;
-        }
-    });
+    // ### REMOVIDO ### O 'event listener' do botão 'configInterestBtn'
+    // ### REMOVIDO ### O 'event listener' do botão 'saveInterestBtn'
 
     async function loadFinancialSummary() {
         const totalLoanedEl = document.getElementById('summary-total-loaned');
