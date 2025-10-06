@@ -101,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
     const unlockEditBtn = document.getElementById('unlock-edit-btn');
     const saveEditBtn = document.getElementById('save-edit-btn');
-    // ### REMOVIDO ### A constante do botão 'Renovar' e do campo oculto
     const editClientUsernameInput = document.getElementById('editClientUsername');
     const editClientPasswordInput = document.getElementById('editClientPassword');
     const editInterestRateClientInput = document.getElementById('editInterestRateClientInput');
@@ -173,15 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateInstallmentValue() {
         const loanValue = parseCurrency(loanValueInput.value);
         const installments = parseInt(installmentsInput.value, 10);
-
-        // ### MODIFICAÇÃO 1: Lê a taxa de juros do novo campo ###
         const interestRatePercent = parseFloat(interestRateClientInput.value) || 20;
 
         if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
-            // ### MODIFICAÇÃO 2: Calcula o multiplicador com base na taxa digitada ###
             const interestMultiplier = 1 + (interestRatePercent / 100);
             const totalLoan = loanValue * interestMultiplier;
-
             const installmentValue = totalLoan / installments;
             installmentValueInput.value = formatCurrency(installmentValue);
         } else {
@@ -203,11 +198,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateEditInstallmentValue() {
         const loanValue = parseCurrency(editLoanValueInput.value);
         const installments = parseInt(editInstallmentsInput.value, 10);
-        // ### MODIFICAÇÃO: Lê a taxa de juros do campo de edição ###
         const interestRatePercent = parseFloat(editInterestRateClientInput.value) || 20;
 
         if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
-            // ### MODIFICAÇÃO: Usa a taxa de juros dinâmica no cálculo ###
             const interestMultiplier = 1 + (interestRatePercent / 100);
             const totalLoan = loanValue * interestMultiplier;
             const installmentValue = totalLoan / installments;
@@ -274,12 +267,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (allPaid) {
             return '<span class="badge bg-dark">Empréstimo Concluído</span>';
         }
-
-        // ### REMOVIDO ### A lógica que verificava 'original_client_id' e exibia "Xª Renovação"
         return getFinancialStatus(client);
     }
 
-    // Nova função auxiliar para separar o cálculo financeiro
     function getFinancialStatus(client) {
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
@@ -289,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let isPendingToday = false;
         let advancedCount = 0;
 
-        client.paymentDates.forEach(p => {
+        (client.paymentDates || []).forEach(p => {
             const paymentDateTime = new Date(p.date).getTime();
             if (p.status !== 'paid') {
                 if (paymentDateTime < cuiabaTodayUTCMidnight) {
@@ -323,19 +313,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE API ---
     async function loadClients() {
         try {
-            // Agora busca os dados da página atual
             const response = await fetch(`/api/clients?page=${currentPage}&limit=${clientsPerPage}`);
             if (!response.ok) throw new Error('Falha ao carregar clientes.');
-
-            // A resposta agora é um objeto com 'clients' e 'total'
             const data = await response.json();
             clients = data.clients;
             totalClients = data.total;
 
             renderClientList();
-            renderPaginationControls(); // Chama a nova função para criar os botões
-
-            // Carrega todos os clientes em segundo plano para a busca
+            renderPaginationControls();
             fetchAllClientsForSearch();
         } catch (error) {
             console.error('Erro em loadClients:', error);
@@ -380,15 +365,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderClientPanel(clientId) {
-        // 1. CORREÇÃO: Busca o cliente na lista completa para garantir que seja sempre encontrado.
         const client = allClientsForSearch.find(c => c.id === clientId);
-
         if (!client) {
             panelPlaceholder.classList.remove('d-none');
             panelDetails.classList.add('d-none');
             selectedClientId = null;
-
-            // 2. CORREÇÃO: Só redesenha a lista se a busca estiver vazia.
             if (searchInput.value === '') {
                 renderClientList();
             }
@@ -536,7 +517,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editObservationsBtn.classList.remove('d-none');
         saveObservationsBtn.classList.add('d-none');
         
-        // ### REMOVIDO ### A lógica que mostrava o botão 'Renovar'
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
@@ -549,8 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
             generateCollectionBtn.disabled = true;
             generateCollectionBtn.title = "Disponível apenas para clientes com 3 ou mais parcelas em atraso.";
         }
-
-        // 3. CORREÇÃO: Atualiza a lista exibida (seja filtrada ou paginada) para marcar a linha ativa.
         if (searchInput.value !== '') {
             filterClientList();
         } else {
@@ -576,11 +554,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Esta função busca todos os clientes uma vez para a busca funcionar em todas as páginas
     async function fetchAllClientsForSearch() {
         try {
-            // Usamos uma página com um limite muito alto para simular "buscar todos"
-            // Em um sistema com milhares de clientes, uma rota de API específica para busca seria melhor
             const response = await fetch(`/api/clients?page=1&limit=9999`);
             const data = await response.json();
             allClientsForSearch = data.clients;
@@ -589,20 +564,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Esta função cria os botões de navegação da página
     function renderPaginationControls() {
         paginationControls.innerHTML = '';
         const totalPages = Math.ceil(totalClients / clientsPerPage);
 
-        if (totalPages <= 1) return; // Não mostra controles se houver apenas uma página
+        if (totalPages <= 1) return;
 
-        // Botão "Anterior"
         const prevLi = document.createElement('li');
         prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
         prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}">Anterior</a>`;
         paginationControls.appendChild(prevLi);
 
-        // Botões de Página
         for (let i = 1; i <= totalPages; i++) {
             const li = document.createElement('li');
             li.className = `page-item ${i === currentPage ? 'active' : ''}`;
@@ -610,25 +582,20 @@ document.addEventListener('DOMContentLoaded', () => {
             paginationControls.appendChild(li);
         }
 
-        // Botão "Próximo"
         const nextLi = document.createElement('li');
         nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
         nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}">Próximo</a>`;
         paginationControls.appendChild(nextLi);
     }
 
-    // Modificamos a função de filtro para usar a lista completa e não a paginada
     function filterClientList() {
         const searchTerm = searchInput.value.toLowerCase();
-
-        // Se a busca estiver vazia, mostramos a lista paginada normal
         if (!searchTerm) {
-            renderClientList(); // Re-renderiza a página atual
-            paginationControls.style.display = 'flex'; // Garante que a paginação esteja visível
+            renderClientList();
+            paginationControls.style.display = 'flex';
             return;
         }
 
-        // Se houver busca, esconde a paginação e mostra os resultados
         paginationControls.style.display = 'none';
         clientListBody.innerHTML = '';
 
@@ -643,12 +610,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Renderiza apenas os clientes filtrados
         filteredClients.forEach(client => {
             const tr = document.createElement('tr');
             tr.dataset.clientId = client.id;
             tr.className = client.id === selectedClientId ? 'table-active' : '';
-            const status = calculateClientStatus(client); // Usamos a função global
+            const status = calculateClientStatus(client);
             const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
             tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
             clientListBody.appendChild(tr);
@@ -765,7 +731,6 @@ document.addEventListener('DOMContentLoaded', () => {
             bairro: neighborhoodInput.value,
             profissao: professionInput.value,
             taxa_juros: parseFloat(interestRateClientInput.value) || 20,
-            // ### REMOVIDO ### A lógica que enviava o 'original_client_id' para o backend
             original_client_id: null
         };
 
@@ -781,7 +746,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const newClient = await response.json();
 
-            // ### INÍCIO DA ADIÇÃO: LÓGICA PARA CRIAR LOGIN DO CLIENTE ###
             const clientUsername = clientUsernameInput.value.trim();
             const clientPassword = clientPasswordInput.value.trim();
 
@@ -798,14 +762,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     if (!loginResponse.ok) {
                         const loginError = await loginResponse.json();
-                        // Alerta o admin se o cliente foi criado mas o login falhou
                         alert(`Cliente #${newClient.id} criado, mas falha ao criar o login: ${loginError.error}`);
                     }
                 } catch (loginError) {
                     alert(`Cliente #${newClient.id} criado, mas ocorreu um erro de conexão ao criar o login.`);
                 }
             }
-            // ### FIM DA ADIÇÃO ###
 
             if (newClientFiles.length > 0) {
                 const uploadPromises = newClientFiles.map(file => {
@@ -832,7 +794,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const row = e.target.closest('tr');
         if (row && row.dataset.clientId) {
             const clientId = parseInt(row.dataset.clientId);
-            // Atualiza o ID selecionado antes de renderizar, para garantir a marcação correta.
             selectedClientId = clientId;
             renderClientPanel(clientId);
         }
@@ -842,22 +803,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedClientId === null) return;
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
-
-        // Limpa o estado da parcela clicada anteriormente (CORRIGE O BUG)
         currentInstallmentDate = null;
-
-        // Reseta o modal para o estado padrão
-        paymentValueInput.value = formatCurrency(client.dailyValue); // Sugere o valor da parcela
-        paymentDateInput.value = new Date().toLocaleDateString('en-CA'); // Data de hoje
-        paymentListContainer.innerHTML = '<p class="text-muted">Nenhum dia selecionado no calendário.</p>'; // Limpa a lista
-
+        paymentValueInput.value = formatCurrency(client.dailyValue);
+        paymentDateInput.value = new Date().toLocaleDateString('en-CA');
+        paymentListContainer.innerHTML = '<p class="text-muted">Nenhum dia selecionado no calendário.</p>';
         new bootstrap.Modal(paymentModalEl).show();
     });
 
     registerPaymentBtn.addEventListener('click', async () => {
-        // ### INÍCIO DA MODIFICAÇÃO: Usa a data da parcela clicada se existir ###
         const paymentValue = parseCurrency(paymentValueInput.value);
-        // Usa a data do formulário. Se uma parcela foi clicada, ela já foi preenchida.
         const paymentDate = paymentDateInput.value;
 
         if (isNaN(paymentValue) || paymentValue <= 0 || !paymentDate) {
@@ -884,8 +838,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const updatedClient = await response.json();
-
-            // Atualiza as listas de clientes em memória com os novos dados
             const clientId = selectedClientId;
             const clientIndexAll = allClientsForSearch.findIndex(c => c.id === clientId);
             if (clientIndexAll !== -1) {
@@ -897,10 +849,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 clients[clientIndexPaginated] = updatedClient;
             }
 
-            // Renderiza o painel e a lista para refletir a mudança instantaneamente
             renderClientPanel(clientId);
             renderClientList();
-
             loadFinancialSummary();
             bootstrap.Modal.getInstance(paymentModalEl).hide();
 
@@ -920,14 +870,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!client) return;
 
         const clickedDateISO = dayDiv.dataset.date;
-        currentInstallmentDate = clickedDateISO; // Salva a data para o registro/exclusão
+        currentInstallmentDate = clickedDateISO;
         const installment = client.paymentDates.find(p => p.date === clickedDateISO);
-
-        // Preenche sempre o formulário de registro
         paymentValueInput.value = formatCurrency(client.dailyValue);
         paymentDateInput.value = clickedDateISO.split('T')[0];
 
-        // Limpa e reconstrói a lista de pagamentos existentes
         paymentListContainer.innerHTML = '';
         if (installment && installment.payments && installment.payments.length > 0) {
             installment.payments.forEach(payment => {
@@ -951,9 +898,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         new bootstrap.Modal(paymentModalEl).show();
     });
-    // ### FIM DA MODIFICAÇÃO ###
 
-    // ### INÍCIO DA ADIÇÃO: Listener dinâmico para os novos botões de exclusão ###
     paymentListContainer.addEventListener('click', async (e) => {
         const deleteBtn = e.target.closest('.delete-payment-btn');
         if (!deleteBtn) return;
@@ -974,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     clientId: selectedClientId,
                     paymentDate: currentInstallmentDate,
-                    paidAt: paidAt // Envia o identificador único do pagamento
+                    paidAt: paidAt
                 }),
             });
 
@@ -984,11 +929,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const updatedClient = await response.json();
-
-            // Atualiza a UI
             updateClientData(updatedClient);
 
-            // Recarrega a lista de pagamentos dentro do modal que ainda está aberto
             const updatedInstallment = updatedClient.paymentDates.find(p => p.date === currentInstallmentDate);
             paymentListContainer.innerHTML = '';
             if (updatedInstallment && updatedInstallment.payments && updatedInstallment.payments.length > 0) {
@@ -1016,10 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteBtn.disabled = false;
         }
     });
-    // ### FIM DA ADIÇÃO ###
 
-    // ### INÍCIO DA ADIÇÃO: Função auxiliar para atualizar dados do cliente ###
-    // (Isso evita repetição de código)
     function updateClientData(updatedClient) {
         const clientId = updatedClient.id;
 
@@ -1040,20 +979,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     editClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
-        // ### MODIFICAÇÃO: Busca na lista completa de clientes para garantir dados corretos ###
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
         const modal = new bootstrap.Modal(editClientModalEl);
 
-        // Bloqueia os campos inicialmente
         saveEditBtn.classList.add('d-none');
         unlockEditBtn.classList.remove('d-none');
         const formElements = Array.from(editClientForm.elements);
         formElements.forEach(el => el.readOnly = true);
         document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(radio => radio.disabled = true);
 
-        // Preenche os campos do formulário
         editClientIdDisplay.value = `#${client.id}`;
         document.getElementById('editClientName').value = client.name;
         document.getElementById('editStartDate').value = client.startDate ? client.startDate.split('T')[0] : '';
@@ -1063,7 +999,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editNeighborhoodInput.value = client.bairro || '';
         editProfessionInput.value = client.profissao || '';
         editLoanValueInput.value = formatCurrency(client.loanValue || 0);
-        // ### ADIÇÃO: Preenche o novo campo de juros ###
         editInterestRateClientInput.value = parseFloat(client.taxa_juros || 20).toFixed(1);
         editInstallmentsInput.value = client.installments || 20;
         editInstallmentValueInput.value = formatCurrency(client.dailyValue || 0);
@@ -1078,7 +1013,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editClientUsernameInput.value = '';
         editClientPasswordInput.value = '';
 
-        // ### ADIÇÃO: Guarda os valores originais para comparar depois ###
         originalFinancialData = {
             startDate: document.getElementById('editStartDate').value,
             loanValue: editLoanValueInput.value,
@@ -1096,7 +1030,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientIndex = allClientsForSearch.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
 
-        // ### LÓGICA DE VERIFICAÇÃO E RECÁLCULO ###
         const currentFinancialData = {
             startDate: document.getElementById('editStartDate').value,
             loanValue: editLoanValueInput.value,
@@ -1112,13 +1045,12 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFinancialData.installments !== originalFinancialData.installments ||
             currentFinancialData.frequency !== originalFinancialData.frequency;
 
-        let newPaymentDates = allClientsForSearch[clientIndex].paymentDates; // Padrão: mantém o calendário atual
+        let newPaymentDates = allClientsForSearch[clientIndex].paymentDates;
 
         if (hasFinancialChanges) {
             if (!confirm('Você alterou dados financeiros críticos. Isso irá resetar e refazer o calendário de pagamentos do cliente. Deseja continuar?')) {
-                return; // Cancela a operação se o usuário clicar em "Cancelar"
+                return;
             }
-            // Gera um novo calendário se houve mudanças
             newPaymentDates = generatePaymentDates(
                 currentFinancialData.startDate,
                 parseInt(currentFinancialData.installments, 10),
@@ -1126,37 +1058,32 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        // Monta o objeto com todos os dados para enviar à API
         const updatedClientData = {
-            ...allClientsForSearch[clientIndex], // Pega a base de dados do cliente
-            // Atualiza os dados pessoais
+            ...allClientsForSearch[clientIndex],
             name: document.getElementById('editClientName').value,
             phone: editClientPhoneInput.value.replace(/\D/g, ''),
             localizacao: editLocationInput.value,
             bairro: editNeighborhoodInput.value,
             profissao: editProfessionInput.value,
-            // Atualiza os dados financeiros
             startDate: currentFinancialData.startDate,
             loanValue: parseCurrency(currentFinancialData.loanValue),
             taxa_juros: parseFloat(currentFinancialData.interestRate),
             installments: parseInt(currentFinancialData.installments, 10),
             dailyValue: parseCurrency(editInstallmentValueInput.value),
             frequency: currentFinancialData.frequency,
-            // Inclui o calendário (novo ou o antigo)
             paymentDates: newPaymentDates
         };
 
         const updatedClient = await updateClient(updatedClientData);
         if (updatedClient) {
-            allClientsForSearch[clientIndex] = updatedClient; // Atualiza a lista completa
+            allClientsForSearch[clientIndex] = updatedClient;
             if (clients.some(c => c.id === clientId)) {
                 const paginatedIndex = clients.findIndex(c => c.id === clientId);
-                clients[paginatedIndex] = updatedClient; // Atualiza a lista paginada se o cliente estiver nela
+                clients[paginatedIndex] = updatedClient;
             }
             renderClientPanel(clientId);
         }
 
-        // ... (o resto da lógica de login do cliente permanece a mesma) ...
         const clientUsername = editClientUsernameInput.value.trim();
         const clientPassword = editClientPasswordInput.value.trim();
 
@@ -1415,33 +1342,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
     });
 
+    // ### INÍCIO DA ALTERAÇÃO - LÓGICA DE LEMBRETES ###
     reminderBtn.addEventListener('click', async () => {
-        // 1. Identificar clientes com pagamento pendente para hoje
-        const timeZone = 'America/Cuiaba';
-        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
-
-        clientsToRemind = clients.filter(client => {
+        // 1. Amplia a seleção para incluir clientes com status "Pendente" OU "Atrasado"
+        clientsToRemind = allClientsForSearch.filter(client => {
             const status = calculateClientStatus(client);
-            return status.includes('Pendente'); // Pega tanto 'Pendente' quanto 'Pendente Hoje'
+            return status.includes('Pendente') || status.includes('Atrasado');
         });
 
         if (clientsToRemind.length === 0) {
-            alert('Nenhum cliente com parcelas pendentes para hoje foi encontrado.');
+            alert('Nenhum cliente com parcelas pendentes ou em atraso foi encontrado.');
             return;
         }
 
-        // 2. Tentar buscar a chave PIX salva
+        // 2. O resto da lógica para buscar a chave PIX continua a mesma
         try {
             const response = await fetch('/api/get-config?name=pix_key');
             const data = await response.json();
 
             if (data.value) {
-                // Se a chave existe, mostra o modal de confirmação
-                reminderCountText.textContent = `O sistema irá preparar mensagens de lembrete para ${clientsToRemind.length} cliente(s).`;
+                reminderCountText.textContent = `O sistema irá preparar mensagens para ${clientsToRemind.length} cliente(s).`;
                 pixKeyDisplay.value = data.value;
                 new bootstrap.Modal(reminderConfirmationModalEl).show();
             } else {
-                // Se a chave não existe, mostra o modal de configuração
                 new bootstrap.Modal(pixKeySetupModalEl).show();
             }
         } catch (error) {
@@ -1449,6 +1372,8 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Não foi possível buscar a configuração da chave PIX.");
         }
     });
+    // ### FIM DA ALTERAÇÃO ###
+
 
     savePixKeyBtn.addEventListener('click', async () => {
         const newPixKey = pixKeyInput.value.trim();
@@ -1464,9 +1389,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ name: 'pix_key', value: newPixKey })
             });
 
-            // Fecha o modal de setup e abre o de confirmação
             bootstrap.Modal.getInstance(pixKeySetupModalEl).hide();
-            reminderCountText.textContent = `O sistema irá preparar mensagens de lembrete para ${clientsToRemind.length} cliente(s).`;
+            reminderCountText.textContent = `O sistema irá preparar mensagens para ${clientsToRemind.length} cliente(s).`;
             pixKeyDisplay.value = newPixKey;
             new bootstrap.Modal(reminderConfirmationModalEl).show();
         } catch (error) {
@@ -1478,77 +1402,94 @@ document.addEventListener('DOMContentLoaded', () => {
     changePixKeyBtn.addEventListener('click', () => {
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
         const setupModal = new bootstrap.Modal(pixKeySetupModalEl);
-        pixKeyInput.value = pixKeyDisplay.value; // Preenche com a chave atual
+        pixKeyInput.value = pixKeyDisplay.value;
         setupModal.show();
     });
 
+    // ### INÍCIO DA ALTERAÇÃO - LÓGICA DE GERAÇÃO DAS MENSAGENS ###
     sendRemindersBtn.addEventListener('click', () => {
         const pixKey = pixKeyDisplay.value;
         const timeZone = 'America/Cuiaba';
         const todayFormatted = new Date().toLocaleDateString('pt-BR', { timeZone });
+        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
+        const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
 
-        clientsToRemind.forEach(client => {
-            const firstName = client.name.split(' ')[0];
-            const installmentValue = formatCurrency(client.dailyValue);
-
-            let message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} ainda consta como pendente em nosso sistema.\n\n`;
-            message += `Chave PIX: ${pixKey}\n\n`;
-            message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
-
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
-
-        });
-
-        bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
-    });
-
-    sendRemindersBtn.addEventListener('click', () => {
-        const pixKey = pixKeyDisplay.value;
-        const timeZone = 'America/Cuiaba';
-        const todayFormatted = new Date().toLocaleDateString('pt-BR', { timeZone });
-
-        // Limpa a lista anterior
         reminderQueueList.innerHTML = '';
 
-        clientsToRemind.forEach((client, index) => {
+        clientsToRemind.forEach((client) => {
             const firstName = client.name.split(' ')[0];
             const installmentValue = formatCurrency(client.dailyValue);
 
-            let message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} ainda consta como pendente em nosso sistema.\n\n`;
-            message += `Chave PIX: ${pixKey}\n\n`;
-            message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
+            // Analisa a situação do cliente
+            const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid');
+            const hasLate = lateInstallments.length > 0;
+            const lateCount = lateInstallments.length;
 
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+            const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
+            
+            let message = '';
 
-            // Cria o item da lista
-            const listItem = document.createElement('a');
-            listItem.href = whatsappUrl;
-            listItem.target = '_blank';
-            listItem.rel = 'noopener noreferrer';
-            listItem.className = 'list-group-item list-group-item-action';
-            listItem.innerHTML = `<i class="bi bi-whatsapp me-2"></i> Enviar para <strong>${client.name}</strong>`;
+            // Cenário 1: Apenas pendente hoje
+            if (isPendingToday && !hasLate) {
+                message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} ainda consta como pendente em nosso sistema.\n\n`;
+                message += `Chave PIX: ${pixKey}\n\n`;
+                message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
+            }
+            // Cenário 2: Pendente hoje E com parcelas atrasadas
+            else if (isPendingToday && hasLate) {
+                message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} está pendente.\n\n`;
+                message += `Além disso, notamos que você possui *${lateCount} parcela(s) anterior(es) em atraso*.\n\n`;
+                message += `Chave PIX para regularização: ${pixKey}\n\n`;
+                message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
+            }
+            // Cenário 3: Apenas com parcelas atrasadas (sem pendência hoje)
+            else if (!isPendingToday && hasLate) {
+                // Para este cenário, calculamos o valor total devido (principal + juros)
+                const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
+                let totalInterest = 0;
+                lateInstallments.forEach(p => {
+                    const installmentDate = new Date(p.date);
+                    const diffTime = Math.abs(new Date(todayInCuiaba) - installmentDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    totalInterest += diffDays * parseFloat(client.dailyValue) * clientInterestRate;
+                });
+                const totalPrincipal = lateCount * parseFloat(client.dailyValue);
+                const totalDue = totalPrincipal + totalInterest;
 
-            reminderQueueList.appendChild(listItem);
+                message = `Olá ${firstName}, identificamos que você possui *${lateCount} parcela(s) em atraso* em nosso sistema.\n\n`;
+                message += `O valor total para regularizar sua situação hoje é de *${formatCurrency(totalDue)}* (incluindo juros).\n\n`;
+                message += `Chave PIX para pagamento: ${pixKey}`;
+            }
+
+            if (message) { // Só adiciona à lista se uma mensagem foi gerada
+                const encodedMessage = encodeURIComponent(message);
+                const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+
+                const listItem = document.createElement('a');
+                listItem.href = whatsappUrl;
+                listItem.target = '_blank';
+                listItem.rel = 'noopener noreferrer';
+                listItem.className = 'list-group-item list-group-item-action';
+                listItem.innerHTML = `<i class="bi bi-whatsapp me-2"></i> Enviar para <strong>${client.name}</strong>`;
+
+                reminderQueueList.appendChild(listItem);
+            }
         });
 
-        // Esconde o modal de confirmação e abre o modal da fila de envio
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
         new bootstrap.Modal(reminderQueueModalEl).show();
     });
+    // ### FIM DA ALTERAÇÃO ###
 
-    // Novo listener para marcar links como clicados
     reminderQueueList.addEventListener('click', (e) => {
         const clickedLink = e.target.closest('a');
         if (clickedLink) {
-            clickedLink.classList.add('active'); // Marca como visitado usando a classe do Bootstrap
-            clickedLink.style.backgroundColor = '#d1e7dd'; // Adiciona um fundo verde claro
-            clickedLink.style.textDecoration = 'line-through'; // Tacha o texto
+            clickedLink.classList.add('active');
+            clickedLink.style.backgroundColor = '#d1e7dd';
+            clickedLink.style.textDecoration = 'line-through';
         }
     });
 
-    // ### REMOVIDO ### O 'event listener' do botão 'Renovar'
     deleteClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         pendingSecureAction = 'delete';
@@ -1580,13 +1521,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const passwordModalInstance = bootstrap.Modal.getInstance(passwordModalEl);
 
             if (result.success) {
-                // ######### CORREÇÃO DO BUG DA TELA ESCURA #########
-                // Garante que o modal de senha seja fechado antes de prosseguir
                 passwordModalEl.addEventListener('hidden.bs.modal', async () => {
                     passwordForm.reset();
 
                     if (pendingSecureAction === 'unlockEdit') {
-                        // ### MODIFICAÇÃO: Libera todos os campos para edição ###
                         document.getElementById('editClientName').readOnly = false;
                         editClientPhoneInput.readOnly = false;
                         editProfessionInput.readOnly = false;
@@ -1594,8 +1532,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         editLocationInput.readOnly = false;
                         editClientUsernameInput.readOnly = false;
                         editClientPasswordInput.readOnly = false;
-
-                        // Libera os campos financeiros críticos
                         document.getElementById('editStartDate').readOnly = false;
                         editLoanValueInput.readOnly = false;
                         editInterestRateClientInput.readOnly = false;
@@ -1614,25 +1550,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmationModalTitle.textContent = 'Confirmar Reset';
                         confirmationModalBody.textContent = `Tem certeza que deseja resetar TODOS os pagamentos e o saldo deste cliente?`;
                         new bootstrap.Modal(confirmationModalEl).show();
-
-                        // ### INÍCIO DA ADIÇÃO: LÓGICA PARA ABRIR MODAL DE JUROS ###
                     } else if (pendingSecureAction === 'configInterest') {
-                        // Busca o valor atual para preencher o campo
                         try {
                             const response = await fetch('/api/get-config?name=juros_cliente');
                             const data = await response.json();
                             interestRateInput.value = data.value || '';
                         } catch (error) {
                             console.error("Erro ao buscar taxa de juros:", error);
-                            interestRateInput.value = ''; // Limpa em caso de erro
+                            interestRateInput.value = '';
                         }
                         new bootstrap.Modal(interestConfigModalEl).show();
                     }
                     pendingSecureAction = null;
-                }, { once: true }); // O listener só executa uma vez
+                }, { once: true });
 
                 passwordModalInstance.hide();
-                // ######### FIM DA CORREÇÃO #########
             } else {
                 passwordInput.classList.add('is-invalid');
                 passwordError.style.display = 'block';
@@ -1651,7 +1583,6 @@ document.addEventListener('DOMContentLoaded', () => {
         actionToConfirm = null;
     });
 
-    // Função para executar a exclusão (SEM O CONFIRM)
     async function executeDelete() {
         try {
             const response = await fetch(`/api/clients?id=${selectedClientId}`, { method: 'DELETE' });
@@ -1665,7 +1596,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Função para executar o reset de pagamentos (SEM O CONFIRM)
     async function executeResetPayments() {
         try {
             const response = await fetch('/api/clients', {
@@ -1675,26 +1605,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (!response.ok) throw new Error('Falha ao resetar pagamentos.');
 
-            // ### INÍCIO DA CORREÇÃO ###
             const updatedClient = await response.json();
             const clientId = selectedClientId;
 
-            // Atualiza a lista principal (allClientsForSearch)
             const clientIndexAll = allClientsForSearch.findIndex(c => c.id === clientId);
             if (clientIndexAll !== -1) {
                 allClientsForSearch[clientIndexAll] = updatedClient;
             }
 
-            // Atualiza a lista da página atual (clients)
             const clientIndexPaginated = clients.findIndex(c => c.id === clientId);
             if (clientIndexPaginated !== -1) {
                 clients[clientIndexPaginated] = updatedClient;
             }
 
-            // Renderiza o painel e a lista para atualização instantânea
             renderClientPanel(clientId);
             renderClientList();
-            // ### FIM DA CORREÇÃO ###
 
             alert('Pagamentos e saldo resetados com sucesso!');
             loadFinancialSummary();
@@ -1744,7 +1669,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function loadFinancialSummary() {
-        // Seleciona os elementos onde os valores serão exibidos
         const totalLoanedEl = document.getElementById('summary-total-loaned');
         const totalReceivedEl = document.getElementById('summary-total-received');
         const totalOverdueEl = document.getElementById('summary-total-overdue');
@@ -1757,7 +1681,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
 
-            // Preenche os elementos com os dados formatados
             totalLoanedEl.textContent = formatCurrency(data.totalLoaned);
             totalReceivedEl.textContent = formatCurrency(data.totalReceived);
             totalOverdueEl.textContent = formatCurrency(data.totalOverduePrincipal);
@@ -1765,7 +1688,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('Erro ao carregar resumo financeiro:', error);
-            // Em caso de erro, exibe uma mensagem no painel
             const errorMessage = 'Erro ao carregar';
             totalLoanedEl.textContent = errorMessage;
             totalReceivedEl.textContent = errorMessage;
@@ -1776,14 +1698,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INICIALIZAÇÃO ---
 
-    // ### INÍCIO DA ADIÇÃO: INICIALIZAÇÃO DOS TOOLTIPS DO BOOTSTRAP ###
-    // Este código procura por todos os elementos com o atributo 'data-bs-toggle="tooltip"'
-    // e ativa a funcionalidade de tooltip para eles.
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-    // ### FIM DA ADIÇÃO ###
 
     function updateClock() {
         if (!clockTimeEl || !clockDateEl) return;
