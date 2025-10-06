@@ -101,8 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editFreqWeeklyRadio = document.getElementById('editFreqWeekly');
     const unlockEditBtn = document.getElementById('unlock-edit-btn');
     const saveEditBtn = document.getElementById('save-edit-btn');
-    const renewClientBtn = document.getElementById('renew-client-btn');
-    const originalClientIdInput = document.getElementById('originalClientId');
+    // ### REMOVIDO ### A constante do botão 'Renovar' e do campo oculto
     const editClientUsernameInput = document.getElementById('editClientUsername');
     const editClientPasswordInput = document.getElementById('editClientPassword');
     const editInterestRateClientInput = document.getElementById('editInterestRateClientInput');
@@ -276,13 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return '<span class="badge bg-dark">Empréstimo Concluído</span>';
         }
 
-        if (client.original_client_id) {
-            // CORREÇÃO: Usa a lista completa de clientes para garantir a contagem correta das renovações.
-            const renewalCount = allClientsForSearch.filter(c => c.original_client_id === client.original_client_id).length;
-            const baseStatus = getFinancialStatus(client);
-            return `<span class="badge bg-primary">${renewalCount}ª Renovação</span> ${baseStatus}`;
-        }
-
+        // ### REMOVIDO ### A lógica que verificava 'original_client_id' e exibia "Xª Renovação"
         return getFinancialStatus(client);
     }
 
@@ -542,14 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
         observationsTextarea.readOnly = true;
         editObservationsBtn.classList.remove('d-none');
         saveObservationsBtn.classList.add('d-none');
-
-        const isCompleted = client.paymentDates && client.paymentDates.every(p => p.status === 'paid');
-        if (isCompleted) {
-            renewClientBtn.classList.remove('d-none');
-        } else {
-            renewClientBtn.classList.add('d-none');
-        }
-
+        
+        // ### REMOVIDO ### A lógica que mostrava o botão 'Renovar'
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
@@ -778,7 +765,8 @@ document.addEventListener('DOMContentLoaded', () => {
             bairro: neighborhoodInput.value,
             profissao: professionInput.value,
             taxa_juros: parseFloat(interestRateClientInput.value) || 20,
-            original_client_id: originalClientIdInput.value ? parseInt(originalClientIdInput.value, 10) : null
+            // ### REMOVIDO ### A lógica que enviava o 'original_client_id' para o backend
+            original_client_id: null
         };
 
         try {
@@ -1560,36 +1548,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    renewClientBtn.addEventListener('click', () => {
-        if (selectedClientId === null) return;
-        const clientToRenew = allClientsForSearch.find(c => c.id === selectedClientId);
-        if (!clientToRenew) return;
-
-        const addModal = new bootstrap.Modal(addClientModalEl);
-
-        // Pré-preenche os dados pessoais
-        document.getElementById('clientName').value = clientToRenew.name;
-        clientCPFInput.value = clientToRenew.cpf ? formatCPF(clientToRenew.cpf) : '';
-        clientPhoneInput.value = clientToRenew.phone ? formatPhone(clientToRenew.phone) : '';
-        professionInput.value = clientToRenew.profissao || '';
-        neighborhoodInput.value = clientToRenew.bairro || '';
-        locationInput.value = clientToRenew.localizacao || '';
-
-        // Guarda o ID do cliente original (ou o ID original do cliente que já é uma renovação)
-        originalClientIdInput.value = clientToRenew.original_client_id || clientToRenew.id;
-
-        // Limpa os campos que precisam ser novos
-        clientIdInput.value = '';
-        document.getElementById('startDate').value = '';
-        loanValueInput.value = '';
-        installmentsInput.value = 20; // Valor padrão
-        installmentValueInput.value = '';
-        newClientFiles = [];
-        renderNewClientFileList();
-
-        addModal.show();
-    });
-
+    // ### REMOVIDO ### O 'event listener' do botão 'Renovar'
     deleteClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         pendingSecureAction = 'delete';
