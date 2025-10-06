@@ -6,6 +6,21 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+// ### INÍCIO DA ALTERAÇÃO: Nova função para calcular dias úteis ###
+function calculateBusinessDays(startDate, endDate) {
+    let count = 0;
+    const curDate = new Date(startDate.getTime());
+    while (curDate < endDate) {
+        const dayOfWeek = curDate.getUTCDay(); // 0 = Domingo, 6 = Sábado
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            count++;
+        }
+        curDate.setUTCDate(curDate.getUTCDate() + 1);
+    }
+    return count;
+}
+// ### FIM DA ALTERAÇÃO ###
+
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
         return res.status(405).end();
@@ -18,17 +33,13 @@ export default async function handler(req, res) {
 
     const db = await pool.connect();
     try {
-        // 1. Buscar os dados do cliente
         const clientResult = await db.query('SELECT * FROM clients WHERE id = $1', [clientId]);
         if (clientResult.rows.length === 0) {
             return res.status(404).json({ error: 'Cliente não encontrado.' });
         }
         const client = clientResult.rows[0];
 
-        // 2. ### MODIFICAÇÃO: Usar a taxa de juros do próprio cliente ###
-        const interestRate = parseFloat(client.taxa_juros) || 0; // Pega o juro individual, com padrão 0 se não existir.
-
-        // 3. Calcular Juros e totais
+        const interestRate = parseFloat(client.taxa_juros) || 0;
         const installmentValue = parseFloat(client.dailyValue);
         let totalInterest = 0;
         let totalPrincipalLate = 0;
@@ -38,9 +49,9 @@ export default async function handler(req, res) {
 
         const timeZone = 'America/Cuiaba';
         const today = new Date(new Date().toLocaleString("en-US", { timeZone }));
-        today.setHours(0, 0, 0, 0); // Zera a hora para comparar apenas a data
+        today.setHours(0, 0, 0, 0);
 
-        client.paymentDates.forEach(p => {
+        (client.paymentDates || []).forEach(p => {
             if (p.status === 'paid') {
                 paidInstallmentsCount++;
                 return;
@@ -53,18 +64,16 @@ export default async function handler(req, res) {
                 lateInstallmentsCount++;
                 totalPrincipalLate += installmentValue;
 
-                // Calcula a diferença de dias (incluindo fins de semana)
-                const diffTime = Math.abs(today - installmentDate);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                // Calcula o juro para esta parcela e adiciona ao total
-                totalInterest += diffDays * installmentValue * (interestRate / 100);
+                // ### INÍCIO DA ALTERAÇÃO: Troca do cálculo de dias ###
+                // Em vez de calcular a diferença direta, agora contamos apenas os dias úteis.
+                const businessDaysLate = calculateBusinessDays(installmentDate, today);
+                totalInterest += businessDaysLate * installmentValue * (interestRate / 100);
+                // ### FIM DA ALTERAÇÃO ###
             }
         });
 
-        // ### INÍCIO DA ADIÇÃO DA LÓGICA ###
-        let todayInstallmentStatus = 'Em Dia'; // Padrão
-        const todayInstallment = client.paymentDates.find(p => {
+        let todayInstallmentStatus = 'Em Dia';
+        const todayInstallment = (client.paymentDates || []).find(p => {
             const installmentDate = new Date(p.date);
             return installmentDate.getTime() === today.getTime();
         });
@@ -72,20 +81,14 @@ export default async function handler(req, res) {
         if (todayInstallment && todayInstallment.status !== 'paid') {
             todayInstallmentStatus = 'Pendente';
         }
-        // ### FIM DA ADIÇÃO DA LÓGICA ###
 
-        // ### INÍCIO DA CORREÇÃO: CÁLCULO DO VALOR TOTAL ###
         let totalToPayNow = totalPrincipalLate + totalInterest;
-
-        // Adiciona o valor da parcela de hoje, se ela estiver pendente
         if (todayInstallmentStatus === 'Pendente') {
             totalToPayNow += installmentValue;
         }
-        // ### FIM DA CORREÇÃO ###
 
         const totalInstallments = client.installments;
 
-        // 4. Montar o objeto de resposta
         const responseData = {
             clientName: client.name,
             loanValue: client.loanValue,

@@ -169,6 +169,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
+
+    // ### INÍCIO DA ALTERAÇÃO: Nova função para calcular dias úteis ###
+    function calculateBusinessDays(startDate, endDate) {
+        let count = 0;
+        // Usa UTC para evitar problemas com fuso horário durante a iteração
+        const curDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
+        const lastDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
+        
+        while (curDate < lastDate) {
+            const dayOfWeek = curDate.getUTCDay(); // 0 = Domingo, 6 = Sábado
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                count++;
+            }
+            curDate.setUTCDate(curDate.getUTCDate() + 1);
+        }
+        return count;
+    }
+    // ### FIM DA ALTERAÇÃO ###
+
     function updateInstallmentValue() {
         const loanValue = parseCurrency(loanValueInput.value);
         const installments = parseInt(installmentsInput.value, 10);
@@ -1284,15 +1303,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
-        const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
+        const today = new Date(todayInCuiaba + 'T00:00:00.000Z');
 
-        const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid');
+        const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < today && p.status !== 'paid');
         const todayInstallment = (client.paymentDates || []).find(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
 
         let totalInterest = 0;
         if (chargeInterest && lateInstallments.length > 0) {
             const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-            totalInterest = lateInstallments.length * parseFloat(client.dailyValue) * clientInterestRate;
+            // ### INÍCIO DA ALTERAÇÃO: Cálculo de juros para o aviso ###
+            lateInstallments.forEach(p => {
+                const installmentDate = new Date(p.date);
+                const businessDaysLate = calculateBusinessDays(installmentDate, today);
+                totalInterest += businessDaysLate * parseFloat(client.dailyValue) * clientInterestRate;
+            });
+            // ### FIM DA ALTERAÇÃO ###
         }
 
         let totalValue = 0;
@@ -1344,7 +1369,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ### INÍCIO DA ALTERAÇÃO - LÓGICA DE LEMBRETES ###
     reminderBtn.addEventListener('click', async () => {
-        // 1. Amplia a seleção para incluir clientes com status "Pendente" OU "Atrasado"
         clientsToRemind = allClientsForSearch.filter(client => {
             const status = calculateClientStatus(client);
             return status.includes('Pendente') || status.includes('Atrasado');
@@ -1355,7 +1379,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 2. O resto da lógica para buscar a chave PIX continua a mesma
         try {
             const response = await fetch('/api/get-config?name=pix_key');
             const data = await response.json();
@@ -1412,7 +1435,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const timeZone = 'America/Cuiaba';
         const todayFormatted = new Date().toLocaleDateString('pt-BR', { timeZone });
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
-        const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
+        const today = new Date(todayInCuiaba + 'T00:00:00.000Z');
 
         reminderQueueList.innerHTML = '';
 
@@ -1420,8 +1443,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const firstName = client.name.split(' ')[0];
             const installmentValue = formatCurrency(client.dailyValue);
 
-            // Analisa a situação do cliente
-            const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid');
+            const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < today && p.status !== 'paid');
             const hasLate = lateInstallments.length > 0;
             const lateCount = lateInstallments.length;
 
@@ -1429,29 +1451,24 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let message = '';
 
-            // Cenário 1: Apenas pendente hoje
             if (isPendingToday && !hasLate) {
                 message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} ainda consta como pendente em nosso sistema.\n\n`;
                 message += `Chave PIX: ${pixKey}\n\n`;
                 message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
             }
-            // Cenário 2: Pendente hoje E com parcelas atrasadas
             else if (isPendingToday && hasLate) {
                 message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} está pendente.\n\n`;
                 message += `Além disso, notamos que você possui *${lateCount} parcela(s) anterior(es) em atraso*.\n\n`;
                 message += `Chave PIX para regularização: ${pixKey}\n\n`;
                 message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
             }
-            // Cenário 3: Apenas com parcelas atrasadas (sem pendência hoje)
             else if (!isPendingToday && hasLate) {
-                // Para este cenário, calculamos o valor total devido (principal + juros)
                 const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
                 let totalInterest = 0;
                 lateInstallments.forEach(p => {
                     const installmentDate = new Date(p.date);
-                    const diffTime = Math.abs(new Date(todayInCuiaba) - installmentDate);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    totalInterest += diffDays * parseFloat(client.dailyValue) * clientInterestRate;
+                    const businessDaysLate = calculateBusinessDays(installmentDate, today);
+                    totalInterest += businessDaysLate * parseFloat(client.dailyValue) * clientInterestRate;
                 });
                 const totalPrincipal = lateCount * parseFloat(client.dailyValue);
                 const totalDue = totalPrincipal + totalInterest;
@@ -1461,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 message += `Chave PIX para pagamento: ${pixKey}`;
             }
 
-            if (message) { // Só adiciona à lista se uma mensagem foi gerada
+            if (message) {
                 const encodedMessage = encodeURIComponent(message);
                 const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
 
