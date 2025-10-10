@@ -17,6 +17,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadSheetBtn = document.getElementById('download-sheet-btn');
     const downloadSpinner = document.getElementById('download-spinner');
 
+    // ### INÍCIO DA ADIÇÃO: Novos elementos do painel de filtro ###
+    const filterActiveBtn = document.getElementById('filter-active-btn');
+    const filterSettledBtn = document.getElementById('filter-settled-btn');
+    const filterOverdueBtn = document.getElementById('filter-overdue-btn');
+    const filterClearBtn = document.getElementById('filter-clear-btn');
+    const activeCountSpan = document.getElementById('active-count');
+    const settledCountSpan = document.getElementById('settled-count');
+    const overdueCountSpan = document.getElementById('overdue-count');
+    const settledClientsList = document.getElementById('settled-clients-list');
+    const overdueClientsList = document.getElementById('overdue-clients-list');
+    const settledClientsModalEl = document.getElementById('settledClientsModal');
+    const overdueClientsModalEl = document.getElementById('overdueClientsModal');
+    // ### FIM DA ADIÇÃO ###
+
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -125,6 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let actionToConfirm = null;
     let originalFinancialData = {};
     let currentInstallmentDate = null;
+    let activeClients = [];
+    let settledClients = [];
+    let overdueClients = [];
 
     // --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO ---
     const formatCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -340,13 +357,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- FUNÇÕES DE RENDERIZAÇÃO ---
-    function renderClientList() {
+    function renderClientList(clientsToRender = clients) {
         clientListBody.innerHTML = '';
-        if (clients.length === 0) {
-            clientListBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
+        if (clientsToRender.length === 0) {
+            const message = (searchInput.value || filterClearBtn.classList.contains('d-none') === false) 
+                ? 'Nenhum cliente encontrado para o filtro aplicado.' 
+                : 'Nenhum cliente cadastrado.';
+            clientListBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">${message}</td></tr>`;
             return;
         }
-        clients.forEach(client => {
+        clientsToRender.forEach(client => {
             const tr = document.createElement('tr');
             tr.dataset.clientId = client.id;
             tr.className = client.id === selectedClientId ? 'table-active' : '';
@@ -390,7 +410,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const allPaid = client.paymentDates && client.paymentDates.every(p => p.status === 'paid');
         if (allPaid) {
-            const paidDates = client.paymentDates.map(p => new Date(p.paidAt)).filter(d => !isNaN(d));
+            const paidDates = (client.paymentDates || [])
+                .flatMap(p => p.payments || [])
+                .map(pm => new Date(pm.paidAt))
+                .filter(d => !isNaN(d));
             if (paidDates.length > 0) {
                 const lastPaymentDate = new Date(Math.max.apply(null, paidDates));
                 panelSettlementDate.textContent = lastPaymentDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
@@ -451,34 +474,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (payment.status === 'paid') {
                         dayDiv.classList.add('status-paid');
-
-                        if (payment.paidAt) {
-                            const paidAtDate = new Date(payment.paidAt).setUTCHours(0, 0, 0, 0);
-                            const dueDate = new Date(payment.date).setUTCHours(0, 0, 0, 0);
-                            const diffDays = (paidAtDate - dueDate) / (1000 * 60 * 60 * 24);
-
-                            let tooltipText = '';
-                            let tooltipColor = '';
-
-                            if (diffDays === 0) {
-                                tooltipText = 'Pago no dia';
-                                tooltipColor = 'green';
-                            } else if (diffDays === 1) {
-                                tooltipText = 'Pago com 1 dia de atraso';
-                                tooltipColor = 'orange';
-                            } else if (diffDays > 1) {
-                                tooltipText = `Pago com ${diffDays} dias de atraso`;
-                                tooltipColor = 'red';
-                            } else {
-                                tooltipText = `Pago ${-diffDays} dia(s) adiantado`;
-                                tooltipColor = 'green';
-                            }
-
-                            const tooltip = document.createElement('span');
-                            tooltip.className = `tooltip-text ${tooltipColor}`;
-                            tooltip.textContent = tooltipText;
-                            dayDiv.appendChild(tooltip);
-                        }
                     } else if (paymentDateMidnight < cuiabaTodayUTCMidnight) {
                         dayDiv.classList.add('status-late');
                     } else {
@@ -515,8 +510,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
         const lateCount = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid').length;
 
-        // ### INÍCIO DA ALTERAÇÃO ###
-        // Altera a condição de '>= 3' para '>= 1' e atualiza a mensagem do 'title'.
         if (lateCount >= 1) {
             generateCollectionBtn.disabled = false;
             generateCollectionBtn.title = "Gerar Aviso de Cobrança";
@@ -524,10 +517,8 @@ document.addEventListener('DOMContentLoaded', () => {
             generateCollectionBtn.disabled = true;
             generateCollectionBtn.title = "Disponível apenas para clientes com parcelas em atraso.";
         }
-        // ### FIM DA ALTERAÇÃO ###
-
-        if (searchInput.value !== '') {
-            filterClientList();
+        if (searchInput.value !== '' || filterClearBtn.classList.contains('d-none') === false) {
+            // Se um filtro estiver ativo, não redesenha a lista principal
         } else {
             renderClientList();
         }
@@ -556,6 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`/api/clients?page=1&limit=9999`);
             const data = await response.json();
             allClientsForSearch = data.clients;
+            updateFilterPanel(); // Atualiza os contadores dos filtros
         } catch (error) {
             console.error('Erro ao buscar todos os clientes para pesquisa:', error);
         }
@@ -590,33 +582,115 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!searchTerm) {
             renderClientList();
             paginationControls.style.display = 'flex';
+            filterClearBtn.classList.add('d-none');
             return;
         }
 
         paginationControls.style.display = 'none';
-        clientListBody.innerHTML = '';
-
+        filterClearBtn.classList.remove('d-none');
+        
         const filteredClients = allClientsForSearch.filter(client => {
             const idMatch = client.id.toString().toLowerCase().includes(searchTerm);
             const nameMatch = client.name.toLowerCase().includes(searchTerm);
             return idMatch || nameMatch;
         });
+        
+        renderClientList(filteredClients);
+    }
 
-        if (filteredClients.length === 0) {
-            clientListBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum cliente encontrado.</td></tr>';
+    // --- ### INÍCIO DA ADIÇÃO: Funções do Painel de Filtro ### ---
+    function updateFilterPanel() {
+        activeClients = [];
+        settledClients = [];
+        overdueClients = [];
+
+        allClientsForSearch.forEach(client => {
+            const status = calculateClientStatus(client);
+            if (status.includes('Empréstimo Concluído')) {
+                settledClients.push(client);
+            } else {
+                activeClients.push(client);
+            }
+            if (status.includes('Atrasado')) {
+                overdueClients.push(client);
+            }
+        });
+
+        activeCountSpan.textContent = activeClients.length;
+        settledCountSpan.textContent = settledClients.length;
+        overdueCountSpan.textContent = overdueClients.length;
+    }
+
+    function handleFilterClick(clientsToShow) {
+        searchInput.value = '';
+        renderClientList(clientsToShow);
+        paginationControls.style.display = 'none';
+        filterClearBtn.classList.remove('d-none');
+    }
+
+    filterActiveBtn.addEventListener('click', () => handleFilterClick(activeClients));
+    
+    filterClearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        filterClearBtn.classList.add('d-none');
+        paginationControls.style.display = 'flex';
+        renderClientList(clients); // Renderiza a lista paginada original
+    });
+
+    filterSettledBtn.addEventListener('click', () => {
+        settledClientsList.innerHTML = '';
+        if (settledClients.length === 0) {
+            settledClientsList.innerHTML = '<p class="text-muted text-center">Nenhum cliente quitado encontrado.</p>';
+            return;
+        }
+        settledClients.forEach(client => {
+            const item = document.createElement('button');
+            item.className = 'list-group-item list-group-item-action';
+            item.dataset.clientId = client.id;
+            item.textContent = `#${client.id} - ${client.name}`;
+            settledClientsList.appendChild(item);
+        });
+    });
+
+    filterOverdueBtn.addEventListener('click', () => {
+        overdueClientsList.innerHTML = '';
+        if (overdueClients.length === 0) {
+            overdueClientsList.innerHTML = '<p class="text-muted text-center">Nenhum cliente em atraso encontrado.</p>';
             return;
         }
 
-        filteredClients.forEach(client => {
-            const tr = document.createElement('tr');
-            tr.dataset.clientId = client.id;
-            tr.className = client.id === selectedClientId ? 'table-active' : '';
-            const status = calculateClientStatus(client);
-            const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
-            tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
-            clientListBody.appendChild(tr);
+        // Ordena os clientes em atraso
+        const sortedOverdue = [...overdueClients].sort((a, b) => {
+            const statusA = calculateClientStatus(a);
+            const statusB = calculateClientStatus(b);
+            const lateCountA = parseInt((statusA.match(/Atrasado \((\d+)\)/) || [0, 0])[1], 10);
+            const lateCountB = parseInt((statusB.match(/Atrasado \((\d+)\)/) || [0, 0])[1], 10);
+            return lateCountB - lateCountA;
         });
+
+        sortedOverdue.forEach(client => {
+            const status = calculateClientStatus(client);
+            const lateCount = (status.match(/Atrasado \((\d+)\)/) || [0, 0])[1];
+            const item = document.createElement('button');
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+            item.dataset.clientId = client.id;
+            item.innerHTML = `<span>#${client.id} - ${client.name}</span> <span class="badge bg-danger rounded-pill">${lateCount}</span>`;
+            overdueClientsList.appendChild(item);
+        });
+    });
+
+    function handleModalListClick(e, modalEl) {
+        const target = e.target.closest('.list-group-item');
+        if (!target || !target.dataset.clientId) return;
+        const clientId = parseInt(target.dataset.clientId, 10);
+        renderClientPanel(clientId);
+        bootstrap.Modal.getInstance(modalEl).hide();
     }
+    
+    settledClientsList.addEventListener('click', (e) => handleModalListClick(e, settledClientsModalEl));
+    overdueClientsList.addEventListener('click', (e) => handleModalListClick(e, overdueClientsModalEl));
+
+    // --- ### FIM DA ADIÇÃO ### ---
 
     // --- EVENT LISTENERS ---
 
@@ -968,9 +1042,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clientIndexPaginated !== -1) {
             clients[clientIndexPaginated] = updatedClient;
         }
-
+        
+        updateFilterPanel();
         renderClientPanel(clientId);
-        renderClientList();
+        
+        if (filterClearBtn.classList.contains('d-none')) {
+            renderClientList(); // Atualiza a lista paginada se nenhum filtro estiver ativo
+        }
         loadFinancialSummary();
     }
 
@@ -1262,11 +1340,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalInterest = 0;
         if (chargeInterest && lateInstallments.length > 0) {
             const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-            // ### INÍCIO DA ALTERAÇÃO ###
-            // Calcula um juro fixo por parcela atrasada, sem considerar os dias.
             const interestPerInstallment = parseFloat(client.dailyValue) * clientInterestRate;
             totalInterest = lateInstallments.length * interestPerInstallment;
-            // ### FIM DA ALTERAÇÃO ###
         }
 
         let totalValue = 0;
