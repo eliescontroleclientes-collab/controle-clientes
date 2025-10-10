@@ -192,11 +192,13 @@
                             Clientes Ativos
                             <span id="active-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
                         </button>
-                        <button id="filter-settled-btn" class="btn btn-dark position-relative" data-bs-toggle="modal" data-bs-target="#settledClientsModal">
+                        <!-- ### ALTERAÇÃO: Removido 'data-bs-toggle' e 'data-bs-target' ### -->
+                        <button id="filter-settled-btn" class="btn btn-dark position-relative">
                             Quitados
                             <span id="settled-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
                         </button>
-                        <button id="filter-overdue-btn" class="btn btn-danger position-relative" data-bs-toggle="modal" data-bs-target="#overdueClientsModal">
+                        <!-- ### ALTERAÇÃO: Removido 'data-bs-toggle' e 'data-bs-target' ### -->
+                        <button id="filter-overdue-btn" class="btn btn-danger position-relative">
                             Em Atraso
                             <span id="overdue-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
                         </button>
@@ -736,42 +738,7 @@
         </div>
     </div>
 
-    <!-- ### INÍCIO DA ADIÇÃO: NOVOS MODAIS PARA FILTROS ### -->
-    <!-- Modal para Clientes Quitados -->
-    <div class="modal fade" id="settledClientsModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Clientes Quitados</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="settled-clients-list" class="list-group">
-                        <!-- A lista de clientes quitados será inserida aqui -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Clientes em Atraso -->
-    <div class="modal fade" id="overdueClientsModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Clientes em Atraso</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="overdue-clients-list" class="list-group">
-                        <!-- A lista de clientes em atraso será inserida aqui -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- ### FIM DA ADIÇÃO ### -->
-
+    <!-- ### REMOVIDO ### Os modais para "Quitados" e "Em Atraso" foram removidos daqui. -->
 
     <!-- Incluindo JavaScript do Bootstrap e o nosso script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

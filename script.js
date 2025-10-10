@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadSheetBtn = document.getElementById('download-sheet-btn');
     const downloadSpinner = document.getElementById('download-spinner');
 
-    // ### INÍCIO DA ADIÇÃO: Novos elementos do painel de filtro ###
     const filterActiveBtn = document.getElementById('filter-active-btn');
     const filterSettledBtn = document.getElementById('filter-settled-btn');
     const filterOverdueBtn = document.getElementById('filter-overdue-btn');
@@ -25,12 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeCountSpan = document.getElementById('active-count');
     const settledCountSpan = document.getElementById('settled-count');
     const overdueCountSpan = document.getElementById('overdue-count');
-    const settledClientsList = document.getElementById('settled-clients-list');
-    const overdueClientsList = document.getElementById('overdue-clients-list');
-    const settledClientsModalEl = document.getElementById('settledClientsModal');
-    const overdueClientsModalEl = document.getElementById('overdueClientsModal');
-    // ### FIM DA ADIÇÃO ###
-
+    // ### REMOVIDO ### Variáveis dos modais que não existem mais
+    
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -598,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderClientList(filteredClients);
     }
 
-    // --- ### INÍCIO DA ADIÇÃO: Funções do Painel de Filtro ### ---
+    // --- ### INÍCIO DA ALTERAÇÃO: Funções do Painel de Filtro ### ---
     function updateFilterPanel() {
         activeClients = [];
         settledClients = [];
@@ -630,36 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     filterActiveBtn.addEventListener('click', () => handleFilterClick(activeClients));
     
-    filterClearBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        filterClearBtn.classList.add('d-none');
-        paginationControls.style.display = 'flex';
-        renderClientList(clients); // Renderiza a lista paginada original
-    });
-
-    filterSettledBtn.addEventListener('click', () => {
-        settledClientsList.innerHTML = '';
-        if (settledClients.length === 0) {
-            settledClientsList.innerHTML = '<p class="text-muted text-center">Nenhum cliente quitado encontrado.</p>';
-            return;
-        }
-        settledClients.forEach(client => {
-            const item = document.createElement('button');
-            item.className = 'list-group-item list-group-item-action';
-            item.dataset.clientId = client.id;
-            item.textContent = `#${client.id} - ${client.name}`;
-            settledClientsList.appendChild(item);
-        });
-    });
+    filterSettledBtn.addEventListener('click', () => handleFilterClick(settledClients));
 
     filterOverdueBtn.addEventListener('click', () => {
-        overdueClientsList.innerHTML = '';
-        if (overdueClients.length === 0) {
-            overdueClientsList.innerHTML = '<p class="text-muted text-center">Nenhum cliente em atraso encontrado.</p>';
-            return;
-        }
-
-        // Ordena os clientes em atraso
+        // Ordena os clientes em atraso antes de exibi-los
         const sortedOverdue = [...overdueClients].sort((a, b) => {
             const statusA = calculateClientStatus(a);
             const statusB = calculateClientStatus(b);
@@ -667,30 +636,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const lateCountB = parseInt((statusB.match(/Atrasado \((\d+)\)/) || [0, 0])[1], 10);
             return lateCountB - lateCountA;
         });
-
-        sortedOverdue.forEach(client => {
-            const status = calculateClientStatus(client);
-            const lateCount = (status.match(/Atrasado \((\d+)\)/) || [0, 0])[1];
-            const item = document.createElement('button');
-            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
-            item.dataset.clientId = client.id;
-            item.innerHTML = `<span>#${client.id} - ${client.name}</span> <span class="badge bg-danger rounded-pill">${lateCount}</span>`;
-            overdueClientsList.appendChild(item);
-        });
+        handleFilterClick(sortedOverdue);
     });
 
-    function handleModalListClick(e, modalEl) {
-        const target = e.target.closest('.list-group-item');
-        if (!target || !target.dataset.clientId) return;
-        const clientId = parseInt(target.dataset.clientId, 10);
-        renderClientPanel(clientId);
-        bootstrap.Modal.getInstance(modalEl).hide();
-    }
-    
-    settledClientsList.addEventListener('click', (e) => handleModalListClick(e, settledClientsModalEl));
-    overdueClientsList.addEventListener('click', (e) => handleModalListClick(e, overdueClientsModalEl));
+    filterClearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        filterClearBtn.classList.add('d-none');
+        paginationControls.style.display = 'flex';
+        renderClientList(clients); // Renderiza a lista paginada original
+    });
 
-    // --- ### FIM DA ADIÇÃO ### ---
+    // --- ### FIM DA ALTERAÇÃO ### ---
 
     // --- EVENT LISTENERS ---
 
