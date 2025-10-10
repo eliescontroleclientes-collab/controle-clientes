@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeCountSpan = document.getElementById('active-count');
     const settledCountSpan = document.getElementById('settled-count');
     const overdueCountSpan = document.getElementById('overdue-count');
-    // ### REMOVIDO ### Variáveis dos modais que não existem mais
     
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
@@ -542,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`/api/clients?page=1&limit=9999`);
             const data = await response.json();
             allClientsForSearch = data.clients;
-            updateFilterPanel(); // Atualiza os contadores dos filtros
+            updateFilterPanel();
         } catch (error) {
             console.error('Erro ao buscar todos os clientes para pesquisa:', error);
         }
@@ -593,7 +592,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderClientList(filteredClients);
     }
 
-    // --- ### INÍCIO DA ALTERAÇÃO: Funções do Painel de Filtro ### ---
     function updateFilterPanel() {
         activeClients = [];
         settledClients = [];
@@ -625,10 +623,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     filterActiveBtn.addEventListener('click', () => handleFilterClick(activeClients));
     
+    // ### INÍCIO DA ALTERAÇÃO ###
+    // Modifica os listeners para chamar handleFilterClick em vez de abrir modais.
     filterSettledBtn.addEventListener('click', () => handleFilterClick(settledClients));
 
     filterOverdueBtn.addEventListener('click', () => {
-        // Ordena os clientes em atraso antes de exibi-los
         const sortedOverdue = [...overdueClients].sort((a, b) => {
             const statusA = calculateClientStatus(a);
             const statusB = calculateClientStatus(b);
@@ -638,15 +637,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         handleFilterClick(sortedOverdue);
     });
+    // ### FIM DA ALTERAÇÃO ###
 
     filterClearBtn.addEventListener('click', () => {
         searchInput.value = '';
         filterClearBtn.classList.add('d-none');
         paginationControls.style.display = 'flex';
-        renderClientList(clients); // Renderiza a lista paginada original
+        renderClientList(clients);
     });
-
-    // --- ### FIM DA ALTERAÇÃO ### ---
 
     // --- EVENT LISTENERS ---
 
@@ -1003,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderClientPanel(clientId);
         
         if (filterClearBtn.classList.contains('d-none')) {
-            renderClientList(); // Atualiza a lista paginada se nenhum filtro estiver ativo
+            renderClientList();
         }
         loadFinancialSummary();
     }
@@ -1440,12 +1438,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             else if (!isPendingToday && hasLate) {
                 const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-                let totalInterest = 0;
-                lateInstallments.forEach(p => {
-                    const installmentDate = new Date(p.date);
-                    const businessDaysLate = calculateBusinessDays(installmentDate, today);
-                    totalInterest += businessDaysLate * parseFloat(client.dailyValue) * clientInterestRate;
-                });
+                // ### INÍCIO DA ALTERAÇÃO: Unificação do cálculo de juros ###
+                const interestPerInstallment = parseFloat(client.dailyValue) * clientInterestRate;
+                const totalInterest = lateInstallments.length * interestPerInstallment;
+                // ### FIM DA ALTERAÇÃO ###
+                
                 const totalPrincipal = lateCount * parseFloat(client.dailyValue);
                 const totalDue = totalPrincipal + totalInterest;
 
