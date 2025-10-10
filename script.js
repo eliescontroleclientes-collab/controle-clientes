@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let count = 0;
         const curDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
         const lastDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
-
+        
         while (curDate < lastDate) {
             const dayOfWeek = curDate.getUTCDay();
             if (dayOfWeek !== 0 && dayOfWeek !== 6) {
@@ -515,13 +515,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
         const lateCount = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid').length;
 
-        if (lateCount >= 3) {
+        // ### INÍCIO DA ALTERAÇÃO ###
+        // Altera a condição de '>= 3' para '>= 1' e atualiza a mensagem do 'title'.
+        if (lateCount >= 1) {
             generateCollectionBtn.disabled = false;
             generateCollectionBtn.title = "Gerar Aviso de Cobrança";
         } else {
             generateCollectionBtn.disabled = true;
-            generateCollectionBtn.title = "Disponível apenas para clientes com 3 ou mais parcelas em atraso.";
+            generateCollectionBtn.title = "Disponível apenas para clientes com parcelas em atraso.";
         }
+        // ### FIM DA ALTERAÇÃO ###
+
         if (searchInput.value !== '') {
             filterClientList();
         } else {
@@ -1258,11 +1262,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalInterest = 0;
         if (chargeInterest && lateInstallments.length > 0) {
             const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-            lateInstallments.forEach(p => {
-                const installmentDate = new Date(p.date);
-                const businessDaysLate = calculateBusinessDays(installmentDate, today);
-                totalInterest += businessDaysLate * parseFloat(client.dailyValue) * clientInterestRate;
-            });
+            // ### INÍCIO DA ALTERAÇÃO ###
+            // Calcula um juro fixo por parcela atrasada, sem considerar os dias.
+            const interestPerInstallment = parseFloat(client.dailyValue) * clientInterestRate;
+            totalInterest = lateInstallments.length * interestPerInstallment;
+            // ### FIM DA ALTERAÇÃO ###
         }
 
         let totalValue = 0;
@@ -1389,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const lateCount = lateInstallments.length;
 
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
-
+            
             let message = '';
 
             if (isPendingToday && !hasLate) {
@@ -1583,12 +1587,10 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordModal.show();
     });
 
-    // ### INÍCIO DA ADIÇÃO ###
     async function loadFinancialSummary() {
-        // Seleciona todos os elementos de uma vez
         const totalLoanedEl = document.getElementById('summary-total-loaned');
         const totalReceivedEl = document.getElementById('summary-total-received');
-        const totalPendingEl = document.getElementById('summary-total-pending'); // Novo elemento
+        const totalPendingEl = document.getElementById('summary-total-pending'); 
         const totalOverdueEl = document.getElementById('summary-total-overdue');
         const defaultRateEl = document.getElementById('summary-default-rate');
 
@@ -1599,10 +1601,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
 
-            // Preenche todos os elementos com os dados formatados
             totalLoanedEl.textContent = formatCurrency(data.totalLoaned);
             totalReceivedEl.textContent = formatCurrency(data.totalReceived);
-            totalPendingEl.textContent = formatCurrency(data.totalPendingToReceive); // Novo valor
+            totalPendingEl.textContent = formatCurrency(data.totalPendingToReceive); 
             totalOverdueEl.textContent = formatCurrency(data.totalOverduePrincipal);
             defaultRateEl.textContent = `${data.defaultRate.toFixed(2)}%`;
 
@@ -1611,12 +1612,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const errorMessage = 'Erro ao carregar';
             totalLoanedEl.textContent = errorMessage;
             totalReceivedEl.textContent = errorMessage;
-            totalPendingEl.textContent = errorMessage; // Exibe erro no novo elemento também
+            totalPendingEl.textContent = errorMessage; 
             totalOverdueEl.textContent = errorMessage;
             defaultRateEl.textContent = errorMessage;
         }
     }
-    // ### FIM DA ADIÇÃO ###
 
     // --- INICIALIZAÇÃO ---
 
