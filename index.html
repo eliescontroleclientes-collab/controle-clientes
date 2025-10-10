@@ -140,7 +140,6 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
                         <div class="btn-toolbar">
-                            <!-- BOTÕES REMOVIDOS DESTA SEÇÃO -->
                             <button class="btn btn-info btn-sm me-2" id="reminder-btn">
                                 <i class="bi bi-bell-fill"></i> Lembrete de Cobrança
                             </button>
@@ -188,7 +187,6 @@
             </div>
         </div>
 
-        <!-- ### INÍCIO DA ADIÇÃO: RESUMO FINANCEIRO GERAL ### -->
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card shadow-sm">
@@ -215,6 +213,19 @@
                                     <span class="spinner-border spinner-border-sm" role="status"></span>
                                 </strong>
                             </li>
+                            <!-- ### INÍCIO DA ADIÇÃO ### -->
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="bi bi-clock-history me-2 text-info"></i>Valor a Receber (Pendente)
+                                    <i class="bi bi-question-circle ms-1" data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="Soma de todas as parcelas com data de vencimento de hoje ou futura que ainda não foram pagas."></i>
+                                </span>
+                                <strong id="summary-total-pending" class="text-info">
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                </strong>
+                            </li>
+                            <!-- ### FIM DA ADIÇÃO ### -->
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <span>
                                     <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>Valor Total em
@@ -243,7 +254,6 @@
                 </div>
             </div>
         </div>
-        <!-- ### FIM DA ADIÇÃO ### -->
     </div>
 
     <!-- Modal para Adicionar Novo Cliente -->
@@ -483,8 +493,6 @@
             </div>
         </div>
     </div>
-
-    <!-- MODAIS REMOVIDOS: Modal de Sincronizar, Instruções e Configurar Juros -->
 
     <!-- Modal de Pagamento -->
     <div class="modal fade" id="paymentModal" tabindex="-1">

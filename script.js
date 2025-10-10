@@ -1,11 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // ### REMOVIDO ### Bloco de código do modal de instruções temporárias
-    
-    // ######### NOVO: GUARDIÃO DE AUTENTICAÇÃO #########
+
     if (sessionStorage.getItem('isAuthenticated') !== 'true') {
-        // Se não estiver autenticado, redireciona para a página de login.
         window.location.href = '/login.html';
-        return; // Impede a execução do resto do script do painel.
+        return;
     }
 
     // --- ELEMENTOS DO DOM ---
@@ -16,12 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendar = document.getElementById('payment-calendar');
     const editClientBtn = document.getElementById('edit-client-btn');
     const deleteClientBtn = document.getElementById('delete-client-btn');
-    // ### REMOVIDO ### Declaração de 'syncClientsForm'
     const searchInput = document.getElementById('searchInput');
     const downloadSheetBtn = document.getElementById('download-sheet-btn');
     const downloadSpinner = document.getElementById('download-spinner');
-    // ### REMOVIDO ### Declarações de 'configInterestBtn', 'interestConfigModalEl', 'interestRateInput', 'saveInterestBtn'
-    
+
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -156,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let count = 0;
         const curDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
         const lastDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
-        
+
         while (curDate < lastDate) {
             const dayOfWeek = curDate.getUTCDay();
             if (dayOfWeek !== 0 && dayOfWeek !== 6) {
@@ -514,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
         observationsTextarea.readOnly = true;
         editObservationsBtn.classList.remove('d-none');
         saveObservationsBtn.classList.add('d-none');
-        
+
         const timeZone = 'America/Cuiaba';
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
@@ -1395,7 +1390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const lateCount = lateInstallments.length;
 
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
-            
+
             let message = '';
 
             if (isPendingToday && !hasLate) {
