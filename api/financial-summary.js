@@ -13,8 +13,6 @@ export default async function handler(req, res) {
 
     const db = await pool.connect();
     try {
-        // Busca todos os clientes de uma vez para os cálculos.
-        // Para sistemas muito grandes, otimizações seriam necessárias, mas para centenas de clientes isso é eficiente.
         const result = await db.query('SELECT "loanValue", "dailyValue", installments, "paymentDates" FROM clients');
         const clients = result.rows;
 
@@ -23,6 +21,9 @@ export default async function handler(req, res) {
         let totalReceived = 0;
         let totalLateInstallments = 0;
         let totalInstallments = 0;
+        // ### INÍCIO DA ADIÇÃO ###
+        let totalPendingToReceive = 0; // Nova variável para a métrica
+        // ### FIM DA ADIÇÃO ###
 
         const timeZone = 'America/Cuiaba';
         const today = new Date(new Date().toLocaleString("en-US", { timeZone }));
@@ -33,34 +34,35 @@ export default async function handler(req, res) {
             const installmentValue = parseFloat(client.dailyValue) || 0;
             const paymentDates = client.paymentDates || [];
 
-            // 1. Calcula o Total Emprestado
             totalLoaned += loanValue;
-
-            // 2. Calcula o Total de Parcelas do Sistema
             totalInstallments += client.installments || 0;
 
             paymentDates.forEach(p => {
                 const installmentDate = new Date(p.date);
 
-                // 3. Calcula o Total Recebido (soma de todas as parcelas pagas)
                 if (p.status === 'paid') {
                     totalReceived += installmentValue;
                 }
-                // 4. Calcula o Total em Atraso (soma das parcelas vencidas e não pagas)
                 else if (installmentDate < today) {
                     totalOverduePrincipal += installmentValue;
-                    totalLateInstallments++; // Conta para a taxa de inadimplência
+                    totalLateInstallments++;
                 }
+                // ### INÍCIO DA ADIÇÃO ###
+                // Se a parcela não está paga e a data é hoje ou no futuro, entra no novo cálculo
+                else if (installmentDate >= today) {
+                    totalPendingToReceive += installmentValue;
+                }
+                // ### FIM DA ADIÇÃO ###
             });
         });
 
-        // 5. Calcula a Taxa de Inadimplência
         const defaultRate = totalInstallments > 0 ? (totalLateInstallments / totalInstallments) * 100 : 0;
 
         res.status(200).json({
             totalLoaned,
             totalOverduePrincipal,
             totalReceived,
+            totalPendingToReceive, // Adiciona o novo valor à resposta da API
             defaultRate
         });
 

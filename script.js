@@ -1106,7 +1106,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ### REMOVIDO ### O 'event listener' do formulário 'Sincronizar'
     uploadFileForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedClientId || fileInput.files.length === 0) return;
@@ -1509,7 +1508,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmationModalBody.textContent = `Tem certeza que deseja resetar TODOS os pagamentos e o saldo deste cliente?`;
                         new bootstrap.Modal(confirmationModalEl).show();
                     }
-                    // ### REMOVIDO ### O 'else if' para 'configInterest'
                     pendingSecureAction = null;
                 }, { once: true });
 
@@ -1585,12 +1583,12 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordModal.show();
     });
 
-    // ### REMOVIDO ### O 'event listener' do botão 'configInterestBtn'
-    // ### REMOVIDO ### O 'event listener' do botão 'saveInterestBtn'
-
+    // ### INÍCIO DA ADIÇÃO ###
     async function loadFinancialSummary() {
+        // Seleciona todos os elementos de uma vez
         const totalLoanedEl = document.getElementById('summary-total-loaned');
         const totalReceivedEl = document.getElementById('summary-total-received');
+        const totalPendingEl = document.getElementById('summary-total-pending'); // Novo elemento
         const totalOverdueEl = document.getElementById('summary-total-overdue');
         const defaultRateEl = document.getElementById('summary-default-rate');
 
@@ -1601,8 +1599,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
 
+            // Preenche todos os elementos com os dados formatados
             totalLoanedEl.textContent = formatCurrency(data.totalLoaned);
             totalReceivedEl.textContent = formatCurrency(data.totalReceived);
+            totalPendingEl.textContent = formatCurrency(data.totalPendingToReceive); // Novo valor
             totalOverdueEl.textContent = formatCurrency(data.totalOverduePrincipal);
             defaultRateEl.textContent = `${data.defaultRate.toFixed(2)}%`;
 
@@ -1611,10 +1611,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const errorMessage = 'Erro ao carregar';
             totalLoanedEl.textContent = errorMessage;
             totalReceivedEl.textContent = errorMessage;
+            totalPendingEl.textContent = errorMessage; // Exibe erro no novo elemento também
             totalOverdueEl.textContent = errorMessage;
             defaultRateEl.textContent = errorMessage;
         }
     }
+    // ### FIM DA ADIÇÃO ###
 
     // --- INICIALIZAÇÃO ---
 
