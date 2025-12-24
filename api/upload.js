@@ -26,6 +26,14 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+    // --- BLOCO DE SEGURANÇA ---
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token !== process.env.API_SECRET_TOKEN) {
+        return res.status(401).json({ error: 'Acesso Negado.' });
+    }
+    // --------------------------
+
     const dbClient = await pool.connect();
     try {
         if (req.method === 'POST') {

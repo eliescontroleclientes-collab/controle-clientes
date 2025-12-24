@@ -37,6 +37,16 @@ function calculateClientStatus(client) {
 
 
 export default async function handler(req, res) {
+
+    // --- COLE O BLOCO DE SEGURANÇA AQUI ---
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token !== process.env.API_SECRET_TOKEN) {
+        return res.status(401).json({ error: 'Acesso Negado.' });
+    }
+    // --------------------------------------
+
     const db = await pool.connect();
     try {
         const result = await db.query('SELECT * FROM clients ORDER BY id ASC');

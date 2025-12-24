@@ -6,6 +6,14 @@ const pool = new Pool({
 });
 
 export default async function handler(req, res) {
+    // --- BLOCO DE SEGURANÇA ---
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token !== process.env.API_SECRET_TOKEN) {
+        return res.status(401).json({ error: 'Acesso Negado.' });
+    }
+    // --------------------------
+
     if (req.method !== 'POST' && req.method !== 'DELETE') {
         res.setHeader('Allow', ['POST', 'DELETE']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);

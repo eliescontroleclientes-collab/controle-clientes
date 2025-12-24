@@ -871,7 +871,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/payments', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                // ADICIONE AQUI O AUTHORIZATION:
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     clientId: selectedClientId,
                     paymentValue: paymentValue,
@@ -949,7 +953,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/payments', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                // ADICIONE AQUI O AUTHORIZATION:
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     clientId: selectedClientId,
                     paymentDate: currentInstallmentDate,
@@ -1172,7 +1180,14 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadProgressBarContainer.style.display = 'block';
         uploadBtn.disabled = true;
         try {
-            const response = await fetch('/api/upload', { method: 'POST', body: formData });
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                // ADICIONE ISSO:
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
             if (!response.ok) throw new Error((await response.json()).error || 'Falha no upload.');
             const updatedClient = await response.json();
             updateClientData(updatedClient);
@@ -1199,7 +1214,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/upload', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                // ADICIONE ISSO:
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ clientId: selectedClientId, fileName: fileName })
             });
             if (!response.ok) throw new Error((await response.json()).error || 'Falha ao excluir arquivo.');
@@ -1218,7 +1237,13 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadSheetBtn.disabled = true;
 
         try {
-            const response = await fetch('/api/export');
+            // MUDANÇA AQUI: Adicionar o segundo parâmetro com headers
+            const response = await fetch('/api/export', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
             if (!response.ok) {
                 const err = await response.json();
                 throw new Error(err.error || 'Falha ao gerar a planilha.');
