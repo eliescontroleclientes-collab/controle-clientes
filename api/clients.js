@@ -79,18 +79,31 @@ export default async function handler(req, res) {
             }
             // ######### FIM DA ALTERAÇÃO #########
 
-            // LÓGICA NORMAL DE ATUALIZAÇÃO (sem o reset)
-            // ### MODIFICAÇÃO: Adicionado "taxa_juros" ###
-            const { name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, files, saldo, localizacao, bairro, profissao, observacoes, taxa_juros } = clientData;
+            // LÓGICA NORMAL DE ATUALIZAÇÃO (ATUALIZADA COM PAUSA DE LEMBRETE)
+            const {
+                name, startDate, cpf, phone, loanValue, dailyValue, paymentDates,
+                installments, frequency, files, saldo, localizacao, bairro,
+                profissao, observacoes, taxa_juros, reminder_paused_until // <--- NOVO CAMPO
+            } = clientData;
+
             const query = `
                 UPDATE clients 
-                SET name = $1, "startDate" = $2, cpf = $3, phone = $4, "loanValue" = $5, "dailyValue" = $6, "paymentDates" = $7, installments = $8, frequency = $9, files = $10, saldo = $11, localizacao = $12, bairro = $13, profissao = $14, observacoes = $15, taxa_juros = $17
+                SET name = $1, "startDate" = $2, cpf = $3, phone = $4, "loanValue" = $5, 
+                "dailyValue" = $6, "paymentDates" = $7, installments = $8, frequency = $9, 
+                files = $10, saldo = $11, localizacao = $12, bairro = $13, profissao = $14, 
+                observacoes = $15, taxa_juros = $17, reminder_paused_until = $18
                 WHERE id = $16
                 RETURNING *
-            `; // ### MODIFICAÇÃO: Adicionado "taxa_juros = $17" ###
+            `;
 
-            // ### MODIFICAÇÃO: Adicionado "taxa_juros" no final ###
-            const values = [name, startDate, cpf, phone, loanValue, dailyValue, JSON.stringify(paymentDates), installments, frequency, JSON.stringify(files || []), saldo || 0.00, localizacao, bairro, profissao, observacoes, id, taxa_juros];
+            const values = [
+                name, startDate, cpf, phone, loanValue, dailyValue,
+                JSON.stringify(paymentDates), installments, frequency,
+                JSON.stringify(files || []), saldo || 0.00, localizacao,
+                bairro, profissao, observacoes, id, taxa_juros,
+                reminder_paused_until || null // <--- NOVO VALOR ($18)
+            ];
+
             const result = await db.query(query, values);
             res.status(200).json(result.rows[0]);
 

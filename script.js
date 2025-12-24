@@ -53,6 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyCollectionTextBtn = document.getElementById('copy-collection-text-btn');
     const reminderQueueModalEl = document.getElementById('reminderQueueModal');
     const reminderQueueList = document.getElementById('reminder-queue-list');
+    const pauseReminderBtn = document.getElementById('pause-reminder-btn');
+    const reminderStatusContainer = document.getElementById('reminder-status-container');
+    const reminderPausedDateEl = document.getElementById('reminder-paused-date');
+    const removePauseBtn = document.getElementById('remove-pause-btn');
+    const pauseReminderModalEl = document.getElementById('pauseReminderModal');
+    const pauseDateInput = document.getElementById('pauseDateInput');
+    const savePauseBtn = document.getElementById('save-pause-btn');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -470,6 +477,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
         document.getElementById('panel-status').innerHTML = calculateClientStatus(client);
+        // Lógica de Visualização da Pausa
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (client.reminder_paused_until && client.reminder_paused_until >= todayStr) {
+            // Está pausado
+            reminderStatusContainer.classList.remove('d-none');
+            pauseReminderBtn.classList.add('d-none');
+
+            // Formatar data para PT-BR
+            const pauseDateParts = client.reminder_paused_until.split('T')[0].split('-');
+            reminderPausedDateEl.textContent = `${pauseDateParts[2]}/${pauseDateParts[1]}/${pauseDateParts[0]}`;
+        } else {
+            // Não está pausado (ou a data já passou)
+            reminderStatusContainer.classList.add('d-none');
+            pauseReminderBtn.classList.remove('d-none');
+        }
 
         panelProfession.textContent = client.profissao || 'N/A';
         panelNeighborhood.textContent = client.bairro || 'N/A';
@@ -1507,13 +1530,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     reminderBtn.addEventListener('click', async () => {
+        const todayStr = new Date().toISOString().split('T')[0]; // Data de hoje YYYY-MM-DD
+
         clientsToRemind = allClientsForSearch.filter(client => {
             const status = calculateClientStatus(client);
-            return status.includes('Pendente') || status.includes('Atrasado');
+            const isLateOrPending = status.includes('Pendente') || status.includes('Atrasado');
+
+            // Verifica se está pausado
+            // Se reminder_paused_until existir E for maior ou igual a hoje, IGNORA o cliente
+            const isPaused = client.reminder_paused_until && client.reminder_paused_until >= todayStr;
+
+            return isLateOrPending && !isPaused;
         });
 
         if (clientsToRemind.length === 0) {
-            alert('Nenhum cliente com parcelas pendentes ou em atraso foi encontrado.');
+            alert('Nenhum cliente elegível para cobrança no momento (verifique se estão pausados).');
             return;
         }
 
@@ -1850,6 +1881,62 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;
+        }
+    });
+
+    // 1. Abrir modal de pausa
+    pauseReminderBtn.addEventListener('click', () => {
+        if (!selectedClientId) return;
+        pauseDateInput.value = ''; // Limpa anterior
+        new bootstrap.Modal(pauseReminderModalEl).show();
+    });
+
+    // 2. Salvar a pausa
+    savePauseBtn.addEventListener('click', async () => {
+        if (!selectedClientId || !pauseDateInput.value) return;
+
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        // Atualiza apenas o campo de pausa
+        const updatedData = { ...client, reminder_paused_until: pauseDateInput.value };
+
+        // Desabilita botão para evitar duplo clique
+        savePauseBtn.disabled = true;
+        savePauseBtn.textContent = 'Salvando...';
+
+        try {
+            const updatedClient = await updateClient(updatedData);
+            if (updatedClient) {
+                updateClientData(updatedClient);
+                bootstrap.Modal.getInstance(pauseReminderModalEl).hide();
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao salvar pausa.');
+        } finally {
+            savePauseBtn.disabled = false;
+            savePauseBtn.textContent = 'Confirmar Pausa';
+        }
+    });
+
+    // 3. Remover a pausa
+    removePauseBtn.addEventListener('click', async () => {
+        if (!selectedClientId) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        if (!confirm('Deseja voltar a receber lembretes deste cliente imediatamente?')) return;
+
+        const updatedData = { ...client, reminder_paused_until: null }; // Envia null para limpar
+
+        try {
+            const updatedClient = await updateClient(updatedData);
+            if (updatedClient) {
+                updateClientData(updatedClient);
+            }
+        } catch (err) {
+            alert('Erro ao remover pausa.');
         }
     });
 
