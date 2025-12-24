@@ -72,7 +72,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
+                const data = await response.json();
+                // MUDANÇA AQUI:
+                // 1. Salvamos o token que veio do servidor
+                if (data.token) {
+                    sessionStorage.setItem('authToken', data.token);
+                }
+                // 2. Mantemos o isAuthenticated para lógica visual simples
                 sessionStorage.setItem('isAuthenticated', 'true');
+
                 window.location.href = '/index.html';
             } else {
                 loginError.style.display = 'block';

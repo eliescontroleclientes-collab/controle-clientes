@@ -2,12 +2,19 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
+    ssl: { rejectUnauthorized: false }
 });
 
 export default async function handler(req, res) {
+    // --- BLOCO DE SEGURANÇA NOVO ---
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Pega o token depois de "Bearer"
+
+    if (token !== process.env.API_SECRET_TOKEN) {
+        return res.status(401).json({ error: 'Acesso Negado. Token inválido ou ausente.' });
+    }
+    // ----------------------------------
+
     try {
         const db = await pool.connect();
 

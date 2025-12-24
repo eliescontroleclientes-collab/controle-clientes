@@ -1,9 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
-
     if (sessionStorage.getItem('isAuthenticated') !== 'true') {
         window.location.href = '/login.html';
         return;
     }
+
+    // ADICIONE ESSA LINHA AQUI:
+    const token = sessionStorage.getItem('authToken');
 
     // --- ELEMENTOS DO DOM ---
     const clientListBody = document.getElementById('client-list-body');
@@ -24,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeCountSpan = document.getElementById('active-count');
     const settledCountSpan = document.getElementById('settled-count');
     const overdueCountSpan = document.getElementById('overdue-count');
-    
+
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
     const uploadFileForm = document.getElementById('upload-file-form');
@@ -165,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let count = 0;
         const curDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
         const lastDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
-        
+
         while (curDate < lastDate) {
             const dayOfWeek = curDate.getUTCDay();
             if (dayOfWeek !== 0 && dayOfWeek !== 6) {
@@ -320,7 +322,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE API ---
     async function loadClients() {
         try {
-            const response = await fetch(`/api/clients?page=${currentPage}&limit=${clientsPerPage}`);
+            // MUDANÇA AQUI: Adicionado o segundo parâmetro com headers
+            const response = await fetch(`/api/clients?page=${currentPage}&limit=${clientsPerPage}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
             if (!response.ok) throw new Error('Falha ao carregar clientes.');
             const data = await response.json();
             clients = data.clients;
@@ -357,8 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderClientList(clientsToRender = clients) {
         clientListBody.innerHTML = '';
         if (clientsToRender.length === 0) {
-            const message = (searchInput.value || filterClearBtn.classList.contains('d-none') === false) 
-                ? 'Nenhum cliente encontrado para o filtro aplicado.' 
+            const message = (searchInput.value || filterClearBtn.classList.contains('d-none') === false)
+                ? 'Nenhum cliente encontrado para o filtro aplicado.'
                 : 'Nenhum cliente cadastrado.';
             clientListBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">${message}</td></tr>`;
             return;
@@ -514,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             generateCollectionBtn.disabled = true;
             generateCollectionBtn.title = "Disponível apenas para clientes com parcelas em atraso.";
         }
-        
+
         // ### INÍCIO DA ALTERAÇÃO ###
         // A lógica de renderização da lista foi movida para a função `updateClientData`
         // e para os próprios filtros, então este bloco não é mais necessário aqui.
@@ -541,7 +549,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchAllClientsForSearch() {
         try {
-            const response = await fetch(`/api/clients?page=1&limit=9999`);
+            // MUDANÇA AQUI:
+            const response = await fetch(`/api/clients?page=1&limit=9999`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             const data = await response.json();
             allClientsForSearch = data.clients;
             updateFilterPanel();
@@ -588,13 +601,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         paginationControls.style.display = 'none';
         filterClearBtn.classList.remove('d-none');
-        
+
         const filteredClients = allClientsForSearch.filter(client => {
             const idMatch = client.id.toString().toLowerCase().includes(searchTerm);
             const nameMatch = client.name.toLowerCase().includes(searchTerm);
             return idMatch || nameMatch;
         });
-        
+
         renderClientList(filteredClients);
     }
 
@@ -631,7 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     filterActiveBtn.addEventListener('click', () => handleFilterClick(activeClients, filterActiveBtn));
-    
+
     filterSettledBtn.addEventListener('click', () => handleFilterClick(settledClients, filterSettledBtn));
 
     filterOverdueBtn.addEventListener('click', () => {
@@ -994,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clientIndexPaginated !== -1) {
             clients[clientIndexPaginated] = updatedClient;
         }
-        
+
         // Atualiza os painéis e contadores
         updateFilterPanel();
         renderClientPanel(clientId);
@@ -1420,7 +1433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const lateCount = lateInstallments.length;
 
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
-            
+
             let message = '';
 
             if (isPendingToday && !hasLate) {
@@ -1440,7 +1453,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const interestPerInstallment = parseFloat(client.dailyValue) * clientInterestRate;
                 const totalInterest = lateInstallments.length * interestPerInstallment;
                 // ### FIM DA ALTERAÇÃO ###
-                
+
                 const totalPrincipal = lateCount * parseFloat(client.dailyValue);
                 const totalDue = totalPrincipal + totalInterest;
 
@@ -1601,12 +1614,18 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadFinancialSummary() {
         const totalLoanedEl = document.getElementById('summary-total-loaned');
         const totalReceivedEl = document.getElementById('summary-total-received');
-        const totalPendingEl = document.getElementById('summary-total-pending'); 
+        const totalPendingEl = document.getElementById('summary-total-pending');
         const totalOverdueEl = document.getElementById('summary-total-overdue');
         const defaultRateEl = document.getElementById('summary-default-rate');
 
         try {
-            const response = await fetch('/api/financial-summary');
+            // MUDANÇA AQUI:
+            const response = await fetch('/api/financial-summary', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
             if (!response.ok) {
                 throw new Error('Falha ao buscar dados do resumo.');
             }
@@ -1614,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             totalLoanedEl.textContent = formatCurrency(data.totalLoaned);
             totalReceivedEl.textContent = formatCurrency(data.totalReceived);
-            totalPendingEl.textContent = formatCurrency(data.totalPendingToReceive); 
+            totalPendingEl.textContent = formatCurrency(data.totalPendingToReceive);
             totalOverdueEl.textContent = formatCurrency(data.totalOverduePrincipal);
             defaultRateEl.textContent = `${data.defaultRate.toFixed(2)}%`;
 
@@ -1623,7 +1642,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const errorMessage = 'Erro ao carregar';
             totalLoanedEl.textContent = errorMessage;
             totalReceivedEl.textContent = errorMessage;
-            totalPendingEl.textContent = errorMessage; 
+            totalPendingEl.textContent = errorMessage;
             totalOverdueEl.textContent = errorMessage;
             defaultRateEl.textContent = errorMessage;
         }

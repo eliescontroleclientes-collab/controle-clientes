@@ -7,6 +7,15 @@ const pool = new Pool({
 });
 
 export default async function handler(req, res) {
+    // --- BLOCO DE SEGURANÇA NOVO ---
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token !== process.env.API_SECRET_TOKEN) {
+        return res.status(401).json({ error: 'Acesso Negado.' });
+    }
+    // ----------------------------------
+
     if (req.method !== 'GET') {
         return res.status(405).end();
     }
