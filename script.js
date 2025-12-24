@@ -640,22 +640,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (totalPages <= 1) return;
 
-        const prevLi = document.createElement('li');
-        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-        prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}">Anterior</a>`;
-        paginationControls.appendChild(prevLi);
-
-        for (let i = 1; i <= totalPages; i++) {
+        // Função auxiliar para criar o HTML do botão
+        const createPageItem = (text, pageNumber, isActive = false, isDisabled = false) => {
             const li = document.createElement('li');
-            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-            li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
-            paginationControls.appendChild(li);
+            li.className = `page-item ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`;
+
+            // Se for desativado (como "..."), não colocamos data-page para não ser clicável
+            const dataAttr = isDisabled ? '' : `data-page="${pageNumber}"`;
+            li.innerHTML = `<a class="page-link" href="#" ${dataAttr}>${text}</a>`;
+            return li;
+        };
+
+        // 1. Botão "Anterior"
+        paginationControls.appendChild(createPageItem('Anterior', currentPage - 1, false, currentPage === 1));
+
+        // Lógica para definir quais números mostrar
+        const pagesToShow = [];
+
+        // Sempre mostra a página 1
+        pagesToShow.push(1);
+
+        // Define o intervalo ao redor da página atual (ex: 2 antes e 2 depois)
+        let startPage = Math.max(2, currentPage - 2);
+        let endPage = Math.min(totalPages - 1, currentPage + 2);
+
+        // Se houver um buraco grande entre o 1 e o início do intervalo, adiciona "..."
+        if (startPage > 2) {
+            pagesToShow.push('...');
         }
 
-        const nextLi = document.createElement('li');
-        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-        nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}">Próximo</a>`;
-        paginationControls.appendChild(nextLi);
+        // Adiciona as páginas do intervalo
+        for (let i = startPage; i <= endPage; i++) {
+            pagesToShow.push(i);
+        }
+
+        // Se houver um buraco grande entre o fim do intervalo e a última página, adiciona "..."
+        if (endPage < totalPages - 1) {
+            pagesToShow.push('...');
+        }
+
+        // Sempre mostra a última página (se não for a 1)
+        if (totalPages > 1) {
+            pagesToShow.push(totalPages);
+        }
+
+        // 2. Renderiza os números calculados
+        pagesToShow.forEach(page => {
+            if (page === '...') {
+                paginationControls.appendChild(createPageItem('...', null, false, true));
+            } else {
+                paginationControls.appendChild(createPageItem(page, page, page === currentPage));
+            }
+        });
+
+        // 3. Botão "Próximo"
+        paginationControls.appendChild(createPageItem('Próximo', currentPage + 1, false, currentPage === totalPages));
     }
 
     function filterClientList() {
