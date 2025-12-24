@@ -60,6 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const pauseReminderModalEl = document.getElementById('pauseReminderModal');
     const pauseDateInput = document.getElementById('pauseDateInput');
     const savePauseBtn = document.getElementById('save-pause-btn');
+    const renewalBtn = document.getElementById('renewal-btn');
+    const renewalModalEl = document.getElementById('renewalModal');
+    const renewalTextResult = document.getElementById('renewalTextResult');
+    const copyRenewalBtn = document.getElementById('copy-renewal-btn');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -477,6 +481,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
         document.getElementById('panel-status').innerHTML = calculateClientStatus(client);
+        // Lógica do Botão de Renovação (R)
+        // Condição: Nenhuma parcela paga (significa que é novo ou recém renovado/resetado)
+        const paidInstallmentsCount = (client.paymentDates || []).filter(p => p.status === 'paid').length;
+
+        if (paidInstallmentsCount === 0) {
+            renewalBtn.classList.remove('d-none');
+        } else {
+            renewalBtn.classList.add('d-none');
+        }
         // Lógica de Visualização da Pausa
         const todayStr = new Date().toISOString().split('T')[0];
 
@@ -1938,6 +1951,69 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             alert('Erro ao remover pausa.');
         }
+    });
+
+    renewalBtn.addEventListener('click', () => {
+        if (!selectedClientId) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        // Formatação de datas
+        const startDate = new Date(client.startDate);
+        const startDay = startDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
+        let firstPayment = 'N/A';
+        if (client.paymentDates && client.paymentDates.length > 0) {
+            const fpDate = new Date(client.paymentDates[0].date);
+            firstPayment = fpDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        }
+
+        // Formatação de valores
+        const loanVal = formatCurrency(client.loanValue);
+        const installVal = formatCurrency(client.dailyValue);
+
+        // Mapeamento de frequência para texto bonito
+        const freqMap = {
+            'daily': 'Diário',
+            'weekly': 'Semanal',
+            'biweekly': 'Quinzenal',
+            'monthly': 'Mensal'
+        };
+        const freqText = freqMap[client.frequency] || 'Diário';
+
+        // MONTAGEM DO TEXTO
+        let msg = `✨ *RENOVAÇÃO DE EMPRÉSTIMO* ✨\n\n`;
+        msg += `Olá, *${client.name.split(' ')[0]}*! Tudo certo? 🤝\n`;
+        msg += `Seguem os detalhes da sua renovação confirmada:\n\n`;
+
+        msg += `📅 *Data:* ${startDay}\n`;
+        msg += `💰 *Valor:* ${loanVal}\n`;
+        msg += `🔢 *Parcelas:* ${client.installments}x de ${installVal}\n`;
+        msg += `🔄 *Frequência:* ${freqText}\n`;
+        msg += `🚀 *1ª Parcela:* ${firstPayment}\n\n`;
+
+        msg += `⚠️ _Lembrete Importante: Manter o pagamento em dia evita a cobrança de juros adicionais e garante renovações futuras._\n\n`;
+
+        msg += `Conta comigo! Qualquer dúvida, estou à disposição. 👊`;
+
+        renewalTextResult.value = msg;
+        new bootstrap.Modal(renewalModalEl).show();
+    });
+
+    copyRenewalBtn.addEventListener('click', () => {
+        renewalTextResult.select();
+        document.execCommand('copy');
+
+        const originalText = copyRenewalBtn.innerHTML;
+        copyRenewalBtn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
+        copyRenewalBtn.classList.remove('btn-success');
+        copyRenewalBtn.classList.add('btn-dark');
+
+        setTimeout(() => {
+            copyRenewalBtn.innerHTML = originalText;
+            copyRenewalBtn.classList.remove('btn-dark');
+            copyRenewalBtn.classList.add('btn-success');
+        }, 2000);
     });
 
     async function loadFinancialSummary() {
