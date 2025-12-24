@@ -407,7 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/clients', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // <--- ADICIONE ESSA LINHA
+                },
                 body: JSON.stringify(clientData),
             });
             if (!response.ok) {
@@ -852,7 +855,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/clients', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // <--- ADICIONE ESSA LINHA
+                },
                 body: JSON.stringify(clientData),
             });
             if (!response.ok) {
@@ -1675,7 +1681,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function executeDelete() {
         try {
-            const response = await fetch(`/api/clients?id=${selectedClientId}`, { method: 'DELETE' });
+            // ADICIONE AS CHAVES E O HEADER AQUI:
+            const response = await fetch(`/api/clients?id=${selectedClientId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}` // <--- ADICIONE ESSA LINHA
+                }
+            });
+
             if (!response.ok) throw new Error('Falha ao excluir cliente.');
             await loadClients();
             renderClientPanel(null);
@@ -1690,7 +1703,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/clients', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // <--- ADICIONE ESSA LINHA
+                },
                 body: JSON.stringify({ id: selectedClientId, resetPayments: true })
             });
             if (!response.ok) throw new Error('Falha ao resetar pagamentos.');
