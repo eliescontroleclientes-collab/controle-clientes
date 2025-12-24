@@ -190,17 +190,20 @@
                     <div class="card-body d-flex justify-content-around align-items-center">
                         <button id="filter-active-btn" class="btn btn-primary position-relative">
                             Clientes Ativos
-                            <span id="active-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
+                            <span id="active-count"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
                         </button>
                         <!-- ### ALTERAÇÃO: Removido 'data-bs-toggle' e 'data-bs-target' ### -->
                         <button id="filter-settled-btn" class="btn btn-dark position-relative">
                             Quitados
-                            <span id="settled-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
+                            <span id="settled-count"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
                         </button>
                         <!-- ### ALTERAÇÃO: Removido 'data-bs-toggle' e 'data-bs-target' ### -->
                         <button id="filter-overdue-btn" class="btn btn-danger position-relative">
                             Em Atraso
-                            <span id="overdue-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
+                            <span id="overdue-count"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
                         </button>
                         <button id="filter-clear-btn" class="btn btn-outline-secondary d-none">
                             Mostrar Todos
@@ -367,12 +370,23 @@
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="paymentFrequency" id="freqDaily"
                                         value="daily" checked>
-                                    <label class="form-check-label" for="freqDaily">Diário (Dias Úteis)</label>
+                                    <label class="form-check-label" for="freqDaily">Diário</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="paymentFrequency" id="freqWeekly"
-                                        value="weekly" disabled>
+                                        value="weekly">
                                     <label class="form-check-label" for="freqWeekly">Semanal</label>
+                                </div>
+                                <!-- NOVAS OPÇÕES -->
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="paymentFrequency"
+                                        id="freqBiweekly" value="biweekly">
+                                    <label class="form-check-label" for="freqBiweekly">Quinzenal</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="paymentFrequency"
+                                        id="freqMonthly" value="monthly">
+                                    <label class="form-check-label" for="freqMonthly">Mensal</label>
                                 </div>
                             </div>
                         </div>
@@ -496,12 +510,23 @@
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="editPaymentFrequency"
                                         id="editFreqDaily" value="daily">
-                                    <label class="form-check-label" for="editFreqDaily">Diário (Dias Úteis)</label>
+                                    <label class="form-check-label" for="editFreqDaily">Diário</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="editPaymentFrequency"
                                         id="editFreqWeekly" value="weekly">
                                     <label class="form-check-label" for="editFreqWeekly">Semanal</label>
+                                </div>
+                                <!-- NOVAS OPÇÕES -->
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="editPaymentFrequency"
+                                        id="editFreqBiweekly" value="biweekly">
+                                    <label class="form-check-label" for="editFreqBiweekly">Quinzenal</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="editPaymentFrequency"
+                                        id="editFreqMonthly" value="monthly">
+                                    <label class="form-check-label" for="editFreqMonthly">Mensal</label>
                                 </div>
                             </div>
                         </div>

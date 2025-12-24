@@ -233,8 +233,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function generatePaymentDates(startDateStr, installments, frequency) {
         if (!startDateStr || !installments || !frequency) return [];
         const paymentDates = [];
+
         let currentDate;
+
+        // --- CONFIGURAÇÃO DA DATA INICIAL ---
+
         if (frequency === 'daily') {
+            // Lógica Original (Intacta)
             let firstDate = new Date(startDateStr + 'T00:00:00Z');
             firstDate.setUTCDate(firstDate.getUTCDate() + 1);
             while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6) {
@@ -242,13 +247,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             currentDate = firstDate;
         } else if (frequency === 'weekly') {
+            // Lógica Original (Intacta)
             let firstDate = new Date(startDateStr + 'T00:00:00Z');
             firstDate.setUTCDate(firstDate.getUTCDate() + 7);
+            currentDate = firstDate;
+        }
+        // === NOVA LÓGICA (QUINZENAL) ===
+        else if (frequency === 'biweekly') {
+            let firstDate = new Date(startDateStr + 'T00:00:00Z');
+            firstDate.setUTCDate(firstDate.getUTCDate() + 15);
+            // Se cair no sábado ou domingo, joga pra segunda
+            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6) {
+                firstDate.setUTCDate(firstDate.getUTCDate() + 1);
+            }
+            currentDate = firstDate;
+        }
+        // === NOVA LÓGICA (MENSAL) ===
+        else if (frequency === 'monthly') {
+            let firstDate = new Date(startDateStr + 'T00:00:00Z');
+            firstDate.setUTCMonth(firstDate.getUTCMonth() + 1);
+            // Se cair no sábado ou domingo, joga pra segunda
+            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6) {
+                firstDate.setUTCDate(firstDate.getUTCDate() + 1);
+            }
             currentDate = firstDate;
         } else {
             return [];
         }
+
+        // --- GERAÇÃO DAS DATAS ---
+
         if (frequency === 'daily') {
+            // Lógica Original (Intacta)
             let businessDaysCount = 0;
             while (businessDaysCount < installments) {
                 const dayOfWeek = currentDate.getUTCDay();
@@ -259,11 +289,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentDate.setUTCDate(currentDate.getUTCDate() + 1);
             }
         } else if (frequency === 'weekly') {
+            // Lógica Original (Intacta)
             for (let i = 0; i < installments; i++) {
                 paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
                 currentDate.setUTCDate(currentDate.getUTCDate() + 7);
             }
         }
+        // === NOVA LÓGICA (QUINZENAL) ===
+        else if (frequency === 'biweekly') {
+            for (let i = 0; i < installments; i++) {
+                paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
+
+                // Avança 15 dias
+                currentDate.setUTCDate(currentDate.getUTCDate() + 15);
+
+                // Ajusta se cair no fim de semana
+                while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                }
+            }
+        }
+        // === NOVA LÓGICA (MENSAL) ===
+        else if (frequency === 'monthly') {
+            for (let i = 0; i < installments; i++) {
+                paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
+
+                // Avança 1 Mês
+                currentDate.setUTCMonth(currentDate.getUTCMonth() + 1);
+
+                // Ajusta se cair no fim de semana
+                while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                }
+            }
+        }
+
         return paymentDates;
     }
 
@@ -445,7 +505,15 @@ document.addEventListener('DOMContentLoaded', () => {
         panelBalance.className = (client.saldo > 0) ? 'text-success fw-bold' : 'fw-bold';
 
         const calendarTitle = document.querySelector('#panel-details h6:nth-of-type(3)');
-        calendarTitle.textContent = `Calendário de Pagamentos (${client.installments || ''}x ${client.frequency === 'weekly' ? 'Semanal' : 'Diário'})`;
+        // Cria um mapa de nomes para ficar bonito
+        const freqNames = {
+            'daily': 'Diário',
+            'weekly': 'Semanal',
+            'biweekly': 'Quinzenal',
+            'monthly': 'Mensal'
+        };
+        const freqLabel = freqNames[client.frequency] || 'Diário'; // Padrão se não achar
+        calendarTitle.textContent = `Calendário de Pagamentos (${client.installments || ''}x ${freqLabel})`;
 
         calendar.innerHTML = '';
         if (!client.startDate || !client.paymentDates || client.paymentDates.length === 0) {
@@ -1063,8 +1131,15 @@ document.addEventListener('DOMContentLoaded', () => {
         editInstallmentValueInput.value = formatCurrency(client.dailyValue || 0);
 
         toggleEditPaymentFrequency();
+        // Removemos a seleção anterior e aplicamos a nova
+        document.querySelectorAll('input[name="editPaymentFrequency"]').forEach(el => el.checked = false);
+
         if (client.frequency === 'weekly') {
             document.getElementById('editFreqWeekly').checked = true;
+        } else if (client.frequency === 'biweekly') {
+            document.getElementById('editFreqBiweekly').checked = true;
+        } else if (client.frequency === 'monthly') {
+            document.getElementById('editFreqMonthly').checked = true;
         } else {
             document.getElementById('editFreqDaily').checked = true;
         }

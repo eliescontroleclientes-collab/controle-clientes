@@ -144,7 +144,8 @@ export default async function handler(req, res) {
             loansSheet.getCell(`D${startRow + 2}`).value = 'Nº de Parcelas';
             loansSheet.getCell(`D${startRow + 3}`).value = client.installments;
             loansSheet.getCell(`D${startRow + 4}`).value = 'Frequência';
-            loansSheet.getCell(`D${startRow + 5}`).value = client.frequency === 'daily' ? 'Diária' : 'Semanal';
+            const freqMap = { 'daily': 'Diária', 'weekly': 'Semanal', 'biweekly': 'Quinzenal', 'monthly': 'Mensal' };
+            loansSheet.getCell(`D${startRow + 5}`).value = freqMap[client.frequency] || 'Diária';
 
             loansSheet.getCell(`E${startRow}`).value = 'Saldo';
             const balanceCell = loansSheet.getCell(`E${startRow + 1}`);
