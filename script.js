@@ -121,6 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const changePixKeyBtn = document.getElementById('change-pix-key-btn');
     const sendRemindersBtn = document.getElementById('send-reminders-btn');
     const paginationControls = document.getElementById('pagination-controls');
+    const holidayBtn = document.getElementById('holiday-btn');
+    const holidayModalEl = document.getElementById('holidayModal');
+    const holidayList = document.getElementById('holidayList');
+    const addHolidayForm = document.getElementById('add-holiday-form');
+    const holidayDateInput = document.getElementById('holidayDateInput');
 
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
@@ -1764,6 +1769,88 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingSecureAction = 'unlockEdit';
         const passwordModal = new bootstrap.Modal(passwordModalEl);
         passwordModal.show();
+    });
+
+    // 1. Abrir modal
+    holidayBtn.addEventListener('click', () => {
+        loadHolidays();
+        new bootstrap.Modal(holidayModalEl).show();
+    });
+
+    // 2. Carregar lista de feriados
+    async function loadHolidays() {
+        holidayList.innerHTML = '<li class="list-group-item text-muted">Carregando...</li>';
+        try {
+            const response = await fetch('/api/holidays', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const holidays = await response.json();
+
+            holidayList.innerHTML = '';
+            if (holidays.length === 0) {
+                holidayList.innerHTML = '<li class="list-group-item text-muted">Nenhum feriado cadastrado.</li>';
+                return;
+            }
+
+            holidays.forEach(h => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between';
+                // Ajusta data para evitar problema de fuso horário na visualização
+                const dateParts = h.date.split('T')[0].split('-');
+                const dateDisplay = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; // DD/MM/YYYY
+
+                li.innerHTML = `<span>${dateDisplay}</span> <span class="badge bg-secondary">${h.description || 'Feriado'}</span>`;
+                holidayList.appendChild(li);
+            });
+        } catch (error) {
+            holidayList.innerHTML = '<li class="list-group-item text-danger">Erro ao carregar.</li>';
+        }
+    }
+
+    // 3. Adicionar Feriado (A PARTE CRÍTICA)
+    addHolidayForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const date = holidayDateInput.value;
+        if (!date) return;
+
+        if (!confirm(`ATENÇÃO: Isso irá alterar o calendário de TODOS os clientes que têm parcela em ${date.split('-').reverse().join('/')}. Deseja continuar?`)) {
+            return;
+        }
+
+        const btn = document.getElementById('addHolidayBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
+
+        try {
+            const response = await fetch('/api/holidays', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ date: date, description: 'Feriado Manual' })
+            });
+
+            if (!response.ok) throw new Error('Falha ao aplicar feriado.');
+
+            alert('Feriado aplicado com sucesso! Os calendários foram atualizados.');
+            holidayDateInput.value = '';
+            loadHolidays();
+
+            // Recarrega a tela atual para refletir mudanças se estiver vendo algum cliente
+            if (selectedClientId) {
+                renderClientPanel(selectedClientId);
+            }
+            await loadClients(); // Atualiza a lista geral
+
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao aplicar feriado. Tente novamente.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     });
 
     async function loadFinancialSummary() {

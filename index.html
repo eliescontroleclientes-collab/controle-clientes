@@ -140,6 +140,9 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
                         <div class="btn-toolbar">
+                            <button class="btn btn-warning btn-sm me-2" id="holiday-btn">
+                                <i class="bi bi-calendar-event"></i> Gerenciar Feriados
+                            </button>
                             <button class="btn btn-info btn-sm me-2" id="reminder-btn">
                                 <i class="bi bi-bell-fill"></i> Lembrete de Cobrança
                             </button>
@@ -739,6 +742,39 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Concluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Feriados -->
+    <div class="modal fade" id="holidayModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">Gerenciar Feriados Globais</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill"></i> <strong>Cuidado:</strong>
+                        Ao adicionar um feriado, o sistema irá automaticamente <strong>adiar as parcelas</strong> de
+                        TODOS os clientes que caem nesta data.
+                    </div>
+
+                    <form id="add-holiday-form" class="mb-4">
+                        <div class="input-group">
+                            <input type="date" class="form-control" id="holidayDateInput" required>
+                            <button class="btn btn-dark" type="submit" id="addHolidayBtn">
+                                <i class="bi bi-plus-circle"></i> Aplicar Feriado
+                            </button>
+                        </div>
+                    </form>
+
+                    <h6>Feriados Cadastrados:</h6>
+                    <ul class="list-group" id="holidayList">
+                        <li class="list-group-item text-muted">Carregando...</li>
+                    </ul>
                 </div>
             </div>
         </div>
