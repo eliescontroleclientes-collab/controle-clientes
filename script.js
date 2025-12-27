@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportCount = document.getElementById('report-count');
     const reportSpinner = document.getElementById('report-spinner');
     const quickDateBtns = document.querySelectorAll('.quick-date-btn');
+    const clientReportBtn = document.getElementById('client-report-btn');
+    const clientReportModalEl = document.getElementById('clientReportModal');
+    const clientReportText = document.getElementById('clientReportText');
+    const copyClientReportBtn = document.getElementById('copy-client-report-btn');
 
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
@@ -2095,6 +2099,54 @@ document.addEventListener('DOMContentLoaded', () => {
             copyRenewalBtn.innerHTML = originalText;
             copyRenewalBtn.classList.remove('btn-dark');
             copyRenewalBtn.classList.add('btn-success');
+        }, 2000);
+    });
+
+    // --- LÓGICA DO RELATÓRIO INDIVIDUAL DO CLIENTE ---
+
+    clientReportBtn.addEventListener('click', () => {
+        if (!selectedClientId) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        // 1. Cálculos Matemáticos
+        const totalInstallments = client.paymentDates ? client.paymentDates.length : 0;
+        const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
+        const remainingInstallments = totalInstallments - paidInstallments;
+
+        const installmentValue = parseFloat(client.dailyValue);
+        const remainingValue = remainingInstallments * installmentValue;
+
+        // Calcula porcentagem concluída (opcional, mas fica bonito)
+        const progress = totalInstallments > 0 ? Math.round((paidInstallments / totalInstallments) * 100) : 0;
+
+        // 2. Montagem do Texto
+        let msg = `📊 *EXTRATO DE EMPRÉSTIMO* 📊\n\n`;
+        msg += `Olá, *${client.name.split(' ')[0]}*! Aqui está o resumo atualizado do seu contrato:\n\n`;
+
+        msg += `💰 *Valor da Parcela:* ${formatCurrency(installmentValue)}\n`;
+        msg += `✅ *Parcelas Pagas:* ${paidInstallments} de ${totalInstallments}\n`;
+        msg += `⏳ *Restantes:* ${remainingInstallments} parcelas\n\n`;
+
+        msg += `📉 *Progresso:* ${progress}% concluído\n`;
+        msg += `🏁 *Saldo para Quitação:* *${formatCurrency(remainingValue)}*\n\n`;
+
+        msg += `_Continue pagando em dia para manter seu crédito sempre disponível!_ 🤝`;
+
+        // 3. Exibir
+        clientReportText.value = msg;
+        new bootstrap.Modal(clientReportModalEl).show();
+    });
+
+    copyClientReportBtn.addEventListener('click', () => {
+        clientReportText.select();
+        document.execCommand('copy');
+
+        const originalText = copyClientReportBtn.innerHTML;
+        copyClientReportBtn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
+
+        setTimeout(() => {
+            copyClientReportBtn.innerHTML = originalText;
         }, 2000);
     });
 

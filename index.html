@@ -46,8 +46,13 @@
                                         <strong>R</strong>
                                     </button>
 
-                                    <!-- ### NOVO POSICIONAMENTO: BOTÃO ADIAR COBRANÇA ### -->
-                                    <!-- Agora ele fica aqui, junto com os outros, organizado -->
+                                    <!-- NOVO BOTÃO: RELATÓRIO DO CLIENTE -->
+                                    <button id="client-report-btn" class="btn btn-outline-dark btn-sm"
+                                        title="Gerar Relatório de Status">
+                                        <i class="bi bi-file-person"></i>
+                                    </button>
+
+                                    <!-- Botão de Pausa (Reloginho) -->
                                     <button id="pause-reminder-btn" class="btn btn-outline-secondary btn-sm"
                                         title="Adiar cobrança (Sem Lembrete)">
                                         <i class="bi bi-clock-history"></i>
@@ -903,6 +908,28 @@
                         <div class="spinner-border text-primary" role="status"></div>
                         <p class="mt-2">Calculando...</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Relatório do Cliente -->
+    <div class="modal fade" id="clientReportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-file-text"></i> Relatório de Situação</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Resumo atual do empréstimo para envio ao cliente.</p>
+                    <textarea class="form-control" id="clientReportText" rows="10" readonly></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-dark" id="copy-client-report-btn">
+                        <i class="bi bi-clipboard"></i> Copiar
+                    </button>
                 </div>
             </div>
         </div>
