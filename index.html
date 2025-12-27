@@ -307,10 +307,17 @@
                             </li>
                         </ul>
                     </div>
+                    <!-- NOVO RODAPÉ COM O BOTÃO -->
+                    <div class="card-footer bg-white text-center">
+                        <button id="open-report-btn" class="btn btn-outline-primary">
+                            <i class="bi bi-bar-chart-line-fill me-2"></i> Relatório de Recebimentos
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </div> <!-- Fim do container-fluid -->
+
 
     <!-- Modal para Adicionar Novo Cliente -->
     <div class="modal fade" id="addClientModal" tabindex="-1">
@@ -845,6 +852,57 @@
                     <button type="button" class="btn btn-success" id="copy-renewal-btn">
                         <i class="bi bi-clipboard"></i> Copiar Texto
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Relatório de Recebimentos -->
+    <div class="modal fade" id="reportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Relatório de Receita Real</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Consulte o valor total que entrou no caixa no período selecionado.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Período:</label>
+                        <div class="btn-group w-100 mb-2" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-date-btn"
+                                data-days="7">7 Dias</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-date-btn"
+                                data-days="15">15 Dias</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-date-btn active"
+                                data-days="30">30 Dias</button>
+                        </div>
+                        <div class="input-group">
+                            <input type="date" class="form-control" id="reportStartDate">
+                            <span class="input-group-text">até</span>
+                            <input type="date" class="form-control" id="reportEndDate">
+                        </div>
+                    </div>
+
+                    <div class="d-grid mb-4">
+                        <button id="generate-report-btn" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Consultar
+                        </button>
+                    </div>
+
+                    <hr>
+
+                    <div id="report-result" class="text-center d-none">
+                        <small class="text-muted text-uppercase">Total Recebido no Período</small>
+                        <h2 class="display-4 fw-bold text-success" id="report-total-value">R$ 0,00</h2>
+                        <p class="text-muted"><span id="report-count">0</span> pagamentos registrados.</p>
+                    </div>
+
+                    <div id="report-spinner" class="text-center d-none">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2">Calculando...</p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,4 +1,4 @@
-// /api/financial-summary.js
+// ARQUIVO: /api/financial-summary.js
 import { Pool } from 'pg';
 
 const pool = new Pool({
@@ -7,21 +7,66 @@ const pool = new Pool({
 });
 
 export default async function handler(req, res) {
-    // --- BLOCO DE SEGURANÇA NOVO ---
+    // --- SEGURANÇA ---
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token !== process.env.API_SECRET_TOKEN) {
         return res.status(401).json({ error: 'Acesso Negado.' });
     }
-    // ----------------------------------
+    // -----------------
 
     if (req.method !== 'GET') {
         return res.status(405).end();
     }
 
     const db = await pool.connect();
+
     try {
+        const { startDate, endDate } = req.query;
+
+        // ============================================================
+        // MODO 1: RELATÓRIO POR DATA (Se enviou startDate e endDate)
+        // ============================================================
+        if (startDate && endDate) {
+            // Converter para objetos Date (Zerando horas)
+            const start = new Date(startDate + 'T00:00:00Z');
+            const end = new Date(endDate + 'T23:59:59Z');
+
+            // Busca clientes e extrai apenas as datas de pagamento
+            const result = await db.query('SELECT "paymentDates" FROM clients');
+            const clients = result.rows;
+
+            let totalRevenue = 0;
+            let paymentsCount = 0;
+
+            clients.forEach(client => {
+                const paymentDates = client.paymentDates || [];
+                paymentDates.forEach(installment => {
+                    // Verifica se existe o histórico de pagamentos dentro da parcela
+                    if (installment.payments && Array.isArray(installment.payments)) {
+                        installment.payments.forEach(paymentItem => {
+                            const payDate = new Date(paymentItem.registeredDate);
+                            // Filtra pela data
+                            if (payDate >= start && payDate <= end) {
+                                totalRevenue += parseFloat(paymentItem.paidValue || 0);
+                                paymentsCount++;
+                            }
+                        });
+                    }
+                });
+            });
+
+            return res.status(200).json({
+                totalRevenue,
+                paymentsCount,
+                period: { start: startDate, end: endDate }
+            });
+        }
+
+        // ============================================================
+        // MODO 2: RESUMO GERAL (Padrão - Sem datas)
+        // ============================================================
         const result = await db.query('SELECT "loanValue", "dailyValue", installments, "paymentDates" FROM clients');
         const clients = result.rows;
 
@@ -30,9 +75,7 @@ export default async function handler(req, res) {
         let totalReceived = 0;
         let totalLateInstallments = 0;
         let totalInstallments = 0;
-        // ### INÍCIO DA ADIÇÃO ###
-        let totalPendingToReceive = 0; // Nova variável para a métrica
-        // ### FIM DA ADIÇÃO ###
+        let totalPendingToReceive = 0;
 
         const timeZone = 'America/Cuiaba';
         const today = new Date(new Date().toLocaleString("en-US", { timeZone }));
@@ -56,28 +99,25 @@ export default async function handler(req, res) {
                     totalOverduePrincipal += installmentValue;
                     totalLateInstallments++;
                 }
-                // ### INÍCIO DA ADIÇÃO ###
-                // Se a parcela não está paga e a data é hoje ou no futuro, entra no novo cálculo
                 else if (installmentDate >= today) {
                     totalPendingToReceive += installmentValue;
                 }
-                // ### FIM DA ADIÇÃO ###
             });
         });
 
         const defaultRate = totalInstallments > 0 ? (totalLateInstallments / totalInstallments) * 100 : 0;
 
-        res.status(200).json({
+        return res.status(200).json({
             totalLoaned,
             totalOverduePrincipal,
             totalReceived,
-            totalPendingToReceive, // Adiciona o novo valor à resposta da API
+            totalPendingToReceive,
             defaultRate
         });
 
     } catch (error) {
         console.error('API /financial-summary error:', error);
-        res.status(500).json({ error: 'Erro ao calcular o resumo financeiro.' });
+        res.status(500).json({ error: 'Erro ao calcular dados.' });
     } finally {
         db.release();
     }

@@ -26,6 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeCountSpan = document.getElementById('active-count');
     const settledCountSpan = document.getElementById('settled-count');
     const overdueCountSpan = document.getElementById('overdue-count');
+    const openReportBtn = document.getElementById('open-report-btn');
+    const reportModalEl = document.getElementById('reportModal');
+    const reportStartDate = document.getElementById('reportStartDate');
+    const reportEndDate = document.getElementById('reportEndDate');
+    const generateReportBtn = document.getElementById('generate-report-btn');
+    const reportResultDiv = document.getElementById('report-result');
+    const reportTotalValue = document.getElementById('report-total-value');
+    const reportCount = document.getElementById('report-count');
+    const reportSpinner = document.getElementById('report-spinner');
+    const quickDateBtns = document.querySelectorAll('.quick-date-btn');
 
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
@@ -1188,6 +1198,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     // ### FIM DA ALTERAÇÃO ###
+
+    // Função auxiliar para definir datas (Hoje - X dias)
+    function setDateRange(daysBack) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - daysBack);
+
+        reportEndDate.value = end.toISOString().split('T')[0];
+        reportStartDate.value = start.toISOString().split('T')[0];
+    }
+
+    // 1. Ao abrir o modal, define o padrão (30 dias)
+    openReportBtn.addEventListener('click', () => {
+        setDateRange(30); // Padrão: Últimos 30 dias
+        reportResultDiv.classList.add('d-none');
+        new bootstrap.Modal(reportModalEl).show();
+        // Dispara a consulta automaticamente ao abrir
+        generateReportBtn.click();
+    });
+
+    // 2. Botões Rápidos (7, 15, 30 dias)
+    quickDateBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Remove active de todos e adiciona no clicado
+            quickDateBtns.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+
+            const days = parseInt(e.target.dataset.days);
+            setDateRange(days);
+            generateReportBtn.click(); // Já consulta ao clicar
+        });
+    });
+
+    // 3. Consultar API
+    generateReportBtn.addEventListener('click', async () => {
+        const start = reportStartDate.value;
+        const end = reportEndDate.value;
+
+        if (!start || !end) {
+            alert('Por favor, selecione as datas de início e fim.');
+            return;
+        }
+
+        // UI Loading
+        generateReportBtn.disabled = true;
+        reportResultDiv.classList.add('d-none');
+        reportSpinner.classList.remove('d-none');
+
+        try {
+            const token = sessionStorage.getItem('authToken');
+            const response = await fetch(`/api/financial-summary?startDate=${start}&endDate=${end}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error('Erro ao buscar relatório.');
+
+            const data = await response.json();
+
+            reportTotalValue.textContent = formatCurrency(data.totalRevenue);
+            reportCount.textContent = data.paymentsCount;
+
+            reportSpinner.classList.add('d-none');
+            reportResultDiv.classList.remove('d-none');
+
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao gerar relatório.');
+            reportSpinner.classList.add('d-none');
+        } finally {
+            generateReportBtn.disabled = false;
+        }
+    });
 
 
     editClientBtn.addEventListener('click', () => {
