@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ADICIONE ESSA LINHA AQUI:
     const token = sessionStorage.getItem('authToken');
 
+    // NOVA VARIÁVEL GLOBAL
+    let globalHolidays = [];
+
     // --- ELEMENTOS DO DOM ---
     const clientListBody = document.getElementById('client-list-body');
     const panelPlaceholder = document.getElementById('panel-placeholder');
@@ -266,38 +269,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let currentDate;
 
+        // Funçãozinha auxiliar para checar se é feriado (usa a variável que criamos no passo anterior)
+        const isHoliday = (dateObj) => {
+            const dateString = dateObj.toISOString().split('T')[0];
+            return globalHolidays.includes(dateString);
+        };
+
         // --- CONFIGURAÇÃO DA DATA INICIAL ---
 
         if (frequency === 'daily') {
-            // Lógica Original (Intacta)
             let firstDate = new Date(startDateStr + 'T00:00:00Z');
             firstDate.setUTCDate(firstDate.getUTCDate() + 1);
-            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6) {
+
+            // Avança se for Sábado (6), Domingo (0) OU Feriado (isHoliday)
+            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6 || isHoliday(firstDate)) {
                 firstDate.setUTCDate(firstDate.getUTCDate() + 1);
             }
             currentDate = firstDate;
-        } else if (frequency === 'weekly') {
-            // Lógica Original (Intacta)
+        }
+        else if (frequency === 'weekly') {
             let firstDate = new Date(startDateStr + 'T00:00:00Z');
             firstDate.setUTCDate(firstDate.getUTCDate() + 7);
+            // Semanal geralmente não pula feriado automaticamente na regra padrão, 
+            // mas se quiser pular, basta adicionar o while aqui igual ao daily.
             currentDate = firstDate;
         }
-        // === NOVA LÓGICA (QUINZENAL) ===
         else if (frequency === 'biweekly') {
             let firstDate = new Date(startDateStr + 'T00:00:00Z');
             firstDate.setUTCDate(firstDate.getUTCDate() + 15);
-            // Se cair no sábado ou domingo, joga pra segunda
-            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6) {
+
+            // Avança se for Sábado (6), Domingo (0) OU Feriado
+            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6 || isHoliday(firstDate)) {
                 firstDate.setUTCDate(firstDate.getUTCDate() + 1);
             }
             currentDate = firstDate;
         }
-        // === NOVA LÓGICA (MENSAL) ===
         else if (frequency === 'monthly') {
             let firstDate = new Date(startDateStr + 'T00:00:00Z');
             firstDate.setUTCMonth(firstDate.getUTCMonth() + 1);
-            // Se cair no sábado ou domingo, joga pra segunda
-            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6) {
+
+            // Avança se for Sábado (6), Domingo (0) OU Feriado
+            while (firstDate.getUTCDay() === 0 || firstDate.getUTCDay() === 6 || isHoliday(firstDate)) {
                 firstDate.setUTCDate(firstDate.getUTCDate() + 1);
             }
             currentDate = firstDate;
@@ -308,47 +320,44 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- GERAÇÃO DAS DATAS ---
 
         if (frequency === 'daily') {
-            // Lógica Original (Intacta)
             let businessDaysCount = 0;
             while (businessDaysCount < installments) {
                 const dayOfWeek = currentDate.getUTCDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+
+                // Só conta como parcela válida se NÃO for Domingo, NÃO for Sábado E NÃO for Feriado
+                if (dayOfWeek !== 0 && dayOfWeek !== 6 && !isHoliday(currentDate)) {
                     businessDaysCount++;
                     paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
                 }
                 currentDate.setUTCDate(currentDate.getUTCDate() + 1);
             }
-        } else if (frequency === 'weekly') {
-            // Lógica Original (Intacta)
+        }
+        else if (frequency === 'weekly') {
             for (let i = 0; i < installments; i++) {
                 paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
                 currentDate.setUTCDate(currentDate.getUTCDate() + 7);
             }
         }
-        // === NOVA LÓGICA (QUINZENAL) ===
         else if (frequency === 'biweekly') {
             for (let i = 0; i < installments; i++) {
                 paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
 
-                // Avança 15 dias
                 currentDate.setUTCDate(currentDate.getUTCDate() + 15);
 
-                // Ajusta se cair no fim de semana
-                while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+                // Ajusta se cair no fim de semana OU Feriado
+                while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6 || isHoliday(currentDate)) {
                     currentDate.setUTCDate(currentDate.getUTCDate() + 1);
                 }
             }
         }
-        // === NOVA LÓGICA (MENSAL) ===
         else if (frequency === 'monthly') {
             for (let i = 0; i < installments; i++) {
                 paymentDates.push({ date: new Date(currentDate).toISOString(), status: 'pending' });
 
-                // Avança 1 Mês
                 currentDate.setUTCMonth(currentDate.getUTCMonth() + 1);
 
-                // Ajusta se cair no fim de semana
-                while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6) {
+                // Ajusta se cair no fim de semana OU Feriado
+                while (currentDate.getUTCDay() === 0 || currentDate.getUTCDay() === 6 || isHoliday(currentDate)) {
                     currentDate.setUTCDate(currentDate.getUTCDate() + 1);
                 }
             }
@@ -2150,6 +2159,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
     });
 
+    // --- CARREGAR FERIADOS PARA A MEMÓRIA ---
+    async function loadHolidaysForCache() {
+        try {
+            const response = await fetch('/api/holidays', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            // Salva apenas as strings de data (YYYY-MM-DD) na memória
+            globalHolidays = data.map(h => h.date.split('T')[0]);
+        } catch (error) {
+            console.error('Erro ao carregar feriados:', error);
+        }
+    }
+
     async function loadFinancialSummary() {
         const totalLoanedEl = document.getElementById('summary-total-loaned');
         const totalReceivedEl = document.getElementById('summary-total-received');
@@ -2211,7 +2234,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateClock();
     setInterval(updateClock, 1000);
-
+    loadHolidaysForCache();
     loadClients();
     loadFinancialSummary();
 });
