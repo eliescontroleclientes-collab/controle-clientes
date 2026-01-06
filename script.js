@@ -513,19 +513,23 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             renewalBtn.classList.add('d-none');
         }
-        // Lógica de Visualização da Pausa
-        const todayStr = new Date().toISOString().split('T')[0];
+        // Lógica de Visualização da Pausa (ATUALIZADA)
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Cuiaba' });
+        // Garante que pegamos só a parte YYYY-MM-DD da data do banco
+        const pauseDateClean = client.reminder_paused_until ? client.reminder_paused_until.split('T')[0] : null;
 
-        if (client.reminder_paused_until && client.reminder_paused_until >= todayStr) {
+        // MUDANÇA: Trocamos o '>=' por '>'
+        // "Se a data da pausa for MAIOR que hoje (futuro), então mostra o aviso."
+        // "Se for IGUAL ou MENOR (hoje ou passado), esconde o aviso e libera."
+        if (pauseDateClean && pauseDateClean > todayStr) {
             // Está pausado
             reminderStatusContainer.classList.remove('d-none');
             pauseReminderBtn.classList.add('d-none');
 
-            // Formatar data para PT-BR
-            const pauseDateParts = client.reminder_paused_until.split('T')[0].split('-');
+            const pauseDateParts = pauseDateClean.split('-');
             reminderPausedDateEl.textContent = `${pauseDateParts[2]}/${pauseDateParts[1]}/${pauseDateParts[0]}`;
         } else {
-            // Não está pausado (ou a data já passou)
+            // Não está pausado (ou a data chegou/passou)
             reminderStatusContainer.classList.add('d-none');
             pauseReminderBtn.classList.remove('d-none');
         }
@@ -1638,15 +1642,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     reminderBtn.addEventListener('click', async () => {
-        const todayStr = new Date().toISOString().split('T')[0]; // Data de hoje YYYY-MM-DD
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Cuiaba' }); // Data de hoje YYYY-MM-DD
 
         clientsToRemind = allClientsForSearch.filter(client => {
             const status = calculateClientStatus(client);
             const isLateOrPending = status.includes('Pendente') || status.includes('Atrasado');
 
-            // Verifica se está pausado
-            // Se reminder_paused_until existir E for maior ou igual a hoje, IGNORA o cliente
-            const isPaused = client.reminder_paused_until && client.reminder_paused_until >= todayStr;
+            // Verifica se está pausado (LÓGICA CORRIGIDA)
+            const pauseDateClean = client.reminder_paused_until ? client.reminder_paused_until.split('T')[0] : null;
+
+            // Só considera pausado se a data definida for NO FUTURO (Maior que hoje).
+            // Se for hoje (Igual), já considera ativo.
+            const isPaused = pauseDateClean && pauseDateClean > todayStr;
 
             return isLateOrPending && !isPaused;
         });
