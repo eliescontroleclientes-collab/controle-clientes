@@ -1800,7 +1800,22 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(reminderQueueModalEl).show();
     });
 
-    // --- LÓGICA DE COPIAR E ABRIR WHATSAPP (OTIMIZADA) ---
+    // --- LÓGICA DE COPIAR E ABRIR WHATSAPP (HÍBRIDA WEB/APP) ---
+
+    // 1. Configuração do Botão de Alternância (Switch)
+    const waModeToggle = document.getElementById('wa-mode-toggle');
+
+    // Ao carregar a página, verifica se o usuário já tinha escolhido 'app' antes
+    if (localStorage.getItem('wa_opener_mode') === 'app') {
+        waModeToggle.checked = true;
+    }
+
+    // Ao clicar no botão, salva a preferência para o futuro
+    waModeToggle.addEventListener('change', () => {
+        localStorage.setItem('wa_opener_mode', waModeToggle.checked ? 'app' : 'web');
+    });
+
+    // 2. Lógica do Clique na Lista de Clientes
     reminderQueueList.addEventListener('click', (e) => {
         const link = e.target.closest('.reminder-link');
         if (!link) return;
@@ -1812,17 +1827,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Pega apenas o número limpo do link original
         const rawPhone = link.href.split('phone=')[1] || link.href.split('/').pop();
 
-        // --- CONFIGURAÇÃO DO TIPO DE ABERTURA ---
-        // Opção 1: WhatsApp Web Direto (Mais compatível, abre 1 aba e já carrega o chat)
-        // const targetUrl = `https://web.whatsapp.com/send?phone=${rawPhone}`;
+        // --- DECISÃO DO LINK BASEADA NO BOTÃO ---
+        let targetUrl;
 
-        // Opção 2: Protocolo de App (Se você SÓ usa o App instalado no Windows)
-        // Se quiser usar essa, apague a linha de cima e descomente a de baixo:
-        const targetUrl = `whatsapp://send?phone=${rawPhone}`;
+        if (waModeToggle.checked) {
+            // MODO APP (Windows Instalado): Protocolo whatsapp://
+            targetUrl = `whatsapp://send?phone=${rawPhone}`;
+        } else {
+            // MODO WEB (Navegador): Link direto web.whatsapp.com
+            targetUrl = `https://web.whatsapp.com/send?phone=${rawPhone}`;
+        }
 
         // Copia para a área de transferência
         navigator.clipboard.writeText(message).then(() => {
-            // Feedback Visual
+            // Feedback Visual (Botão Verde "Copiado")
             const badge = link.querySelector('.badge');
             const originalBadgeText = badge.innerHTML;
 
@@ -1830,17 +1848,22 @@ document.addEventListener('DOMContentLoaded', () => {
             badge.classList.add('bg-success', 'text-white');
             badge.innerHTML = '<i class="bi bi-check"></i> Copiado!';
 
-            // Marca como "já clicado"
+            // Marca a linha como "já clicada" (riscado e verde claro)
             link.classList.add('active');
             link.style.backgroundColor = '#d1e7dd';
             link.style.textDecoration = 'line-through';
 
             // Abre o WhatsApp
             setTimeout(() => {
-                // Se for Web, abre nova aba. Se for App (whatsapp://), o navegador tenta abrir o programa.
-                window.open(targetUrl, '_blank');
+                if (waModeToggle.checked) {
+                    // MODO APP: Abre na mesma janela para o navegador disparar o aplicativo
+                    window.location.href = targetUrl;
+                } else {
+                    // MODO WEB: Abre em nova aba
+                    window.open(targetUrl, '_blank');
+                }
 
-                // Restaura o badge
+                // Restaura o texto do botão "Copiar" depois de 3 segundos
                 setTimeout(() => {
                     badge.classList.remove('bg-success', 'text-white');
                     badge.classList.add('bg-light', 'text-dark');
@@ -1850,6 +1873,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         }).catch(err => {
             console.error('Erro ao copiar: ', err);
+            // Fallback: se falhar a cópia, tenta abrir o link mesmo assim
             window.open(targetUrl, '_blank');
         });
     });
