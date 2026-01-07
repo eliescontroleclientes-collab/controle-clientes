@@ -1712,52 +1712,71 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     sendRemindersBtn.addEventListener('click', () => {
+        // 1. Pega a Chave PIX que está no input do modal
         const pixKey = pixKeyDisplay.value;
+
+        // 2. Configurações de Data
         const timeZone = 'America/Cuiaba';
         const todayFormatted = new Date().toLocaleDateString('pt-BR', { timeZone });
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
-        const today = new Date(todayInCuiaba + 'T00:00:00.000Z');
+        const todayDateObj = new Date(todayInCuiaba + 'T00:00:00.000Z');
 
         reminderQueueList.innerHTML = '';
 
         clientsToRemind.forEach((client) => {
-            const firstName = client.name.split(' ')[0];
-            const installmentValue = formatCurrency(client.dailyValue);
+            const installmentValue = parseFloat(client.dailyValue);
+            const installmentFormatted = formatCurrency(installmentValue);
 
-            const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < today && p.status !== 'paid');
-            const hasLate = lateInstallments.length > 0;
+            // Filtra parcelas atrasadas (Data menor que hoje e não pagas)
+            const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid');
             const lateCount = lateInstallments.length;
 
+            // Verifica se tem parcela hoje (Data igual a hoje e não paga)
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
 
-            let message = '';
-
-            if (isPendingToday && !hasLate) {
-                message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} ainda consta como pendente em nosso sistema.\n\n`;
-                message += `Chave PIX: ${pixKey}\n\n`;
-                message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
-            }
-            else if (isPendingToday && hasLate) {
-                message = `Olá ${firstName}, a parcela de hoje (${todayFormatted}) no valor de ${installmentValue} está pendente.\n\n`;
-                message += `Além disso, notamos que você possui *${lateCount} parcela(s) anterior(es) em atraso*.\n\n`;
-                message += `Chave PIX para regularização: ${pixKey}\n\n`;
-                message += `Se o pagamento já foi realizado, por favor desconsidere esta mensagem automática.`;
-            }
-            else if (!isPendingToday && hasLate) {
+            // --- CÁLCULO FINANCEIRO UNIFICADO ---
+            let totalInterest = 0;
+            if (lateCount > 0) {
+                // Cálculo de juros (mesma regra do painel)
                 const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-                // ### INÍCIO DA ALTERAÇÃO: Unificação do cálculo de juros ###
-                const interestPerInstallment = parseFloat(client.dailyValue) * clientInterestRate;
-                const totalInterest = lateInstallments.length * interestPerInstallment;
-                // ### FIM DA ALTERAÇÃO ###
-
-                const totalPrincipal = lateCount * parseFloat(client.dailyValue);
-                const totalDue = totalPrincipal + totalInterest;
-
-                message = `Olá ${firstName}, identificamos que você possui *${lateCount} parcela(s) em atraso* em nosso sistema.\n\n`;
-                message += `O valor total para regularizar sua situação hoje é de *${formatCurrency(totalDue)}* (incluindo juros).\n\n`;
-                message += `Chave PIX para pagamento: ${pixKey}`;
+                const interestPerInstallment = installmentValue * clientInterestRate;
+                totalInterest = lateCount * interestPerInstallment;
             }
 
+            // Valor Total = (Parcelas Atrasadas) + (Juros) + (Parcela de Hoje se houver)
+            let totalValue = (lateCount * installmentValue) + totalInterest;
+            if (isPendingToday) {
+                totalValue += installmentValue;
+            }
+
+            // --- MONTAGEM DA MENSAGEM NOVO MODELO ---
+            let message = `🗒 LEMBRETE DE COBRANÇA 🗒\n`;
+            message += `Cliente: ${client.name}\n\n`;
+            message += `Data da Cobrança: ${todayFormatted}\n\n`;
+
+            if (lateCount > 0) {
+                // MODELO 1: ATRASADO (Com ou sem parcela de hoje)
+                message += `${lateCount} Parcela(s) de ${installmentFormatted} - EM ATRASO\n`;
+
+                if (isPendingToday) {
+                    message += `Mais a parcela de Hoje: ${installmentFormatted}\n`;
+                }
+
+                message += `Juros por atraso: ${formatCurrency(totalInterest)}\n\n`;
+            } else {
+                // MODELO 2: APENAS PENDENTE (Em dia, mas deve hoje)
+                message += `Parcela de Hoje: ${installmentFormatted}\n`;
+                message += `Juros por atraso: R$ 0,00\n\n`;
+            }
+
+            message += `Valor total: ${formatCurrency(totalValue)}\n`;
+            message += `(Pra ficar em dias até hoje)\n\n`;
+
+            message += `Pix Para Pagamento: ${pixKey}\n`;
+            message += `NOME: On Comércio e Serviços\n`;
+            message += `Banco C6BANK`;
+
+            // --- GERAÇÃO DO LINK WHATSAPP ---
             if (message) {
                 const encodedMessage = encodeURIComponent(message);
                 const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
@@ -1767,7 +1786,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 listItem.target = '_blank';
                 listItem.rel = 'noopener noreferrer';
                 listItem.className = 'list-group-item list-group-item-action';
-                listItem.innerHTML = `<i class="bi bi-whatsapp me-2"></i> Enviar para <strong>${client.name}</strong>`;
+
+                // Visual: Vermelho se atrasado, Amarelo se só pendente
+                const iconClass = lateCount > 0 ? 'text-danger' : 'text-warning';
+
+                listItem.innerHTML = `<i class="bi bi-whatsapp me-2 ${iconClass}"></i> Enviar para <strong>${client.name}</strong>`;
 
                 reminderQueueList.appendChild(listItem);
             }
