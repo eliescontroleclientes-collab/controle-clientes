@@ -1722,20 +1722,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         reminderQueueList.innerHTML = '';
 
-        // Dicionário de Emojis (Usando código Unicode para não bugar)
+        // --- SOLUÇÃO MATEMÁTICA PARA EMOJIS (INFALÍVEL) ---
+        // Usamos números hexadecimais para gerar o emoji na hora
         const i = {
-            bell: '\uD83D\uDD14',      // 🔔
-            user: '\uD83D\uDC64',      // 👤
-            calendar: '\uD83D\uDCC5',  // 📅
-            cross: '\u274C',           // ❌
-            day: '\uD83D\uDDD3\uFE0F', // 🗓️
-            chart: '\uD83D\uDCC9',     // 📉
-            check: '\u2705',           // ✅
-            money: '\uD83D\uDCB0',     // 💰
-            pix: '\uD83D\uDCA0',       // 💠
-            key: '\uD83D\uDD11',       // 🔑
-            build: '\uD83C\uDFE2',     // 🏢
-            bank: '\uD83C\uDFE6'       // 🏦
+            bell: String.fromCodePoint(0x1F514),      // 🔔
+            user: String.fromCodePoint(0x1F464),      // 👤
+            calendar: String.fromCodePoint(0x1F4C5),  // 📅
+            cross: String.fromCodePoint(0x274C),      // ❌
+            day: String.fromCodePoint(0x1F5D3),       // 🗓️
+            chart: String.fromCodePoint(0x1F4C9),     // 📉
+            check: String.fromCodePoint(0x2705),      // ✅
+            money: String.fromCodePoint(0x1F4B0),     // 💰
+            pix: String.fromCodePoint(0x1F4A0),       // 💠
+            key: String.fromCodePoint(0x1F511),       // 🔑
+            build: String.fromCodePoint(0x1F3E2),     // 🏢
+            bank: String.fromCodePoint(0x1F3E6)       // 🏦
         };
 
         clientsToRemind.forEach((client) => {
@@ -1760,7 +1761,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalValue += installmentValue;
             }
 
-            // --- MONTAGEM DA MENSAGEM (Usando os códigos) ---
+            // --- MONTAGEM DA MENSAGEM ---
             let message = `${i.bell} *LEMBRETE DE COBRANÇA* ${i.bell}\n\n`;
 
             message += `${i.user} *Cliente:* ${client.name}\n`;
