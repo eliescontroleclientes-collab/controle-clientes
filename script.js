@@ -1721,22 +1721,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         reminderQueueList.innerHTML = '';
 
-        // --- SOLUÇÃO BLINDADA PARA EMOJIS ---
-        // Usamos decodeURIComponent para criar o emoji a partir de texto simples.
-        // Assim não existe risco de codificação do arquivo corromper o ícone.
+        // Emojis normais (agora funcionam pois vão via Clipboard)
         const i = {
-            bell: decodeURIComponent('%F0%9F%94%94'),      // 🔔
-            user: decodeURIComponent('%F0%9F%91%A4'),      // 👤
-            calendar: decodeURIComponent('%F0%9F%93%85'),  // 📅
-            cross: decodeURIComponent('%E2%9D%8C'),        // ❌
-            day: decodeURIComponent('%F0%9F%97%93%EF%B8%8F'), // 🗓️
-            chart: decodeURIComponent('%F0%9F%93%89'),     // 📉
-            check: decodeURIComponent('%E2%9C%85'),        // ✅
-            money: decodeURIComponent('%F0%9F%92%B0'),     // 💰
-            pix: decodeURIComponent('%F0%9F%92%A0'),       // 💠 (Usando Diamante como Pix visual)
-            key: decodeURIComponent('%F0%9F%94%91'),       // 🔑
-            build: decodeURIComponent('%F0%9F%8F%A2'),     // 🏢
-            bank: decodeURIComponent('%F0%9F%8F%A6')       // 🏦
+            bell: '🔔', user: '👤', calendar: '📅', cross: '❌',
+            day: '🗓️', chart: '📉', check: '✅', money: '💰',
+            pix: '💠', key: '🔑', build: '🏢', bank: '🏦'
         };
 
         clientsToRemind.forEach((client) => {
@@ -1745,35 +1734,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid');
             const lateCount = lateInstallments.length;
-
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
 
             let totalInterest = 0;
             if (lateCount > 0) {
                 const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-                const interestPerInstallment = installmentValue * clientInterestRate;
-                totalInterest = lateCount * interestPerInstallment;
+                totalInterest = lateCount * (installmentValue * clientInterestRate);
             }
 
             let totalValue = (lateCount * installmentValue) + totalInterest;
-            if (isPendingToday) {
-                totalValue += installmentValue;
-            }
+            if (isPendingToday) totalValue += installmentValue;
 
             // --- MONTAGEM DA MENSAGEM ---
             let message = `${i.bell} *LEMBRETE DE COBRANÇA* ${i.bell}\n\n`;
-
             message += `${i.user} *Cliente:* ${client.name}\n`;
             message += `${i.calendar} *Data:* ${todayFormatted}\n`;
             message += `-----------------------------------\n`;
 
             if (lateCount > 0) {
                 message += `${i.cross} *${lateCount}x Parcela(s) em Atraso:* ${installmentFormatted}\n`;
-
-                if (isPendingToday) {
-                    message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
-                }
-
+                if (isPendingToday) message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
                 message += `${i.chart} *Juros calculados:* ${formatCurrency(totalInterest)}\n`;
             } else {
                 message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
@@ -1783,25 +1763,34 @@ document.addEventListener('DOMContentLoaded', () => {
             message += `\n${i.money} *VALOR TOTAL:* *${formatCurrency(totalValue)}*\n`;
             message += `_(Para regularizar até hoje)_\n`;
             message += `-----------------------------------\n\n`;
-
             message += `${i.pix} *DADOS PARA PAGAMENTO*\n`;
             message += `${i.key} *Pix:* ${pixKey}\n`;
             message += `${i.build} *Nome:* On Comércio e Serviços\n`;
             message += `${i.bank} *Banco:* C6 Bank`;
 
             if (message) {
-                const encodedMessage = encodeURIComponent(message);
-                const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+                // Link apenas com o telefone (sem texto)
+                const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}`;
 
                 const listItem = document.createElement('a');
                 listItem.href = whatsappUrl;
-                listItem.target = '_blank';
-                listItem.rel = 'noopener noreferrer';
-                listItem.className = 'list-group-item list-group-item-action';
+                listItem.className = 'list-group-item list-group-item-action reminder-link'; // Classe nova
+
+                // Guardamos a mensagem aqui escondida para copiar depois
+                listItem.setAttribute('data-message', message);
 
                 const iconClass = lateCount > 0 ? 'text-danger' : 'text-warning';
 
-                listItem.innerHTML = `<i class="bi bi-whatsapp me-2 ${iconClass}"></i> Enviar para <strong>${client.name}</strong>`;
+                // Adicionei um ícone de "Copiar" visualmente
+                listItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-whatsapp me-2 ${iconClass}"></i> 
+                            Enviar para <strong>${client.name}</strong>
+                        </div>
+                        <span class="badge bg-light text-dark border"><i class="bi bi-clipboard"></i> Copiar e Abrir</span>
+                    </div>
+                `;
 
                 reminderQueueList.appendChild(listItem);
             }
@@ -1809,6 +1798,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
         new bootstrap.Modal(reminderQueueModalEl).show();
+    });
+
+    // --- LÓGICA DE COPIAR E ABRIR WHATSAPP ---
+    reminderQueueList.addEventListener('click', (e) => {
+        const link = e.target.closest('.reminder-link');
+        if (!link) return;
+
+        e.preventDefault(); // Impede de abrir o link imediatamente
+
+        const message = link.getAttribute('data-message');
+        const originalUrl = link.href;
+
+        // Copia para a área de transferência
+        navigator.clipboard.writeText(message).then(() => {
+            // Feedback Visual
+            const badge = link.querySelector('.badge');
+            const originalBadgeText = badge.innerHTML;
+
+            badge.classList.remove('bg-light', 'text-dark');
+            badge.classList.add('bg-success', 'text-white');
+            badge.innerHTML = '<i class="bi bi-check"></i> Copiado!';
+
+            // Marca como "já clicado" (riscado)
+            link.classList.add('active');
+            link.style.backgroundColor = '#d1e7dd';
+            link.style.textDecoration = 'line-through';
+
+            // Abre o WhatsApp numa nova aba após um leve delay
+            setTimeout(() => {
+                window.open(originalUrl, '_blank');
+                // Restaura o badge (opcional)
+                setTimeout(() => {
+                    badge.classList.remove('bg-success', 'text-white');
+                    badge.classList.add('bg-light', 'text-dark');
+                    badge.innerHTML = originalBadgeText;
+                }, 3000);
+            }, 300);
+
+        }).catch(err => {
+            console.error('Erro ao copiar: ', err);
+            // Se falhar a cópia, abre o link mesmo assim
+            window.open(originalUrl, '_blank');
+        });
     });
 
     reminderQueueList.addEventListener('click', (e) => {
