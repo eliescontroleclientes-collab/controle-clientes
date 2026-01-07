@@ -1721,50 +1721,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         reminderQueueList.innerHTML = '';
 
-        // Dicionário de Emojis (Blindado)
+        // Emojis normais (agora funcionam pois vão via Clipboard)
         const i = {
-            bell: decodeURIComponent('%F0%9F%94%94'),      // 🔔
-            user: decodeURIComponent('%F0%9F%91%A4'),      // 👤
-            calendar: decodeURIComponent('%F0%9F%93%85'),  // 📅
-            cross: decodeURIComponent('%E2%9D%8C'),        // ❌
-            day: decodeURIComponent('%F0%9F%97%93%EF%B8%8F'), // 🗓️
-            chart: decodeURIComponent('%F0%9F%93%89'),     // 📉
-            check: decodeURIComponent('%E2%9C%85'),        // ✅
-            money: decodeURIComponent('%F0%9F%92%B0'),     // 💰
-            pix: decodeURIComponent('%F0%9F%92%A0'),       // 💠
-            key: decodeURIComponent('%F0%9F%94%91'),       // 🔑
-            build: decodeURIComponent('%F0%9F%8F%A2'),     // 🏢
-            bank: decodeURIComponent('%F0%9F%8F%A6')       // 🏦
+            bell: '🔔', user: '👤', calendar: '📅', cross: '❌',
+            day: '🗓️', chart: '📉', check: '✅', money: '💰',
+            pix: '💠', key: '🔑', build: '🏢', bank: '🏦'
         };
 
         clientsToRemind.forEach((client) => {
-            // MUDANÇA AQUI: Extrai o primeiro nome
-            const firstName = client.name.split(' ')[0];
-
             const installmentValue = parseFloat(client.dailyValue);
             const installmentFormatted = formatCurrency(installmentValue);
 
             const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid');
             const lateCount = lateInstallments.length;
-
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
 
             let totalInterest = 0;
             if (lateCount > 0) {
                 const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-                const interestPerInstallment = installmentValue * clientInterestRate;
-                totalInterest = lateCount * interestPerInstallment;
+                totalInterest = lateCount * (installmentValue * clientInterestRate);
             }
 
             let totalValue = (lateCount * installmentValue) + totalInterest;
-            if (isPendingToday) {
-                totalValue += installmentValue;
-            }
+            if (isPendingToday) totalValue += installmentValue;
+
+            // --- EXTRAÇÃO DO PRIMEIRO NOME ---
+            // Pega o nome completo e divide no primeiro espaço
+            const firstName = client.name.split(' ')[0];
 
             // --- MONTAGEM DA MENSAGEM ---
             let message = `${i.bell} *LEMBRETE DE COBRANÇA* ${i.bell}\n\n`;
 
-            // MUDANÇA AQUI: Usando firstName em vez de client.name
+            // MUDANÇA AQUI: Trocamos client.name por firstName
             message += `${i.user} *Cliente:* ${firstName}\n`;
 
             message += `${i.calendar} *Data:* ${todayFormatted}\n`;
@@ -1772,9 +1760,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (lateCount > 0) {
                 message += `${i.cross} *${lateCount}x Parcela(s) em Atraso:* ${installmentFormatted}\n`;
-                if (isPendingToday) {
-                    message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
-                }
+                if (isPendingToday) message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
                 message += `${i.chart} *Juros calculados:* ${formatCurrency(totalInterest)}\n`;
             } else {
                 message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
@@ -1784,26 +1770,26 @@ document.addEventListener('DOMContentLoaded', () => {
             message += `\n${i.money} *VALOR TOTAL:* *${formatCurrency(totalValue)}*\n`;
             message += `_(Para regularizar até hoje)_\n`;
             message += `-----------------------------------\n\n`;
-
             message += `${i.pix} *DADOS PARA PAGAMENTO*\n`;
             message += `${i.key} *Pix:* ${pixKey}\n`;
             message += `${i.build} *Nome:* On Comércio e Serviços\n`;
             message += `${i.bank} *Banco:* C6 Bank`;
 
             if (message) {
-                const encodedMessage = encodeURIComponent(message);
-                const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+                // Link apenas com o telefone (sem texto)
+                const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}`;
 
                 const listItem = document.createElement('a');
                 listItem.href = whatsappUrl;
-                // Mantivemos a classe reminder-link para a lógica de clique funcionar
                 listItem.className = 'list-group-item list-group-item-action reminder-link';
 
-                // Guardamos a mensagem (já com o primeiro nome)
+                // Guardamos a mensagem aqui escondida para copiar depois
                 listItem.setAttribute('data-message', message);
 
                 const iconClass = lateCount > 0 ? 'text-danger' : 'text-warning';
 
+                // Na lista visual do sistema, mantive o nome COMPLETO para você não se confundir
+                // Mas na mensagem copiada (data-message acima) vai só o primeiro nome.
                 listItem.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
