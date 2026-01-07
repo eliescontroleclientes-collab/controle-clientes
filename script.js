@@ -1714,7 +1714,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sendRemindersBtn.addEventListener('click', () => {
         const pixKey = pixKeyDisplay.value;
 
-        // Configurações de Data
         const timeZone = 'America/Cuiaba';
         const todayFormatted = new Date().toLocaleDateString('pt-BR', { timeZone });
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
@@ -1722,21 +1721,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         reminderQueueList.innerHTML = '';
 
-        // --- SOLUÇÃO MATEMÁTICA PARA EMOJIS (INFALÍVEL) ---
-        // Usamos números hexadecimais para gerar o emoji na hora
+        // --- SOLUÇÃO BLINDADA PARA EMOJIS ---
+        // Usamos decodeURIComponent para criar o emoji a partir de texto simples.
+        // Assim não existe risco de codificação do arquivo corromper o ícone.
         const i = {
-            bell: String.fromCodePoint(0x1F514),      // 🔔
-            user: String.fromCodePoint(0x1F464),      // 👤
-            calendar: String.fromCodePoint(0x1F4C5),  // 📅
-            cross: String.fromCodePoint(0x274C),      // ❌
-            day: String.fromCodePoint(0x1F5D3),       // 🗓️
-            chart: String.fromCodePoint(0x1F4C9),     // 📉
-            check: String.fromCodePoint(0x2705),      // ✅
-            money: String.fromCodePoint(0x1F4B0),     // 💰
-            pix: String.fromCodePoint(0x1F4A0),       // 💠
-            key: String.fromCodePoint(0x1F511),       // 🔑
-            build: String.fromCodePoint(0x1F3E2),     // 🏢
-            bank: String.fromCodePoint(0x1F3E6)       // 🏦
+            bell: decodeURIComponent('%F0%9F%94%94'),      // 🔔
+            user: decodeURIComponent('%F0%9F%91%A4'),      // 👤
+            calendar: decodeURIComponent('%F0%9F%93%85'),  // 📅
+            cross: decodeURIComponent('%E2%9D%8C'),        // ❌
+            day: decodeURIComponent('%F0%9F%97%93%EF%B8%8F'), // 🗓️
+            chart: decodeURIComponent('%F0%9F%93%89'),     // 📉
+            check: decodeURIComponent('%E2%9C%85'),        // ✅
+            money: decodeURIComponent('%F0%9F%92%B0'),     // 💰
+            pix: decodeURIComponent('%F0%9F%92%A0'),       // 💠 (Usando Diamante como Pix visual)
+            key: decodeURIComponent('%F0%9F%94%91'),       // 🔑
+            build: decodeURIComponent('%F0%9F%8F%A2'),     // 🏢
+            bank: decodeURIComponent('%F0%9F%8F%A6')       // 🏦
         };
 
         clientsToRemind.forEach((client) => {
@@ -1748,7 +1748,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
 
-            // --- CÁLCULO ---
             let totalInterest = 0;
             if (lateCount > 0) {
                 const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
@@ -1769,7 +1768,6 @@ document.addEventListener('DOMContentLoaded', () => {
             message += `-----------------------------------\n`;
 
             if (lateCount > 0) {
-                // MODELO 1: COM ATRASO
                 message += `${i.cross} *${lateCount}x Parcela(s) em Atraso:* ${installmentFormatted}\n`;
 
                 if (isPendingToday) {
@@ -1778,7 +1776,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 message += `${i.chart} *Juros calculados:* ${formatCurrency(totalInterest)}\n`;
             } else {
-                // MODELO 2: SÓ HOJE
                 message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
                 message += `${i.check} *Juros:* R$ 0,00\n`;
             }
@@ -1792,7 +1789,6 @@ document.addEventListener('DOMContentLoaded', () => {
             message += `${i.build} *Nome:* On Comércio e Serviços\n`;
             message += `${i.bank} *Banco:* C6 Bank`;
 
-            // --- GERAÇÃO DO LINK ---
             if (message) {
                 const encodedMessage = encodeURIComponent(message);
                 const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
