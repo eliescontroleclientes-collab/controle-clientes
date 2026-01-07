@@ -1712,10 +1712,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     sendRemindersBtn.addEventListener('click', () => {
-        // 1. Pega a Chave PIX que está no input do modal
         const pixKey = pixKeyDisplay.value;
 
-        // 2. Configurações de Data
+        // Configurações de Data
         const timeZone = 'America/Cuiaba';
         const todayFormatted = new Date().toLocaleDateString('pt-BR', { timeZone });
         const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
@@ -1727,56 +1726,56 @@ document.addEventListener('DOMContentLoaded', () => {
             const installmentValue = parseFloat(client.dailyValue);
             const installmentFormatted = formatCurrency(installmentValue);
 
-            // Filtra parcelas atrasadas (Data menor que hoje e não pagas)
             const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid');
             const lateCount = lateInstallments.length;
 
-            // Verifica se tem parcela hoje (Data igual a hoje e não paga)
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
 
-            // --- CÁLCULO FINANCEIRO UNIFICADO ---
+            // --- CÁLCULO ---
             let totalInterest = 0;
             if (lateCount > 0) {
-                // Cálculo de juros (mesma regra do painel)
                 const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
                 const interestPerInstallment = installmentValue * clientInterestRate;
                 totalInterest = lateCount * interestPerInstallment;
             }
 
-            // Valor Total = (Parcelas Atrasadas) + (Juros) + (Parcela de Hoje se houver)
             let totalValue = (lateCount * installmentValue) + totalInterest;
             if (isPendingToday) {
                 totalValue += installmentValue;
             }
 
-            // --- MONTAGEM DA MENSAGEM NOVO MODELO ---
-            let message = `🗒 LEMBRETE DE COBRANÇA 🗒\n`;
-            message += `Cliente: ${client.name}\n\n`;
-            message += `Data da Cobrança: ${todayFormatted}\n\n`;
+            // --- MONTAGEM DA MENSAGEM ESTILIZADA ---
+            let message = `🔔 *LEMBRETE DE COBRANÇA* 🔔\n\n`;
+
+            message += `👤 *Cliente:* ${client.name}\n`;
+            message += `📅 *Data:* ${todayFormatted}\n`;
+            message += `-----------------------------------\n`;
 
             if (lateCount > 0) {
-                // MODELO 1: ATRASADO (Com ou sem parcela de hoje)
-                message += `${lateCount} Parcela(s) de ${installmentFormatted} - EM ATRASO\n`;
+                // MODELO 1: COM ATRASO
+                message += `❌ *${lateCount}x Parcela(s) em Atraso:* ${installmentFormatted}\n`;
 
                 if (isPendingToday) {
-                    message += `Mais a parcela de Hoje: ${installmentFormatted}\n`;
+                    message += `🗓️ *Parcela de Hoje:* ${installmentFormatted}\n`;
                 }
 
-                message += `Juros por atraso: ${formatCurrency(totalInterest)}\n\n`;
+                message += `📉 *Juros calculados:* ${formatCurrency(totalInterest)}\n`;
             } else {
-                // MODELO 2: APENAS PENDENTE (Em dia, mas deve hoje)
-                message += `Parcela de Hoje: ${installmentFormatted}\n`;
-                message += `Juros por atraso: R$ 0,00\n\n`;
+                // MODELO 2: SÓ HOJE
+                message += `🗓️ *Parcela de Hoje:* ${installmentFormatted}\n`;
+                message += `✅ *Juros:* R$ 0,00\n`;
             }
 
-            message += `Valor total: ${formatCurrency(totalValue)}\n`;
-            message += `(Pra ficar em dias até hoje)\n\n`;
+            message += `\n💰 *VALOR TOTAL:* *${formatCurrency(totalValue)}*\n`;
+            message += `_(Para regularizar até hoje)_\n`;
+            message += `-----------------------------------\n\n`;
 
-            message += `Pix Para Pagamento: ${pixKey}\n`;
-            message += `NOME: On Comércio e Serviços\n`;
-            message += `Banco C6BANK`;
+            message += `💠 *DADOS PARA PAGAMENTO*\n`;
+            message += `🔑 *Pix:* ${pixKey}\n`;
+            message += `🏢 *Nome:* On Comércio e Serviços\n`;
+            message += `🏦 *Banco:* C6 Bank`;
 
-            // --- GERAÇÃO DO LINK WHATSAPP ---
+            // --- GERAÇÃO DO LINK ---
             if (message) {
                 const encodedMessage = encodeURIComponent(message);
                 const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
@@ -1787,7 +1786,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 listItem.rel = 'noopener noreferrer';
                 listItem.className = 'list-group-item list-group-item-action';
 
-                // Visual: Vermelho se atrasado, Amarelo se só pendente
                 const iconClass = lateCount > 0 ? 'text-danger' : 'text-warning';
 
                 listItem.innerHTML = `<i class="bi bi-whatsapp me-2 ${iconClass}"></i> Enviar para <strong>${client.name}</strong>`;
