@@ -1722,6 +1722,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         reminderQueueList.innerHTML = '';
 
+        // Dicionário de Emojis (Usando código Unicode para não bugar)
+        const i = {
+            bell: '\uD83D\uDD14',      // 🔔
+            user: '\uD83D\uDC64',      // 👤
+            calendar: '\uD83D\uDCC5',  // 📅
+            cross: '\u274C',           // ❌
+            day: '\uD83D\uDDD3\uFE0F', // 🗓️
+            chart: '\uD83D\uDCC9',     // 📉
+            check: '\u2705',           // ✅
+            money: '\uD83D\uDCB0',     // 💰
+            pix: '\uD83D\uDCA0',       // 💠
+            key: '\uD83D\uDD11',       // 🔑
+            build: '\uD83C\uDFE2',     // 🏢
+            bank: '\uD83C\uDFE6'       // 🏦
+        };
+
         clientsToRemind.forEach((client) => {
             const installmentValue = parseFloat(client.dailyValue);
             const installmentFormatted = formatCurrency(installmentValue);
@@ -1744,36 +1760,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalValue += installmentValue;
             }
 
-            // --- MONTAGEM DA MENSAGEM ESTILIZADA ---
-            let message = `🔔 *LEMBRETE DE COBRANÇA* 🔔\n\n`;
+            // --- MONTAGEM DA MENSAGEM (Usando os códigos) ---
+            let message = `${i.bell} *LEMBRETE DE COBRANÇA* ${i.bell}\n\n`;
 
-            message += `👤 *Cliente:* ${client.name}\n`;
-            message += `📅 *Data:* ${todayFormatted}\n`;
+            message += `${i.user} *Cliente:* ${client.name}\n`;
+            message += `${i.calendar} *Data:* ${todayFormatted}\n`;
             message += `-----------------------------------\n`;
 
             if (lateCount > 0) {
                 // MODELO 1: COM ATRASO
-                message += `❌ *${lateCount}x Parcela(s) em Atraso:* ${installmentFormatted}\n`;
+                message += `${i.cross} *${lateCount}x Parcela(s) em Atraso:* ${installmentFormatted}\n`;
 
                 if (isPendingToday) {
-                    message += `🗓️ *Parcela de Hoje:* ${installmentFormatted}\n`;
+                    message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
                 }
 
-                message += `📉 *Juros calculados:* ${formatCurrency(totalInterest)}\n`;
+                message += `${i.chart} *Juros calculados:* ${formatCurrency(totalInterest)}\n`;
             } else {
                 // MODELO 2: SÓ HOJE
-                message += `🗓️ *Parcela de Hoje:* ${installmentFormatted}\n`;
-                message += `✅ *Juros:* R$ 0,00\n`;
+                message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
+                message += `${i.check} *Juros:* R$ 0,00\n`;
             }
 
-            message += `\n💰 *VALOR TOTAL:* *${formatCurrency(totalValue)}*\n`;
+            message += `\n${i.money} *VALOR TOTAL:* *${formatCurrency(totalValue)}*\n`;
             message += `_(Para regularizar até hoje)_\n`;
             message += `-----------------------------------\n\n`;
 
-            message += `💠 *DADOS PARA PAGAMENTO*\n`;
-            message += `🔑 *Pix:* ${pixKey}\n`;
-            message += `🏢 *Nome:* On Comércio e Serviços\n`;
-            message += `🏦 *Banco:* C6 Bank`;
+            message += `${i.pix} *DADOS PARA PAGAMENTO*\n`;
+            message += `${i.key} *Pix:* ${pixKey}\n`;
+            message += `${i.build} *Nome:* On Comércio e Serviços\n`;
+            message += `${i.bank} *Banco:* C6 Bank`;
 
             // --- GERAÇÃO DO LINK ---
             if (message) {
