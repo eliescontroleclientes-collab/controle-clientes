@@ -1800,15 +1800,25 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(reminderQueueModalEl).show();
     });
 
-    // --- LÓGICA DE COPIAR E ABRIR WHATSAPP ---
+    // --- LÓGICA DE COPIAR E ABRIR WHATSAPP (OTIMIZADA) ---
     reminderQueueList.addEventListener('click', (e) => {
         const link = e.target.closest('.reminder-link');
         if (!link) return;
 
-        e.preventDefault(); // Impede de abrir o link imediatamente
+        e.preventDefault(); // Impede o link padrão
 
         const message = link.getAttribute('data-message');
-        const originalUrl = link.href;
+
+        // Pega apenas o número limpo do link original
+        const rawPhone = link.href.split('phone=')[1] || link.href.split('/').pop();
+
+        // --- CONFIGURAÇÃO DO TIPO DE ABERTURA ---
+        // Opção 1: WhatsApp Web Direto (Mais compatível, abre 1 aba e já carrega o chat)
+        // const targetUrl = `https://web.whatsapp.com/send?phone=${rawPhone}`;
+
+        // Opção 2: Protocolo de App (Se você SÓ usa o App instalado no Windows)
+        // Se quiser usar essa, apague a linha de cima e descomente a de baixo:
+        const targetUrl = `whatsapp://send?phone=${rawPhone}`;
 
         // Copia para a área de transferência
         navigator.clipboard.writeText(message).then(() => {
@@ -1820,15 +1830,17 @@ document.addEventListener('DOMContentLoaded', () => {
             badge.classList.add('bg-success', 'text-white');
             badge.innerHTML = '<i class="bi bi-check"></i> Copiado!';
 
-            // Marca como "já clicado" (riscado)
+            // Marca como "já clicado"
             link.classList.add('active');
             link.style.backgroundColor = '#d1e7dd';
             link.style.textDecoration = 'line-through';
 
-            // Abre o WhatsApp numa nova aba após um leve delay
+            // Abre o WhatsApp
             setTimeout(() => {
-                window.open(originalUrl, '_blank');
-                // Restaura o badge (opcional)
+                // Se for Web, abre nova aba. Se for App (whatsapp://), o navegador tenta abrir o programa.
+                window.open(targetUrl, '_blank');
+
+                // Restaura o badge
                 setTimeout(() => {
                     badge.classList.remove('bg-success', 'text-white');
                     badge.classList.add('bg-light', 'text-dark');
@@ -1838,8 +1850,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         }).catch(err => {
             console.error('Erro ao copiar: ', err);
-            // Se falhar a cópia, abre o link mesmo assim
-            window.open(originalUrl, '_blank');
+            window.open(targetUrl, '_blank');
         });
     });
 
