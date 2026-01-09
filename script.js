@@ -2371,9 +2371,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         else if (msgType === 'quitacao_seca') {
             msg = `${i.check} *QUITAÇÃO CONFIRMADA* ${i.check}\n\n`;
-            msg += `Olá, *${firstName}*!\n\n`;
-            msg += `Passando para confirmar que recebemos sua última parcela e seu empréstimo foi **100% quitado**. Obrigado pela pontualidade! ${i.hand}\n\n`;
-            msg += `Sempre que precisar, estamos à disposição. Conte com a gente!`;
+            msg += `Olá, *${firstName}*.\n\n`;
+            msg += `Passando para confirmar que recebemos sua última parcela e seu empréstimo foi *100% quitado* no nosso sistema.`;
         }
 
         // Copia e Abre
