@@ -83,6 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyRenewalBtn = document.getElementById('copy-renewal-btn');
     const riskBtn = document.getElementById('risk-btn');
     const vipOfferBtn = document.getElementById('vip-offer-btn');
+    const vipStrategyModalEl = document.getElementById('vipStrategyModal');
+    const vipResgateBtn = document.getElementById('vip-resgate-btn');
+    const vipQuitacaoOfertaBtn = document.getElementById('vip-quitacao-oferta-btn');
+    const vipQuitacaoSecaBtn = document.getElementById('vip-quitacao-seca-btn');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -2332,46 +2336,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 2. CLIQUE NO BOTÃO OFERTA VIP (Cópia + Zap)
-    vipOfferBtn.addEventListener('click', () => {
+    // Função auxiliar para enviar mensagem VIP
+    const sendVipMessage = (msgType) => {
         if (!selectedClientId) return;
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
 
         const firstName = client.name.split(' ')[0];
         const rawPhone = client.phone.replace(/\D/g, '');
 
-        // Mensagem Genérica (Emojis via código para não quebrar)
+        // Emojis (Via código)
         const i = {
             star: String.fromCodePoint(0x2B50),
             party: String.fromCodePoint(0x1F389),
             hand: String.fromCodePoint(0x1F91D),
-            money: String.fromCodePoint(0x1F4B8)
+            money: String.fromCodePoint(0x1F4B8),
+            check: String.fromCodePoint(0x2705),
+            rocket: String.fromCodePoint(0x1F680)
         };
 
-        let msg = `${i.star} *OFERTA ESPECIAL* ${i.star}\n\n`;
-        msg += `Olá, *${firstName}*! Tudo bem?\n\n`;
-        msg += `Passando para parabenizar pela quitação do seu empréstimo! ${i.party}\n\n`;
-        msg += `Como você é um excelente cliente, liberamos uma condição especial para você renovar hoje mesmo.\n\n`;
-        msg += `${i.money} *Limite pré-aprovado disponível!*\n\n`;
-        msg += `Tem interesse em simular sem compromisso? É só responder aqui. ${i.hand}`;
+        let msg = "";
 
-        // Lógica de Copiar e Abrir (Mesma do Reminder)
+        if (msgType === 'resgate') {
+            msg = `${i.star} *OFERTA ESPECIAL* ${i.star}\n\n`;
+            msg += `Olá, *${firstName}*! Tudo bem?\n\n`;
+            msg += `Passando para te avisar que, como você é um cliente VIP, liberamos uma condição especial para você hoje.\n\n`;
+            msg += `${i.money} *Limite pré-aprovado disponível!*\n\n`;
+            msg += `Tem interesse em simular sem compromisso? É só responder aqui. ${i.hand}`;
+        }
+        else if (msgType === 'quitacao_oferta') {
+            msg = `${i.check} *QUITAÇÃO CONFIRMADA* ${i.check}\n\n`;
+            msg += `Parabéns, *${firstName}*! Seu empréstimo foi finalizado com sucesso no nosso sistema. ${i.party}\n\n`;
+            msg += `Gostamos muito de ter você como cliente! Por isso, seu cadastro já está liberado para uma **nova renovação imediata**.\n\n`;
+            msg += `${i.rocket} Vamos fazer uma nova simulação agora?`;
+        }
+        else if (msgType === 'quitacao_seca') {
+            msg = `${i.check} *QUITAÇÃO CONFIRMADA* ${i.check}\n\n`;
+            msg += `Olá, *${firstName}*!\n\n`;
+            msg += `Passando para confirmar que recebemos sua última parcela e seu empréstimo foi **100% quitado**. Obrigado pela pontualidade! ${i.hand}\n\n`;
+            msg += `Sempre que precisar, estamos à disposição. Conte com a gente!`;
+        }
+
+        // Copia e Abre
         navigator.clipboard.writeText(msg).then(() => {
-            alert('Mensagem copiada! Abrindo WhatsApp...'); // Feedback simples
+            // Fecha o modal
+            bootstrap.Modal.getInstance(vipStrategyModalEl).hide();
 
-            // Verifica a preferência WEB ou APP (que já implementamos antes)
+            // Verifica Web/App e abre
             const savedMode = localStorage.getItem('wa_opener_mode');
-            let targetUrl;
+            let targetUrl = (savedMode === 'app')
+                ? `whatsapp://send?phone=${rawPhone}`
+                : `https://web.whatsapp.com/send?phone=${rawPhone}`;
 
-            if (savedMode === 'app') {
-                targetUrl = `whatsapp://send?phone=${rawPhone}`;
-                window.location.href = targetUrl;
-            } else {
-                targetUrl = `https://web.whatsapp.com/send?phone=${rawPhone}`;
-                window.open(targetUrl, '_blank');
-            }
+            if (savedMode === 'app') window.location.href = targetUrl;
+            else window.open(targetUrl, '_blank');
         });
+    };
+
+    // 2. Botão Principal (Abre o Modal)
+    vipOfferBtn.addEventListener('click', () => {
+        if (!selectedClientId) return;
+        // Apenas abre o modal de escolha
+        new bootstrap.Modal(vipStrategyModalEl).show();
     });
+
+    // 3. Botões do Modal (Chamam a função acima)
+    vipResgateBtn.addEventListener('click', () => sendVipMessage('resgate'));
+    vipQuitacaoOfertaBtn.addEventListener('click', () => sendVipMessage('quitacao_oferta'));
+    vipQuitacaoSecaBtn.addEventListener('click', () => sendVipMessage('quitacao_seca'));
 
     // --- CARREGAR FERIADOS PARA A MEMÓRIA ---
     async function loadHolidaysForCache() {

@@ -980,7 +980,48 @@
         </div>
     </div>
 
-    <!-- ### REMOVIDO ### Os modais para "Quitados" e "Em Atraso" foram removidos daqui. -->
+    <!-- Modal de Estratégia VIP -->
+    <div class="modal fade" id="vipStrategyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-stars"></i> Ações de Pós-Venda</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="text-muted">Escolha a mensagem ideal para este cliente:</p>
+
+                    <!-- OPÇÃO 1: RESGATE (Cliente antigo sumido) -->
+                    <div class="d-grid gap-2 mb-4">
+                        <button id="vip-resgate-btn" class="btn btn-outline-success btn-lg">
+                            <i class="bi bi-arrow-counterclockwise"></i> Chamar de Volta (Resgate)
+                            <div class="small text-muted" style="font-size: 0.7rem;">"Sentimos sua falta... temos uma
+                                oferta..."</div>
+                        </button>
+                    </div>
+
+                    <hr>
+
+                    <!-- OPÇÃO 2: QUITAÇÃO (Acabou de pagar) -->
+                    <h6 class="mb-3">Recém Quitado</h6>
+
+                    <div class="d-grid gap-2">
+                        <!-- Quitação COM Oferta -->
+                        <button id="vip-quitacao-oferta-btn" class="btn btn-primary">
+                            <i class="bi bi-check-circle-fill"></i> Confirmar Quitação + <strong>Oferecer
+                                Renovação</strong>
+                        </button>
+
+                        <!-- Quitação SEM Oferta -->
+                        <button id="vip-quitacao-seca-btn" class="btn btn-secondary">
+                            <i class="bi bi-hand-thumbs-up-fill"></i> Apenas Confirmar Quitação (Sem Oferta)
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Incluindo JavaScript do Bootstrap e o nosso script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
