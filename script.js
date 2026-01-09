@@ -2366,7 +2366,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (msgType === 'quitacao_oferta') {
             msg = `${i.check} *QUITAÇÃO CONFIRMADA* ${i.check}\n\n`;
             msg += `Parabéns, *${firstName}*! Seu empréstimo foi finalizado com sucesso no nosso sistema. ${i.party}\n\n`;
-            msg += `Gostamos muito de ter você como cliente! Por isso, seu cadastro já está liberado para uma **nova renovação imediata**.\n\n`;
+            msg += `Gostamos muito de ter você como cliente! Por isso, seu cadastro já está liberado para uma *nova renovação imediata*.\n\n`;
             msg += `${i.rocket} Vamos fazer uma nova simulação agora?`;
         }
         else if (msgType === 'quitacao_seca') {
