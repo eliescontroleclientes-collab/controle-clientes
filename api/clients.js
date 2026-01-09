@@ -79,11 +79,12 @@ export default async function handler(req, res) {
             }
             // ######### FIM DA ALTERAÇÃO #########
 
-            // LÓGICA NORMAL DE ATUALIZAÇÃO (ATUALIZADA COM PAUSA DE LEMBRETE)
+            // LÓGICA NORMAL DE ATUALIZAÇÃO (ATUALIZADA COM RISCO)
             const {
                 name, startDate, cpf, phone, loanValue, dailyValue, paymentDates,
                 installments, frequency, files, saldo, localizacao, bairro,
-                profissao, observacoes, taxa_juros, reminder_paused_until // <--- NOVO CAMPO
+                profissao, observacoes, taxa_juros, reminder_paused_until,
+                is_risk // <--- NOVO CAMPO
             } = clientData;
 
             const query = `
@@ -91,7 +92,7 @@ export default async function handler(req, res) {
                 SET name = $1, "startDate" = $2, cpf = $3, phone = $4, "loanValue" = $5, 
                 "dailyValue" = $6, "paymentDates" = $7, installments = $8, frequency = $9, 
                 files = $10, saldo = $11, localizacao = $12, bairro = $13, profissao = $14, 
-                observacoes = $15, taxa_juros = $17, reminder_paused_until = $18
+                observacoes = $15, taxa_juros = $17, reminder_paused_until = $18, is_risk = $19
                 WHERE id = $16
                 RETURNING *
             `;
@@ -101,7 +102,8 @@ export default async function handler(req, res) {
                 JSON.stringify(paymentDates), installments, frequency,
                 JSON.stringify(files || []), saldo || 0.00, localizacao,
                 bairro, profissao, observacoes, id, taxa_juros,
-                reminder_paused_until || null // <--- NOVO VALOR ($18)
+                reminder_paused_until || null,
+                is_risk || false // <--- NOVO VALOR ($19)
             ];
 
             const result = await db.query(query, values);

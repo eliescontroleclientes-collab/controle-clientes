@@ -81,6 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const renewalModalEl = document.getElementById('renewalModal');
     const renewalTextResult = document.getElementById('renewalTextResult');
     const copyRenewalBtn = document.getElementById('copy-renewal-btn');
+    const riskBtn = document.getElementById('risk-btn');
+    const vipOfferBtn = document.getElementById('vip-offer-btn');
     // --- ELEMENTOS DO MODAL DE ADIÇÃO ---
     const addClientModalEl = document.getElementById('addClientModal');
     const addClientForm = document.getElementById('add-client-form');
@@ -477,9 +479,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.dataset.clientId = client.id;
             tr.className = client.id === selectedClientId ? 'table-active' : '';
+
+            // LÓGICA DE COR: Se for risco, fica vermelho e negrito
+            const nameClass = client.is_risk ? 'text-danger fw-bold' : '';
+            // Ícone visual ao lado do nome (opcional, mas ajuda)
+            const riskIcon = client.is_risk ? '<i class="bi bi-exclamation-triangle-fill me-1"></i>' : '';
+
             const status = calculateClientStatus(client);
             const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
-            tr.innerHTML = `<td>#${client.id}</td><td>${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
+
+            // ATUALIZE ESSA LINHA:
+            tr.innerHTML = `<td>#${client.id}</td><td class="${nameClass}">${riskIcon}${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
+
             clientListBody.appendChild(tr);
         });
     }
@@ -532,6 +543,27 @@ document.addEventListener('DOMContentLoaded', () => {
             // Não está pausado (ou a data chegou/passou)
             reminderStatusContainer.classList.add('d-none');
             pauseReminderBtn.classList.remove('d-none');
+        }
+
+        // LÓGICA DO BOTÃO DE RISCO
+        if (client.is_risk) {
+            riskBtn.classList.remove('btn-outline-secondary');
+            riskBtn.classList.add('btn-danger'); // Fica vermelho ativado
+            document.getElementById('panel-name').classList.add('text-danger'); // Título vermelho
+        } else {
+            riskBtn.classList.remove('btn-danger');
+            riskBtn.classList.add('btn-outline-secondary'); // Fica cinza desativado
+            document.getElementById('panel-name').classList.remove('text-danger');
+        }
+
+        // LÓGICA DO BOTÃO OFERTA VIP
+        // Regra: Empréstimo Concluído (Tudo Pago) E NÃO é Risco
+        const isCompleted = client.paymentDates && client.paymentDates.every(p => p.status === 'paid');
+
+        if (isCompleted && !client.is_risk) {
+            vipOfferBtn.classList.remove('d-none');
+        } else {
+            vipOfferBtn.classList.add('d-none');
         }
 
         panelProfession.textContent = client.profissao || 'N/A';
@@ -2273,6 +2305,72 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             copyClientReportBtn.innerHTML = originalText;
         }, 2000);
+    });
+
+    // 1. CLIQUE NO BOTÃO DE RISCO (Toggle)
+    riskBtn.addEventListener('click', async () => {
+        if (!selectedClientId) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        // Inverte o status atual
+        const newRiskStatus = !client.is_risk;
+
+        // Feedback visual imediato no botão
+        riskBtn.disabled = true;
+
+        try {
+            const updatedClient = await updateClient({ ...client, is_risk: newRiskStatus });
+            if (updatedClient) {
+                updateClientData(updatedClient);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao alterar status de risco.');
+        } finally {
+            riskBtn.disabled = false;
+        }
+    });
+
+    // 2. CLIQUE NO BOTÃO OFERTA VIP (Cópia + Zap)
+    vipOfferBtn.addEventListener('click', () => {
+        if (!selectedClientId) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+
+        const firstName = client.name.split(' ')[0];
+        const rawPhone = client.phone.replace(/\D/g, '');
+
+        // Mensagem Genérica (Emojis via código para não quebrar)
+        const i = {
+            star: String.fromCodePoint(0x2B50),
+            party: String.fromCodePoint(0x1F389),
+            hand: String.fromCodePoint(0x1F91D),
+            money: String.fromCodePoint(0x1F4B8)
+        };
+
+        let msg = `${i.star} *OFERTA ESPECIAL* ${i.star}\n\n`;
+        msg += `Olá, *${firstName}*! Tudo bem?\n\n`;
+        msg += `Passando para parabenizar pela quitação do seu empréstimo! ${i.party}\n\n`;
+        msg += `Como você é um excelente cliente, liberamos uma condição especial para você renovar hoje mesmo.\n\n`;
+        msg += `${i.money} *Limite pré-aprovado disponível!*\n\n`;
+        msg += `Tem interesse em simular sem compromisso? É só responder aqui. ${i.hand}`;
+
+        // Lógica de Copiar e Abrir (Mesma do Reminder)
+        navigator.clipboard.writeText(msg).then(() => {
+            alert('Mensagem copiada! Abrindo WhatsApp...'); // Feedback simples
+
+            // Verifica a preferência WEB ou APP (que já implementamos antes)
+            const savedMode = localStorage.getItem('wa_opener_mode');
+            let targetUrl;
+
+            if (savedMode === 'app') {
+                targetUrl = `whatsapp://send?phone=${rawPhone}`;
+                window.location.href = targetUrl;
+            } else {
+                targetUrl = `https://web.whatsapp.com/send?phone=${rawPhone}`;
+                window.open(targetUrl, '_blank');
+            }
+        });
     });
 
     // --- CARREGAR FERIADOS PARA A MEMÓRIA ---
