@@ -996,11 +996,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
+            // 1. CRIA O CLIENTE (Já estava certo)
             const response = await fetch('/api/clients', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // <--- ADICIONE ESSA LINHA
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(clientData),
             });
@@ -1010,6 +1011,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const newClient = await response.json();
 
+            // 2. CRIA O LOGIN (Opcional)
             const clientUsername = clientUsernameInput.value.trim();
             const clientPassword = clientPasswordInput.value.trim();
 
@@ -1033,15 +1035,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // 3. UPLOAD DE ARQUIVOS (AQUI ESTAVA O PROBLEMA)
             if (newClientFiles.length > 0) {
                 const uploadPromises = newClientFiles.map(file => {
                     const formData = new FormData();
                     formData.append('file', file);
                     formData.append('clientId', newClient.id);
-                    return fetch('/api/upload', { method: 'POST', body: formData });
+
+                    // CORREÇÃO APLICADA AQUI: ADICIONADO O HEADER DE AUTORIZAÇÃO
+                    return fetch('/api/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}` // <--- AGORA VAI FUNCIONAR
+                        },
+                        body: formData
+                    });
                 });
                 await Promise.all(uploadPromises);
             }
+
             await loadClients();
             loadFinancialSummary();
             bootstrap.Modal.getInstance(addClientModalEl).hide();
