@@ -84,7 +84,7 @@ export default async function handler(req, res) {
                 name, startDate, cpf, phone, loanValue, dailyValue, paymentDates,
                 installments, frequency, files, saldo, localizacao, bairro,
                 profissao, observacoes, taxa_juros, reminder_paused_until,
-                is_risk // <--- NOVO CAMPO
+                is_risk, reminder_pause_note // <--- NOVO CAMPO
             } = clientData;
 
             const query = `
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
                 SET name = $1, "startDate" = $2, cpf = $3, phone = $4, "loanValue" = $5, 
                 "dailyValue" = $6, "paymentDates" = $7, installments = $8, frequency = $9, 
                 files = $10, saldo = $11, localizacao = $12, bairro = $13, profissao = $14, 
-                observacoes = $15, taxa_juros = $17, reminder_paused_until = $18, is_risk = $19
+                observacoes = $15, taxa_juros = $17, reminder_paused_until = $18, is_risk = $19, reminder_pause_note = $20
                 WHERE id = $16
                 RETURNING *
             `;
@@ -103,7 +103,8 @@ export default async function handler(req, res) {
                 JSON.stringify(files || []), saldo || 0.00, localizacao,
                 bairro, profissao, observacoes, id, taxa_juros,
                 reminder_paused_until || null,
-                is_risk || false // <--- NOVO VALOR ($19)
+                is_risk || false,
+                reminder_pause_note || '' // <--- NOVO VALOR ($20)
             ];
 
             const result = await db.query(query, values);

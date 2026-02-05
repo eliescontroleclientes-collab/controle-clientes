@@ -109,6 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const clientUsernameInput = document.getElementById('clientUsername');
     const clientPasswordInput = document.getElementById('clientPassword');
     const interestRateClientInput = document.getElementById('interestRateClientInput');
+    const pauseNoteInput = document.getElementById('pauseNoteInput');
+    const reminderPauseNoteDisplay = document.getElementById('reminder-pause-note-display');
     // --- ELEMENTOS DO MODAL DE EDIÇÃO ---
     const editClientModalEl = document.getElementById('editClientModal');
     const editClientForm = document.getElementById('edit-client-form');
@@ -583,6 +585,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const pauseDateParts = pauseDateClean.split('-');
             reminderPausedDateEl.textContent = `${pauseDateParts[2]}/${pauseDateParts[1]}/${pauseDateParts[0]}`;
+
+            // LÓGICA DA NOTA (NOVO)
+            if (client.reminder_pause_note) {
+                reminderPauseNoteDisplay.textContent = `Nota: ${client.reminder_pause_note}`;
+                reminderPauseNoteDisplay.classList.remove('d-none');
+            } else {
+                reminderPauseNoteDisplay.classList.add('d-none');
+            }
+
         } else {
             // Não está pausado (ou a data chegou/passou)
             reminderStatusContainer.classList.add('d-none');
@@ -2214,7 +2225,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Abrir modal de pausa
     pauseReminderBtn.addEventListener('click', () => {
         if (!selectedClientId) return;
-        pauseDateInput.value = ''; // Limpa anterior
+        pauseDateInput.value = '';
+        pauseNoteInput.value = ''; // <--- LIMPA A NOTA ANTERIOR
         new bootstrap.Modal(pauseReminderModalEl).show();
     });
 
@@ -2225,8 +2237,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        // Atualiza apenas o campo de pausa
-        const updatedData = { ...client, reminder_paused_until: pauseDateInput.value };
+        // ATUALIZAÇÃO: SALVA A DATA E A NOTA
+        const updatedData = {
+            ...client,
+            reminder_paused_until: pauseDateInput.value,
+            reminder_pause_note: pauseNoteInput.value // <--- PEGA O TEXTO
+        };
 
         // Desabilita botão para evitar duplo clique
         savePauseBtn.disabled = true;
@@ -2255,7 +2271,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!confirm('Deseja voltar a receber lembretes deste cliente imediatamente?')) return;
 
-        const updatedData = { ...client, reminder_paused_until: null }; // Envia null para limpar
+        // ATUALIZAÇÃO: LIMPA A DATA E A NOTA
+        const updatedData = {
+            ...client,
+            reminder_paused_until: null,
+            reminder_pause_note: '' // <--- LIMPA A NOTA NO BANCO
+        };
 
         try {
             const updatedClient = await updateClient(updatedData);

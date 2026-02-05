@@ -89,15 +89,19 @@
                                 </div>
                             </div>
 
-                            <!-- Status de Pausa de Cobrança (Aparece quando está pausado) -->
-                            <!-- A lógica do JS vai esconder o botão acima e mostrar este aviso aqui -->
+                            <!-- Status de Pausa de Cobrança -->
                             <div id="reminder-status-container" class="mt-2 mb-2 d-none">
-                                <div
-                                    class="alert alert-warning d-flex justify-content-between align-items-center py-2 px-3 m-0 shadow-sm border-warning">
-                                    <small><i class="bi bi-pause-circle-fill"></i> Sem Lembrete até: <strong
-                                            id="reminder-paused-date"></strong></small>
-                                    <button id="remove-pause-btn" class="btn btn-sm btn-outline-dark"
-                                        title="Remover pausa e voltar a cobrar"><i class="bi bi-x-lg"></i></button>
+                                <div class="alert alert-warning py-2 px-3 m-0 shadow-sm border-warning">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small><i class="bi bi-pause-circle-fill"></i> Sem Lembrete até: <strong
+                                                id="reminder-paused-date"></strong></small>
+                                        <button id="remove-pause-btn" class="btn btn-sm btn-outline-dark border-0"
+                                            title="Remover pausa"><i class="bi bi-x-lg"></i></button>
+                                    </div>
+                                    <!-- AQUI VAI APARECER A NOTA -->
+                                    <div id="reminder-pause-note-display"
+                                        class="small text-muted fst-italic mt-1 border-top border-warning pt-1"
+                                        style="font-size: 0.85rem;"></div>
                                 </div>
                             </div>
 
@@ -857,7 +861,15 @@
                 <div class="modal-body">
                     <p class="small text-muted">Este cliente não aparecerá na lista de "Lembrete de Cobrança" até a data
                         selecionada (inclusive).</p>
-                    <input type="date" class="form-control mb-3" id="pauseDateInput">
+
+                    <label class="form-label small">Até quando?</label>
+                    <input type="date" class="form-control mb-2" id="pauseDateInput">
+
+                    <!-- NOVO CAMPO DE ANOTAÇÃO -->
+                    <label class="form-label small">Motivo / Anotação:</label>
+                    <textarea class="form-control mb-3" id="pauseNoteInput" rows="2"
+                        placeholder="Ex: Cliente viajou, pediu para ligar dia X..."></textarea>
+
                     <div class="d-grid">
                         <button id="save-pause-btn" class="btn btn-primary btn-sm">Confirmar Pausa</button>
                     </div>
