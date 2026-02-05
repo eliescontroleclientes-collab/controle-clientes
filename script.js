@@ -428,21 +428,57 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE API ---
     async function loadClients() {
         try {
-            // MUDANÇA AQUI: Adicionado o segundo parâmetro com headers
-            const response = await fetch(`/api/clients?page=${currentPage}&limit=${clientsPerPage}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            // --- CAMINHO A: COBRADOR (Paginação Local) ---
+            if (userRole === 'cobrador') {
+                // 1. Baixa TODOS os clientes de uma vez
+                const response = await fetch(`/api/clients?page=1&limit=9999`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
-            if (!response.ok) throw new Error('Falha ao carregar clientes.');
-            const data = await response.json();
-            clients = data.clients;
-            totalClients = data.total;
+                if (!response.ok) throw new Error('Falha ao carregar clientes.');
+                const data = await response.json();
 
-            renderClientList();
-            renderPaginationControls();
+                // 2. Filtra apenas os atrasados/pendentes
+                const allCobradorClients = data.clients.filter(client => {
+                    const status = calculateClientStatus(client);
+                    // A lógica "Atrasado + Pendente Hoje" contém a palavra "Atrasado"
+                    return status.includes('Atrasado');
+                });
+
+                // 3. Atualiza o TOTAL baseado no filtro
+                totalClients = allCobradorClients.length;
+
+                // 4. Cria a "Página" manualmente (fatia o array)
+                const startIndex = (currentPage - 1) * clientsPerPage;
+                const endIndex = startIndex + clientsPerPage;
+
+                // Essa variável 'clients' agora tem apenas os 15 da página atual
+                clients = allCobradorClients.slice(startIndex, endIndex);
+
+                // 5. Renderiza
+                renderClientList(clients); // Manda a lista já filtrada e paginada
+                renderPaginationControls(); // A barra vai calcular baseada no novo totalClients
+            }
+
+            // --- CAMINHO B: ADMIN (Paginação no Servidor - Original) ---
+            else {
+                const response = await fetch(`/api/clients?page=${currentPage}&limit=${clientsPerPage}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Falha ao carregar clientes.');
+                const data = await response.json();
+
+                clients = data.clients;
+                totalClients = data.total;
+
+                renderClientList(clients);
+                renderPaginationControls();
+            }
+
+            // Mantém o cache para a barra de pesquisa funcionar em ambos os casos
             fetchAllClientsForSearch();
+
         } catch (error) {
             console.error('Erro em loadClients:', error);
             alert('Não foi possível carregar os clientes do servidor.');
@@ -474,16 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderClientList(clientsToRender = clients) {
         clientListBody.innerHTML = '';
 
-        // --- FILTRO DO COBRADOR ---
-        if (userRole === 'cobrador') {
-            clientsToRender = clientsToRender.filter(client => {
-                const status = calculateClientStatus(client);
-                // Só mostra se tiver "Atrasado" no status
-                // A lógica "Atrasado + Pendente Hoje" já contém a palavra "Atrasado", então isso cobre os dois.
-                return status.includes('Atrasado');
-            });
-        }
-        // --------------------------
+        // (O BLOCO DE FILTRO DO COBRADOR FOI REMOVIDO DAQUI, POIS JÁ É FEITO NO LOAD)
 
         if (clientsToRender.length === 0) {
             const message = (searchInput.value || filterClearBtn.classList.contains('d-none') === false)
@@ -2515,8 +2542,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'renewal-btn',          // Renovação
             'vip-offer-btn',        // Oferta VIP
             'risk-btn',             // Botão Risco
-            'summary-total-loaned', // Totais financeiros (Opcional, se quiser esconder o resumo geral)
-            // Adicione aqui outros IDs que queira esconder
+            'summary-total-loaned',
+            'financial-summary-card', // <--- NOVO ITEM NA LISTA
         ];
 
         elementsToHide.forEach(id => {
