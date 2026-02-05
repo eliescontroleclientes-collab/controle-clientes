@@ -73,13 +73,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 const data = await response.json();
-                // MUDANÇA AQUI:
-                // 1. Salvamos o token que veio do servidor
+
+                // 1. Salva o token de segurança
                 if (data.token) {
                     sessionStorage.setItem('authToken', data.token);
                 }
-                // 2. Mantemos o isAuthenticated para lógica visual simples
+
+                // 2. Salva que está logado
                 sessionStorage.setItem('isAuthenticated', 'true');
+
+                // 3. NOVO: Salva o CARGO (admin ou cobrador)
+                // Se a API não mandar nada (legado), assume que é admin por segurança
+                const role = data.role || 'admin';
+                sessionStorage.setItem('userRole', role);
 
                 window.location.href = '/index.html';
             } else {

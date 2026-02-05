@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ADICIONE ESSA LINHA AQUI:
     const token = sessionStorage.getItem('authToken');
+    const userRole = sessionStorage.getItem('userRole'); // Pega o cargo (admin ou cobrador)
 
     // NOVA VARIÁVEL GLOBAL
     let globalHolidays = [];
@@ -472,6 +473,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE RENDERIZAÇÃO ---
     function renderClientList(clientsToRender = clients) {
         clientListBody.innerHTML = '';
+
+        // --- FILTRO DO COBRADOR ---
+        if (userRole === 'cobrador') {
+            clientsToRender = clientsToRender.filter(client => {
+                const status = calculateClientStatus(client);
+                // Só mostra se tiver "Atrasado" no status
+                // A lógica "Atrasado + Pendente Hoje" já contém a palavra "Atrasado", então isso cobre os dois.
+                return status.includes('Atrasado');
+            });
+        }
+        // --------------------------
+
         if (clientsToRender.length === 0) {
             const message = (searchInput.value || filterClearBtn.classList.contains('d-none') === false)
                 ? 'Nenhum cliente encontrado para o filtro aplicado.'
@@ -702,6 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // A lógica de renderização da lista foi movida para a função `updateClientData`
         // e para os próprios filtros, então este bloco não é mais necessário aqui.
         // ### FIM DA ALTERAÇÃO ###
+        applyCobradorRestrictions();
     }
 
     function handleNewFiles(files) {
@@ -2488,9 +2502,37 @@ document.addEventListener('DOMContentLoaded', () => {
         clockDateEl.textContent = dateString;
     }
 
+    function applyCobradorRestrictions() {
+        if (userRole !== 'cobrador') return; // Se for admin, não faz nada
+
+        // Lista de IDs de elementos para ESCONDER do cobrador
+        const elementsToHide = [
+            'holiday-btn',          // Feriados
+            'download-sheet-btn',   // Planilha
+            'add-client-btn',       // Adicionar Novo (Você precisa por esse ID no HTML)
+            'edit-client-btn',      // Editar Dados
+            'delete-client-btn',    // Excluir Cliente
+            'renewal-btn',          // Renovação
+            'vip-offer-btn',        // Oferta VIP
+            'risk-btn',             // Botão Risco
+            'summary-total-loaned', // Totais financeiros (Opcional, se quiser esconder o resumo geral)
+            // Adicione aqui outros IDs que queira esconder
+        ];
+
+        elementsToHide.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('d-none'); // Esconde visualmente
+        });
+
+        // Esconde o painel de filtros rápidos (pois ele só verá atrasados)
+        const filterPanel = document.getElementById('filter-active-btn')?.closest('.card');
+        if (filterPanel) filterPanel.classList.add('d-none');
+    }
+
     updateClock();
     setInterval(updateClock, 1000);
     loadHolidaysForCache();
     loadClients();
     loadFinancialSummary();
+    applyCobradorRestrictions(); // <--- CHAME AQUI TAMBÉM
 });

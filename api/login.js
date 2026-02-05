@@ -1,5 +1,4 @@
-// ARQUIVO: /api/login.js
-
+// ARQUIVO: api/login.js
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', ['POST']);
@@ -9,22 +8,40 @@ export default async function handler(req, res) {
     try {
         const { username, password } = req.body;
 
-        const correctUser = process.env.LOGIN_USER;
-        const correctPassword = process.env.LOGIN_PASSWORD;
-        // O novo Token que você criou no .env
         const apiToken = process.env.API_SECRET_TOKEN;
 
-        if (!correctUser || !correctPassword || !apiToken) {
-            console.error("Variáveis de ambiente de login ou token não estão definidas.");
+        // Credenciais ADMIN
+        const adminUser = process.env.LOGIN_USER;
+        const adminPass = process.env.LOGIN_PASSWORD;
+
+        // Credenciais COBRADOR
+        const cobradorUser = process.env.COBRADOR_USER;
+        const cobradorPass = process.env.COBRADOR_PASSWORD;
+
+        if (!apiToken) {
             return res.status(500).json({ error: 'Erro de configuração do servidor.' });
         }
 
-        if (username === correctUser && password === correctPassword) {
-            // MUDANÇA AQUI: Retornamos o token para o frontend
-            res.status(200).json({ success: true, token: apiToken });
-        } else {
-            res.status(401).json({ success: false });
+        // Verifica se é ADMIN
+        if (username === adminUser && password === adminPass) {
+            return res.status(200).json({
+                success: true,
+                token: apiToken,
+                role: 'admin' // <--- Identifica como CHEFE
+            });
         }
+
+        // Verifica se é COBRADOR
+        if (username === cobradorUser && password === cobradorPass) {
+            return res.status(200).json({
+                success: true,
+                token: apiToken,
+                role: 'cobrador' // <--- Identifica como FUNCIONÁRIO
+            });
+        }
+
+        // Se não for nenhum dos dois
+        res.status(401).json({ success: false });
 
     } catch (error) {
         console.error('API /login error:', error);
