@@ -713,7 +713,21 @@ document.addEventListener('DOMContentLoaded', () => {
             client.files.forEach(file => {
                 const li = document.createElement('li');
                 li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                li.innerHTML = `<span><i class="bi bi-file-earmark-text"></i> ${file.name}</span><div><a href="${file.url}" target="_blank" class="btn btn-outline-primary btn-sm" title="Ver Arquivo"><i class="bi bi-eye"></i></a> <button class="btn btn-outline-danger btn-sm delete-file-btn" data-filename="${file.name}" title="Excluir Arquivo"><i class="bi bi-trash"></i></button></div>`;
+
+                // LÓGICA DE PERMISSÃO:
+                // Se for cobrador, a string do botão de excluir fica vazia.
+                // Se for admin, cria o botão normal.
+                const deleteButtonHTML = (userRole === 'cobrador')
+                    ? ''
+                    : `<button class="btn btn-outline-danger btn-sm delete-file-btn" data-filename="${file.name}" title="Excluir Arquivo"><i class="bi bi-trash"></i></button>`;
+
+                li.innerHTML = `
+                    <span><i class="bi bi-file-earmark-text"></i> ${file.name}</span>
+                    <div>
+                        <a href="${file.url}" target="_blank" class="btn btn-outline-primary btn-sm" title="Ver Arquivo"><i class="bi bi-eye"></i></a> 
+                        ${deleteButtonHTML}
+                    </div>
+                `;
                 fileList.appendChild(li);
             });
         } else {
@@ -2543,7 +2557,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'vip-offer-btn',        // Oferta VIP
             'risk-btn',             // Botão Risco
             'summary-total-loaned',
-            'financial-summary-card', // <--- NOVO ITEM NA LISTA
+            'financial-summary-card',
+            'upload-file-form', // <--- NOVO: ESCONDE O INPUT DE ARQUIVOS
         ];
 
         elementsToHide.forEach(id => {
