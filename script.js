@@ -876,12 +876,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function filterClientList() {
         const searchTerm = searchInput.value.toLowerCase();
-        // ### INÍCIO DA ALTERAÇÃO ###
-        activeFilterButton = null; // Limpa o filtro de botão quando a busca por texto é usada
-        // ### FIM DA ALTERAÇÃO ###
+        activeFilterButton = null; // Limpa o filtro de botão
+
         if (!searchTerm) {
-            renderClientList();
-            paginationControls.style.display = 'flex';
+            // Se limpou a busca, recarrega a lista padrão (que já tem o filtro do cobrador no loadClients)
+            loadClients();
+            paginationControls.style.display = (userRole === 'cobrador') ? 'none' : 'flex';
             filterClearBtn.classList.add('d-none');
             return;
         }
@@ -890,9 +890,19 @@ document.addEventListener('DOMContentLoaded', () => {
         filterClearBtn.classList.remove('d-none');
 
         const filteredClients = allClientsForSearch.filter(client => {
+            // 1. Filtro de Texto (Nome ou ID)
             const idMatch = client.id.toString().toLowerCase().includes(searchTerm);
             const nameMatch = client.name.toLowerCase().includes(searchTerm);
-            return idMatch || nameMatch;
+            const matchesSearch = idMatch || nameMatch;
+
+            // 2. Filtro de Segurança (Cobrador vê apenas atrasados)
+            let matchesRole = true;
+            if (userRole === 'cobrador') {
+                const status = calculateClientStatus(client);
+                matchesRole = status.includes('Atrasado');
+            }
+
+            return matchesSearch && matchesRole;
         });
 
         renderClientList(filteredClients);
@@ -2605,18 +2615,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Cuiaba' });
 
         // Filtra clientes cujo acordo vence EXATAMENTE hoje
-        const dueToday = allClientsForSearch.filter(client => {
+        let dueToday = allClientsForSearch.filter(client => {
             const pauseDate = client.reminder_paused_until ? client.reminder_paused_until.split('T')[0] : null;
             return pauseDate === todayStr;
         });
 
+        // FILTRO DO COBRADOR (Só conta se estiver atrasado)
+        if (userRole === 'cobrador') {
+            dueToday = dueToday.filter(client => {
+                const status = calculateClientStatus(client);
+                return status.includes('Atrasado');
+            });
+        }
+
         if (dueToday.length > 0) {
             agreementsBadge.textContent = dueToday.length;
             agreementsBadge.classList.remove('d-none');
-            agreementsBtn.classList.add('btn-danger'); // Deixa o botão vermelho para chamar atenção
+            agreementsBtn.classList.add('btn-danger');
         } else {
             agreementsBadge.classList.add('d-none');
-            agreementsBtn.classList.remove('btn-danger'); // Volta ao normal
+            agreementsBtn.classList.remove('btn-danger');
         }
     }
 
@@ -2624,33 +2642,39 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAgreementsModal() {
         const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Cuiaba' });
 
-        // Limpa listas anteriores
         agreementsTodayList.innerHTML = '';
         agreementsUpcomingList.innerHTML = '';
         agreementsTodaySection.classList.add('d-none');
 
-        // Filtra clientes com pausas ativas
-        const activeAgreements = allClientsForSearch.filter(client =>
+        // 1. Filtra clientes com pausas ativas
+        let activeAgreements = allClientsForSearch.filter(client =>
             client.reminder_paused_until && client.reminder_paused_until.split('T')[0] >= todayStr
         );
+
+        // 2. FILTRO DO COBRADOR (Adicionado)
+        if (userRole === 'cobrador') {
+            activeAgreements = activeAgreements.filter(client => {
+                const status = calculateClientStatus(client);
+                return status.includes('Atrasado');
+            });
+        }
 
         // Separa em "Hoje" e "Futuro"
         const dueToday = activeAgreements.filter(c => c.reminder_paused_until.split('T')[0] === todayStr);
         const upcoming = activeAgreements.filter(c => c.reminder_paused_until.split('T')[0] > todayStr);
 
-        // Ordena os futuros pela data mais próxima
+        // Ordena os futuros
         upcoming.sort((a, b) => new Date(a.reminder_paused_until) - new Date(b.reminder_paused_until));
 
-        // Renderiza a lista de HOJE
+        // Renderiza HOJE
         if (dueToday.length > 0) {
             agreementsTodaySection.classList.remove('d-none');
             dueToday.forEach(client => {
                 const item = document.createElement('div');
-                item.className = 'list-group-item list-group-item-warning'; // Fundo amarelo para destaque
+                item.className = 'list-group-item list-group-item-warning';
                 item.innerHTML = `
                     <div class="d-flex w-100 justify-content-between">
                         <h6 class="mb-1">
-                            <!-- ALTERAÇÃO AQUI: NOME VIRA LINK -->
                             <a href="#" class="text-dark agreement-client-link" data-client-id="${client.id}">${client.name}</a>
                         </h6>
                         <small>ID: ${client.id}</small>
@@ -2661,7 +2685,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Renderiza a lista de FUTUROS
+        // Renderiza FUTUROS
         if (upcoming.length > 0) {
             upcoming.forEach(client => {
                 const pauseDateParts = client.reminder_paused_until.split('T')[0].split('-');
@@ -2672,7 +2696,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.innerHTML = `
                     <div class="d-flex w-100 justify-content-between">
                         <h6 class="mb-1">
-                            <!-- ALTERAÇÃO AQUI: NOME VIRA LINK -->
                             <a href="#" class="text-dark agreement-client-link" data-client-id="${client.id}">${client.name}</a>
                         </h6>
                         <small class="badge bg-primary rounded-pill">${formattedDate}</small>
@@ -2682,9 +2705,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 agreementsUpcomingList.appendChild(item);
             });
         } else {
-            // Pequeno ajuste para a mensagem de lista vazia só aparecer se ambas estiverem vazias
             if (dueToday.length === 0) {
-                agreementsUpcomingList.innerHTML = '<p class="text-muted small">Nenhum acordo agendado.</p>';
+                agreementsUpcomingList.innerHTML = '<p class="text-muted small">Nenhum acordo agendado para exibição.</p>';
             }
         }
     }
