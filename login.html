@@ -30,13 +30,22 @@
                         <input type="password" class="form-control" id="password" placeholder="Senha" required>
                         <label for="password">Senha</label>
                     </div>
-                    <div class="d-grid">
+
+                    <!-- ÁREA DOS BOTÕES -->
+                    <div class="d-grid gap-2">
+                        <!-- Botão Principal -->
                         <button type="submit" class="btn btn-primary btn-lg" id="login-btn">
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
                                 style="display: none;"></span>
                             Entrar
                         </button>
+
+                        <!-- Botão Acesso Rota (Cobrador) -->
+                        <a href="/cobrador.html" class="btn btn-outline-dark">
+                            <i class="bi bi-bicycle"></i> Acesso Rota
+                        </a>
                     </div>
+
                     <div id="login-error" class="text-danger text-center mt-3" style="display: none;">
                         Usuário ou senha inválidos.
                     </div>
