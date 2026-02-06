@@ -44,6 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const clientReportModalEl = document.getElementById('clientReportModal');
     const clientReportText = document.getElementById('clientReportText');
     const copyClientReportBtn = document.getElementById('copy-client-report-btn');
+    const agreementsBtn = document.getElementById('agreements-btn');
+    const agreementsBadge = document.getElementById('agreements-badge');
+    const agreementsModalEl = document.getElementById('agreementsModal');
+    const agreementsTodaySection = document.getElementById('agreements-today-section');
+    const agreementsTodayList = document.getElementById('agreements-today-list');
+    const agreementsUpcomingList = document.getElementById('agreements-upcoming-list');
 
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
@@ -799,6 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             allClientsForSearch = data.clients;
             updateFilterPanel();
+            updateAgreementsButton(); // <-- ADICIONE AQUI
         } catch (error) {
             console.error('Erro ao buscar todos os clientes para pesquisa:', error);
         }
@@ -1315,6 +1322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFilterPanel();
         renderClientPanel(clientId);
         loadFinancialSummary();
+        updateAgreementsButton(); // <-- ADICIONE AQUI
 
         // Lógica para reaplicar o filtro ativo e atualizar a lista
         if (searchInput.value) {
@@ -2591,6 +2599,91 @@ document.addEventListener('DOMContentLoaded', () => {
         const filterPanel = document.getElementById('filter-active-btn')?.closest('.card');
         if (filterPanel) filterPanel.classList.add('d-none');
     }
+
+    // FUNÇÃO 1: ATUALIZA O NÚMERO NO BOTÃO
+    function updateAgreementsButton() {
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Cuiaba' });
+
+        // Filtra clientes cujo acordo vence EXATAMENTE hoje
+        const dueToday = allClientsForSearch.filter(client => {
+            const pauseDate = client.reminder_paused_until ? client.reminder_paused_until.split('T')[0] : null;
+            return pauseDate === todayStr;
+        });
+
+        if (dueToday.length > 0) {
+            agreementsBadge.textContent = dueToday.length;
+            agreementsBadge.classList.remove('d-none');
+            agreementsBtn.classList.add('btn-danger'); // Deixa o botão vermelho para chamar atenção
+        } else {
+            agreementsBadge.classList.add('d-none');
+            agreementsBtn.classList.remove('btn-danger'); // Volta ao normal
+        }
+    }
+
+    // FUNÇÃO 2: PREENCHE O MODAL COM A LISTA
+    function renderAgreementsModal() {
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Cuiaba' });
+
+        // Limpa listas anteriores
+        agreementsTodayList.innerHTML = '';
+        agreementsUpcomingList.innerHTML = '';
+        agreementsTodaySection.classList.add('d-none');
+
+        // Filtra clientes com pausas ativas
+        const activeAgreements = allClientsForSearch.filter(client =>
+            client.reminder_paused_until && client.reminder_paused_until.split('T')[0] >= todayStr
+        );
+
+        // Separa em "Hoje" e "Futuro"
+        const dueToday = activeAgreements.filter(c => c.reminder_paused_until.split('T')[0] === todayStr);
+        const upcoming = activeAgreements.filter(c => c.reminder_paused_until.split('T')[0] > todayStr);
+
+        // Ordena os futuros pela data mais próxima
+        upcoming.sort((a, b) => new Date(a.reminder_paused_until) - new Date(b.reminder_paused_until));
+
+        // Renderiza a lista de HOJE
+        if (dueToday.length > 0) {
+            agreementsTodaySection.classList.remove('d-none');
+            dueToday.forEach(client => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item list-group-item-warning'; // Fundo amarelo para destaque
+                item.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${client.name}</h6>
+                        <small>ID: ${client.id}</small>
+                    </div>
+                    <p class="mb-1 small fst-italic text-muted">"${client.reminder_pause_note || 'Sem anotação.'}"</p>
+                `;
+                agreementsTodayList.appendChild(item);
+            });
+        }
+
+        // Renderiza a lista de FUTUROS
+        if (upcoming.length > 0) {
+            upcoming.forEach(client => {
+                const pauseDateParts = client.reminder_paused_until.split('T')[0].split('-');
+                const formattedDate = `${pauseDateParts[2]}/${pauseDateParts[1]}`;
+
+                const item = document.createElement('div');
+                item.className = 'list-group-item';
+                item.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${client.name}</h6>
+                        <small class="badge bg-primary rounded-pill">${formattedDate}</small>
+                    </div>
+                    <p class="mb-1 small fst-italic text-muted">"${client.reminder_pause_note || 'Sem anotação.'}"</p>
+                `;
+                agreementsUpcomingList.appendChild(item);
+            });
+        } else {
+            agreementsUpcomingList.innerHTML = '<p class="text-muted small">Nenhum acordo futuro agendado.</p>';
+        }
+    }
+
+    agreementsBtn.addEventListener('click', () => {
+        renderAgreementsModal();
+        new bootstrap.Modal(agreementsModalEl).show();
+    });
 
     updateClock();
     setInterval(updateClock, 1000);

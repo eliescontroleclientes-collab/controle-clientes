@@ -191,6 +191,15 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lista Geral de Clientes</h5>
                         <div class="btn-toolbar">
+                            <!-- NOVO BOTÃO DE ACORDOS -->
+                            <button class="btn btn-primary btn-sm me-2 position-relative" id="agreements-btn">
+                                <i class="bi bi-calendar2-heart"></i> Acordos
+                                <span id="agreements-badge"
+                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
+                                    0
+                                </span>
+                            </button>
+
                             <button class="btn btn-warning btn-sm me-2" id="holiday-btn">
                                 <i class="bi bi-calendar-event"></i> Gerenciar Feriados
                             </button>
@@ -1029,6 +1038,34 @@
                         <button id="vip-quitacao-seca-btn" class="btn btn-secondary">
                             <i class="bi bi-hand-thumbs-up-fill"></i> Apenas Confirmar Quitação (Sem Oferta)
                         </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Acordos -->
+    <div class="modal fade" id="agreementsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-calendar2-heart"></i> Painel de Acordos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    <!-- SEÇÃO PARA ACORDOS VENCENDO HOJE -->
+                    <div id="agreements-today-section" class="d-none">
+                        <h6><i class="bi bi-alarm-fill text-danger"></i> Acordos Vencendo Hoje</h6>
+                        <div id="agreements-today-list" class="list-group mb-4"></div>
+                        <hr>
+                    </div>
+
+                    <!-- SEÇÃO PARA PRÓXIMOS ACORDOS -->
+                    <h6><i class="bi bi-hourglass-split"></i> Próximos Acordos</h6>
+                    <div id="agreements-upcoming-list" class="list-group">
+                        <p class="text-muted">Nenhum acordo futuro encontrado.</p>
                     </div>
 
                 </div>
