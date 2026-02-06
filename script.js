@@ -2649,7 +2649,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.className = 'list-group-item list-group-item-warning'; // Fundo amarelo para destaque
                 item.innerHTML = `
                     <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">${client.name}</h6>
+                        <h6 class="mb-1">
+                            <!-- ALTERAÇÃO AQUI: NOME VIRA LINK -->
+                            <a href="#" class="text-dark agreement-client-link" data-client-id="${client.id}">${client.name}</a>
+                        </h6>
                         <small>ID: ${client.id}</small>
                     </div>
                     <p class="mb-1 small fst-italic text-muted">"${client.reminder_pause_note || 'Sem anotação.'}"</p>
@@ -2668,7 +2671,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.className = 'list-group-item';
                 item.innerHTML = `
                     <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">${client.name}</h6>
+                        <h6 class="mb-1">
+                            <!-- ALTERAÇÃO AQUI: NOME VIRA LINK -->
+                            <a href="#" class="text-dark agreement-client-link" data-client-id="${client.id}">${client.name}</a>
+                        </h6>
                         <small class="badge bg-primary rounded-pill">${formattedDate}</small>
                     </div>
                     <p class="mb-1 small fst-italic text-muted">"${client.reminder_pause_note || 'Sem anotação.'}"</p>
@@ -2676,7 +2682,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 agreementsUpcomingList.appendChild(item);
             });
         } else {
-            agreementsUpcomingList.innerHTML = '<p class="text-muted small">Nenhum acordo futuro agendado.</p>';
+            // Pequeno ajuste para a mensagem de lista vazia só aparecer se ambas estiverem vazias
+            if (dueToday.length === 0) {
+                agreementsUpcomingList.innerHTML = '<p class="text-muted small">Nenhum acordo agendado.</p>';
+            }
         }
     }
 
@@ -2684,6 +2693,30 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAgreementsModal();
         new bootstrap.Modal(agreementsModalEl).show();
     });
+
+    // --- LÓGICA PARA CLICAR EM CLIENTES NO MODAL DE ACORDOS ---
+
+    // Função que será usada para ambas as listas (Hoje e Futuro)
+    const handleAgreementClick = (e) => {
+        // Encontra o link que foi clicado, mesmo que o clique tenha sido em cima do texto
+        const link = e.target.closest('.agreement-client-link');
+        if (!link) return; // Se não clicou no link, não faz nada
+
+        e.preventDefault(); // Evita que a página suba (comportamento padrão do href="#")
+
+        // Pega o ID que guardamos no 'data-client-id'
+        const clientId = parseInt(link.dataset.clientId, 10);
+
+        // Chama a função que já existe para renderizar o painel
+        renderClientPanel(clientId);
+
+        // Fecha o modal para o usuário ver o painel
+        bootstrap.Modal.getInstance(agreementsModalEl).hide();
+    };
+
+    // Aplica o "ouvinte" para as duas listas dentro do modal
+    agreementsTodayList.addEventListener('click', handleAgreementClick);
+    agreementsUpcomingList.addEventListener('click', handleAgreementClick);
 
     updateClock();
     setInterval(updateClock, 1000);
