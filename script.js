@@ -2371,38 +2371,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
     });
 
-    // --- LÓGICA DO RELATÓRIO INDIVIDUAL DO CLIENTE ---
+    // --- LÓGICA DO RELATÓRIO INDIVIDUAL DO CLIENTE (ATUALIZADA COM JUROS) ---
 
     clientReportBtn.addEventListener('click', () => {
         if (!selectedClientId) return;
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        // 1. Cálculos Matemáticos
+        // 1. Configurações de Data (Para identificar o que é atraso hoje)
+        const timeZone = 'America/Cuiaba';
+        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
+        const todayDateObj = new Date(todayInCuiaba + 'T00:00:00.000Z');
+
+        // 2. Cálculos Básicos
         const totalInstallments = client.paymentDates ? client.paymentDates.length : 0;
         const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
         const remainingInstallments = totalInstallments - paidInstallments;
-
         const installmentValue = parseFloat(client.dailyValue);
-        const remainingValue = remainingInstallments * installmentValue;
 
-        // Calcula porcentagem concluída (opcional, mas fica bonito)
+        // 3. Cálculo de Juros por Atraso
+        // Filtra parcelas com data menor que hoje e não pagas
+        const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid');
+        const lateCount = lateInstallments.length;
+
+        let totalInterest = 0;
+        if (lateCount > 0) {
+            const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
+            const interestPerInstallment = installmentValue * clientInterestRate;
+            totalInterest = lateCount * interestPerInstallment;
+        }
+
+        // 4. Saldo Final (Principal Restante + Juros)
+        const baseRemainingValue = remainingInstallments * installmentValue;
+        const finalSettlementValue = baseRemainingValue + totalInterest;
+
+        // Calcula porcentagem concluída
         const progress = totalInstallments > 0 ? Math.round((paidInstallments / totalInstallments) * 100) : 0;
 
-        // 2. Montagem do Texto
+        // 5. Montagem do Texto
         let msg = `📊 *EXTRATO DE EMPRÉSTIMO* 📊\n\n`;
         msg += `Olá, *${client.name.split(' ')[0]}*! Aqui está o resumo atualizado do seu contrato:\n\n`;
 
         msg += `💰 *Valor da Parcela:* ${formatCurrency(installmentValue)}\n`;
         msg += `✅ *Parcelas Pagas:* ${paidInstallments} de ${totalInstallments}\n`;
-        msg += `⏳ *Restantes:* ${remainingInstallments} parcelas\n\n`;
+        msg += `⏳ *Restantes:* ${remainingInstallments} parcelas\n`;
 
-        msg += `📉 *Progresso:* ${progress}% concluído\n`;
-        msg += `🏁 *Saldo para Quitação:* *${formatCurrency(remainingValue)}*\n\n`;
+        // SE TIVER ATRASO, ADICIONA O ALERTA E OS JUROS
+        if (lateCount > 0) {
+            msg += `\n❌ *Atenção:* Constam ${lateCount} parcela(s) em atraso.\n`;
+            msg += `📉 *Juros Acumulados:* ${formatCurrency(totalInterest)}\n`;
+        }
+
+        msg += `\n📉 *Progresso:* ${progress}% concluído\n`;
+
+        // O valor final aqui já inclui os juros somados
+        msg += `🏁 *Saldo para Quitação:* *${formatCurrency(finalSettlementValue)}*\n\n`;
 
         msg += `_Continue pagando em dia para manter seu crédito sempre disponível!_ 🤝`;
 
-        // 3. Exibir
+        // 6. Exibir
         clientReportText.value = msg;
         new bootstrap.Modal(clientReportModalEl).show();
     });
