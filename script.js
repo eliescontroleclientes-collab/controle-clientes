@@ -876,12 +876,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function filterClientList() {
         const searchTerm = searchInput.value.toLowerCase();
-        activeFilterButton = null; // Limpa o filtro de botão
+        activeFilterButton = null;
 
         if (!searchTerm) {
-            // Se limpou a busca, recarrega a lista padrão (que já tem o filtro do cobrador no loadClients)
+            // Se limpou a busca, recarrega a lista padrão
             loadClients();
-            paginationControls.style.display = (userRole === 'cobrador') ? 'none' : 'flex';
+
+            // CORREÇÃO: Força a exibição da barra para TODO MUNDO ('flex').
+            // O loadClients() já cuidou de montar os botões certos (1, 2, 3...) tanto pro Admin quanto pro Cobrador.
+            paginationControls.style.display = 'flex';
+
             filterClearBtn.classList.add('d-none');
             return;
         }
@@ -890,12 +894,10 @@ document.addEventListener('DOMContentLoaded', () => {
         filterClearBtn.classList.remove('d-none');
 
         const filteredClients = allClientsForSearch.filter(client => {
-            // 1. Filtro de Texto (Nome ou ID)
             const idMatch = client.id.toString().toLowerCase().includes(searchTerm);
             const nameMatch = client.name.toLowerCase().includes(searchTerm);
             const matchesSearch = idMatch || nameMatch;
 
-            // 2. Filtro de Segurança (Cobrador vê apenas atrasados)
             let matchesRole = true;
             if (userRole === 'cobrador') {
                 const status = calculateClientStatus(client);
