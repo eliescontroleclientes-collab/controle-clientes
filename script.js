@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // NOVA VARIÁVEL GLOBAL
     let globalHolidays = [];
+    let globalResponsiblesList = []; // Cache da lista
 
     // --- ELEMENTOS DO DOM ---
     const clientListBody = document.getElementById('client-list-body');
@@ -50,6 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const agreementsTodaySection = document.getElementById('agreements-today-section');
     const agreementsTodayList = document.getElementById('agreements-today-list');
     const agreementsUpcomingList = document.getElementById('agreements-upcoming-list');
+    const responsibleSelect = document.getElementById('responsibleSelect');
+    const manageResponsiblesBtn = document.getElementById('manage-responsibles-btn');
+    const responsiblesModalEl = document.getElementById('responsiblesModal');
+    const newRespNameInput = document.getElementById('newRespName');
+    const saveNewRespBtn = document.getElementById('saveNewRespBtn');
+    const responsiblesList = document.getElementById('responsiblesList');
 
     // ELEMENTOS DO PAINEL DE DETALHES
     const fileList = document.getElementById('file-list');
@@ -637,6 +644,11 @@ document.addEventListener('DOMContentLoaded', () => {
             panelLocation.parentElement.style.display = 'none';
         }
 
+        // A API agora nos envia o 'responsible_name', então podemos usá-lo
+        const respName = client.responsible_name || "Não informado";
+        document.getElementById('panel-responsible').textContent = respName;
+        // ===============================================
+
         const allPaid = client.paymentDates && client.paymentDates.every(p => p.status === 'paid');
         if (allPaid) {
             const paidDates = (client.paymentDates || [])
@@ -1077,7 +1089,8 @@ document.addEventListener('DOMContentLoaded', () => {
             bairro: neighborhoodInput.value,
             profissao: professionInput.value,
             taxa_juros: parseFloat(interestRateClientInput.value) || 20,
-            original_client_id: null
+            original_client_id: null,
+            responsible_id: document.getElementById('responsibleSelect').value || null, // <--- PEGA O ID
         };
 
         try {
@@ -1798,7 +1811,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch('/api/get-config?name=pix_key');
+            const response = await fetch('/api/settings?type=config&name=pix_key', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await response.json();
 
             if (data.value) {
@@ -1822,9 +1837,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            await fetch('/api/save-config', {
+            await fetch('/api/settings?type=config', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ name: 'pix_key', value: newPixKey })
             });
 
@@ -2769,10 +2784,109 @@ document.addEventListener('DOMContentLoaded', () => {
     agreementsTodayList.addEventListener('click', handleAgreementClick);
     agreementsUpcomingList.addEventListener('click', handleAgreementClick);
 
+    async function loadResponsibles() {
+        try {
+            const response = await fetch('/api/settings?type=responsibles', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            globalResponsiblesList = await response.json();
+            updateResponsibleSelects();
+        } catch (e) { console.error(e); }
+    }
+
+    function updateResponsibleSelects() {
+        // Limpa e preenche o dropdown
+        responsibleSelect.innerHTML = '<option value="">Selecione o responsável...</option>';
+
+        globalResponsiblesList.forEach(resp => {
+            // Só mostra no dropdown se estiver ATIVO
+            if (resp.active) {
+                const option = document.createElement('option');
+                option.value = resp.id;
+                option.textContent = resp.name;
+                responsibleSelect.appendChild(option);
+            }
+        });
+    }
+
+    manageResponsiblesBtn.addEventListener('click', () => {
+        renderResponsiblesList();
+        new bootstrap.Modal(responsiblesModalEl).show();
+    });
+
+    saveNewRespBtn.addEventListener('click', async () => {
+        const name = newRespNameInput.value;
+        if (!name) return;
+
+        // URL ATUALIZADA AQUI:
+        await fetch('/api/settings?type=responsibles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ name })
+        });
+
+        newRespNameInput.value = '';
+        await loadResponsibles(); // Recarrega dropdown e lista
+        renderResponsiblesList();
+    });
+
+    function renderResponsiblesList() {
+        responsiblesList.innerHTML = '';
+        globalResponsiblesList.forEach(resp => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+            const statusColor = resp.active ? 'text-success' : 'text-muted text-decoration-line-through';
+            const toggleIcon = resp.active ? 'bi-toggle-on' : 'bi-toggle-off';
+
+            li.innerHTML = `
+                <span class="${statusColor}">${resp.name}</span>
+                <div>
+                    <button class="btn btn-sm btn-link text-dark toggle-resp-btn" data-id="${resp.id}" data-active="${resp.active}">
+                        <i class="bi ${toggleIcon} fs-5"></i>
+                    </button>
+                    <button class="btn btn-sm btn-link text-danger delete-resp-btn" data-id="${resp.id}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            responsiblesList.appendChild(li);
+        });
+    }
+
+    // Eventos da lista (Toggle e Delete)
+    responsiblesList.addEventListener('click', async (e) => {
+        const toggleBtn = e.target.closest('.toggle-resp-btn');
+        const deleteBtn = e.target.closest('.delete-resp-btn');
+
+        if (toggleBtn) {
+            const id = toggleBtn.dataset.id;
+            const newStatus = toggleBtn.dataset.active === 'true' ? false : true;
+            await fetch('/api/settings?type=responsibles', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ id, active: newStatus })
+            });
+            await loadResponsibles();
+            renderResponsiblesList();
+        }
+
+        if (deleteBtn) {
+            if (!confirm('Tem certeza? Clientes vinculados ficarão como "Não informado".')) return;
+            await fetch(`/api/settings?type=responsibles?id=${deleteBtn.dataset.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            await loadResponsibles();
+            renderResponsiblesList();
+        }
+    });
+
     updateClock();
     setInterval(updateClock, 1000);
     loadHolidaysForCache();
     loadClients();
     loadFinancialSummary();
-    applyCobradorRestrictions(); // <--- CHAME AQUI TAMBÉM
+    applyCobradorRestrictions();
+    loadResponsibles()
 });

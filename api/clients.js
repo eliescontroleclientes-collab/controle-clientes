@@ -28,7 +28,14 @@ export default async function handler(req, res) {
             const totalResult = await db.query('SELECT COUNT(*) AS total FROM clients');
             const totalClients = parseInt(totalResult.rows[0].total, 10);
 
-            const result = await db.query('SELECT * FROM clients ORDER BY id ASC LIMIT $1 OFFSET $2', [limit, offset]);
+            // QUERY ATUALIZADA COM JOIN
+            const queryText = `
+                SELECT c.*, r.name as responsible_name 
+                FROM clients c 
+                LEFT JOIN responsibles r ON c.responsible_id = r.id 
+                ORDER BY c.id ASC LIMIT $1 OFFSET $2
+            `;
+            const result = await db.query(queryText, [limit, offset]);
 
             // 3. Retorna um objeto contendo os clientes da página e o total
             res.status(200).json({
@@ -37,18 +44,18 @@ export default async function handler(req, res) {
             });
         }
         else if (req.method === 'POST') {
-            const { id, name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, localizacao, bairro, profissao, original_client_id, taxa_juros } = req.body;
+            const { id, name, startDate, cpf, phone, loanValue, dailyValue, paymentDates, installments, frequency, localizacao, bairro, profissao, original_client_id, taxa_juros, responsible_id } = req.body;
 
             if (!id) {
                 return res.status(400).json({ error: 'O ID do cliente é obrigatório.' });
             }
 
             const query = `
-                INSERT INTO clients (id, name, "startDate", cpf, phone, "loanValue", "dailyValue", "paymentDates", installments, frequency, files, saldo, localizacao, bairro, profissao, observacoes, original_client_id, taxa_juros) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, '[]'::jsonb, 0.00, $11, $12, $13, '', $14, $15) 
+                INSERT INTO clients (id, name, "startDate", cpf, phone, "loanValue", "dailyValue", "paymentDates", installments, frequency, files, saldo, localizacao, bairro, profissao, observacoes, original_client_id, taxa_juros, responsible_id) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, '[]'::jsonb, 0.00, $11, $12, $13, '', $14, $15, $16) 
                 RETURNING *
             `;
-            const values = [id, name, startDate, cpf, phone, loanValue, dailyValue, JSON.stringify(paymentDates), installments, frequency, localizacao, bairro, profissao, original_client_id || null, taxa_juros];
+            const values = [id, name, startDate, cpf, phone, loanValue, dailyValue, JSON.stringify(paymentDates), installments, frequency, localizacao, bairro, profissao, original_client_id || null, taxa_juros, responsible_id || null];
             const result = await db.query(query, values);
             res.status(201).json(result.rows[0]);
         }
@@ -84,15 +91,14 @@ export default async function handler(req, res) {
                 name, startDate, cpf, phone, loanValue, dailyValue, paymentDates,
                 installments, frequency, files, saldo, localizacao, bairro,
                 profissao, observacoes, taxa_juros, reminder_paused_until,
-                is_risk, reminder_pause_note // <--- NOVO CAMPO
-            } = clientData;
+                is_risk, reminder_pause_note, responsible_id } = clientData;
 
             const query = `
                 UPDATE clients 
                 SET name = $1, "startDate" = $2, cpf = $3, phone = $4, "loanValue" = $5, 
                 "dailyValue" = $6, "paymentDates" = $7, installments = $8, frequency = $9, 
                 files = $10, saldo = $11, localizacao = $12, bairro = $13, profissao = $14, 
-                observacoes = $15, taxa_juros = $17, reminder_paused_until = $18, is_risk = $19, reminder_pause_note = $20
+                observacoes = $15, taxa_juros = $17, reminder_paused_until = $18, is_risk = $19, reminder_pause_note = $20, responsible_id = $21
                 WHERE id = $16
                 RETURNING *
             `;
@@ -104,7 +110,8 @@ export default async function handler(req, res) {
                 bairro, profissao, observacoes, id, taxa_juros,
                 reminder_paused_until || null,
                 is_risk || false,
-                reminder_pause_note || '' // <--- NOVO VALOR ($20)
+                reminder_pause_note || '',
+                responsible_id || null // <--- ADICIONE AQUI NO FINAL
             ];
 
             const result = await db.query(query, values);
