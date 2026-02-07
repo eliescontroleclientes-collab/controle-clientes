@@ -443,9 +443,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÕES DE API ---
     async function loadClients() {
         try {
-            // --- CAMINHO A: COBRADOR (Paginação Local) ---
+            // --- CAMINHO A: COBRADOR (Paginação Local + Ordenação por Atraso) ---
             if (userRole === 'cobrador') {
-                // 1. Baixa TODOS os clientes de uma vez
+                // 1. Baixa TODOS os clientes
                 const response = await fetch(`/api/clients?page=1&limit=9999`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -454,25 +454,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 // 2. Filtra apenas os atrasados/pendentes
-                const allCobradorClients = data.clients.filter(client => {
+                let allCobradorClients = data.clients.filter(client => {
                     const status = calculateClientStatus(client);
-                    // A lógica "Atrasado + Pendente Hoje" contém a palavra "Atrasado"
                     return status.includes('Atrasado');
                 });
 
-                // 3. Atualiza o TOTAL baseado no filtro
+                // =========================================================
+                // 3. NOVO: ORDENAÇÃO POR GRAVIDADE (Mais parcelas atrasadas primeiro)
+                // =========================================================
+                const timeZone = 'America/Cuiaba';
+                const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
+                const todayTimestamp = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
+
+                allCobradorClients.sort((a, b) => {
+                    // Função auxiliar para contar parcelas vencidas (data menor que hoje)
+                    const countLate = (c) => {
+                        return (c.paymentDates || []).filter(p => {
+                            const pDate = new Date(p.date).getTime();
+                            return pDate < todayTimestamp && p.status !== 'paid';
+                        }).length;
+                    };
+
+                    const lateA = countLate(a);
+                    const lateB = countLate(b);
+
+                    // Ordena do Maior para o Menor (Descrescente)
+                    return lateB - lateA;
+                });
+                // =========================================================
+
+                // 4. Atualiza o TOTAL
                 totalClients = allCobradorClients.length;
 
-                // 4. Cria a "Página" manualmente (fatia o array)
+                // 5. Cria a "Página" manualmente
                 const startIndex = (currentPage - 1) * clientsPerPage;
                 const endIndex = startIndex + clientsPerPage;
 
-                // Essa variável 'clients' agora tem apenas os 15 da página atual
                 clients = allCobradorClients.slice(startIndex, endIndex);
 
-                // 5. Renderiza
-                renderClientList(clients); // Manda a lista já filtrada e paginada
-                renderPaginationControls(); // A barra vai calcular baseada no novo totalClients
+                // 6. Renderiza
+                renderClientList(clients);
+                renderPaginationControls();
             }
 
             // --- CAMINHO B: ADMIN (Paginação no Servidor - Original) ---
