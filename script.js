@@ -2717,7 +2717,7 @@ document.addEventListener('DOMContentLoaded', () => {
             client.reminder_paused_until && client.reminder_paused_until.split('T')[0] >= todayStr
         );
 
-        // 2. FILTRO DO COBRADOR (Adicionado)
+        // 2. FILTRO DO COBRADOR (Mantido)
         if (userRole === 'cobrador') {
             activeAgreements = activeAgreements.filter(client => {
                 const status = calculateClientStatus(client);
@@ -2725,12 +2725,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Separa em "Hoje" e "Futuro"
         const dueToday = activeAgreements.filter(c => c.reminder_paused_until.split('T')[0] === todayStr);
         const upcoming = activeAgreements.filter(c => c.reminder_paused_until.split('T')[0] > todayStr);
 
-        // Ordena os futuros
         upcoming.sort((a, b) => new Date(a.reminder_paused_until) - new Date(b.reminder_paused_until));
+
+        // HELPER PARA BOTÃO DE EXCLUIR (NOVO)
+        const getDeleteBtn = (clientId) => {
+            if (userRole === 'cobrador') return '';
+            return `<button class="btn btn-sm text-danger delete-agreement-btn ms-2" data-client-id="${clientId}" title="Cancelar Acordo"><i class="bi bi-x-lg"></i></button>`;
+        };
 
         // Renderiza HOJE
         if (dueToday.length > 0) {
@@ -2739,13 +2743,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const item = document.createElement('div');
                 item.className = 'list-group-item list-group-item-warning';
                 item.innerHTML = `
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">
-                            <a href="#" class="text-dark agreement-client-link" data-client-id="${client.id}">${client.name}</a>
-                        </h6>
-                        <small>ID: ${client.id}</small>
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="#" class="text-dark agreement-client-link fw-bold" data-client-id="${client.id}">${client.name}</a>
+                            </h6>
+                            <p class="mb-0 small fst-italic text-muted">"${client.reminder_pause_note || 'Sem anotação.'}"</p>
+                        </div>
+                        <div class="text-end">
+                            <small class="d-block text-muted">ID: ${client.id}</small>
+                            ${getDeleteBtn(client.id)}
+                        </div>
                     </div>
-                    <p class="mb-1 small fst-italic text-muted">"${client.reminder_pause_note || 'Sem anotação.'}"</p>
                 `;
                 agreementsTodayList.appendChild(item);
             });
@@ -2760,13 +2769,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const item = document.createElement('div');
                 item.className = 'list-group-item';
                 item.innerHTML = `
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">
-                            <a href="#" class="text-dark agreement-client-link" data-client-id="${client.id}">${client.name}</a>
-                        </h6>
-                        <small class="badge bg-primary rounded-pill">${formattedDate}</small>
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="#" class="text-dark agreement-client-link fw-bold" data-client-id="${client.id}">${client.name}</a>
+                            </h6>
+                            <p class="mb-0 small fst-italic text-muted">"${client.reminder_pause_note || 'Sem anotação.'}"</p>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary rounded-pill mb-1">${formattedDate}</span>
+                            <div>${getDeleteBtn(client.id)}</div>
+                        </div>
                     </div>
-                    <p class="mb-1 small fst-italic text-muted">"${client.reminder_pause_note || 'Sem anotação.'}"</p>
                 `;
                 agreementsUpcomingList.appendChild(item);
             });
@@ -2782,29 +2796,55 @@ document.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(agreementsModalEl).show();
     });
 
-    // --- LÓGICA PARA CLICAR EM CLIENTES NO MODAL DE ACORDOS ---
+    // --- LÓGICA UNIFICADA: CLICAR NO NOME (ABRIR) OU NO X (EXCLUIR) ---
 
-    // Função que será usada para ambas as listas (Hoje e Futuro)
-    const handleAgreementClick = (e) => {
-        // Encontra o link que foi clicado, mesmo que o clique tenha sido em cima do texto
+    const handleAgreementListAction = async (e) => {
+        // NÃO TEM e.preventDefault() GLOBAL AQUI, pois pode bloquear o scroll ou outros eventos
+        // Usamos preventDefault apenas se clicarmos nos botões específicos.
+
+        // CASO 1: Clicou no botão "X" (Excluir Acordo)
+        const deleteBtn = e.target.closest('.delete-agreement-btn');
+        if (deleteBtn) {
+            e.preventDefault();
+            const clientId = parseInt(deleteBtn.dataset.clientId, 10);
+            const client = allClientsForSearch.find(c => c.id === clientId);
+
+            if (!client) return;
+            if (!confirm(`Deseja cancelar o acordo de ${client.name}? O cliente voltará para a lista de cobrança.`)) return;
+
+            // Remove a pausa e a nota
+            const updatedData = {
+                ...client,
+                reminder_paused_until: null,
+                reminder_pause_note: ''
+            };
+
+            try {
+                // Atualiza no banco
+                const updatedClient = await updateClient(updatedData);
+                if (updatedClient) {
+                    updateClientData(updatedClient); // Atualiza tudo (botão, lista, painel)
+                    renderAgreementsModal(); // Reconstrói a lista do modal na hora
+                }
+            } catch (err) {
+                alert('Erro ao cancelar acordo.');
+            }
+            return;
+        }
+
+        // CASO 2: Clicou no Nome (Abrir Perfil)
         const link = e.target.closest('.agreement-client-link');
-        if (!link) return; // Se não clicou no link, não faz nada
-
-        e.preventDefault(); // Evita que a página suba (comportamento padrão do href="#")
-
-        // Pega o ID que guardamos no 'data-client-id'
-        const clientId = parseInt(link.dataset.clientId, 10);
-
-        // Chama a função que já existe para renderizar o painel
-        renderClientPanel(clientId);
-
-        // Fecha o modal para o usuário ver o painel
-        bootstrap.Modal.getInstance(agreementsModalEl).hide();
+        if (link) {
+            e.preventDefault();
+            const clientId = parseInt(link.dataset.clientId, 10);
+            renderClientPanel(clientId);
+            bootstrap.Modal.getInstance(agreementsModalEl).hide();
+        }
     };
 
-    // Aplica o "ouvinte" para as duas listas dentro do modal
-    agreementsTodayList.addEventListener('click', handleAgreementClick);
-    agreementsUpcomingList.addEventListener('click', handleAgreementClick);
+    // Aplica o "ouvinte inteligente" para as duas listas
+    agreementsTodayList.addEventListener('click', handleAgreementListAction);
+    agreementsUpcomingList.addEventListener('click', handleAgreementListAction);
 
     async function loadResponsibles() {
         try {
