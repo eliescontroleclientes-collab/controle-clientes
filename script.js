@@ -2103,6 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (pendingSecureAction === 'unlockEdit') {
                         document.getElementById('editClientName').readOnly = false;
                         editClientPhoneInput.readOnly = false;
+                        document.getElementById('editClientCPF').readOnly = false;
                         editProfessionInput.readOnly = false;
                         editNeighborhoodInput.readOnly = false;
                         editLocationInput.readOnly = false;
