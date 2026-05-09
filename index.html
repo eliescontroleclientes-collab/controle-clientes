@@ -209,6 +209,9 @@
                             <button class="btn btn-info btn-sm me-2" id="reminder-btn">
                                 <i class="bi bi-bell-fill"></i> Lembrete de Cobrança
                             </button>
+                            <button class="btn btn-secondary btn-sm me-2" id="custom-message-btn">
+                                <i class="bi bi-chat-text-fill"></i> Aviso Personalizado
+                            </button>
                             <button class="btn btn-success btn-sm me-2" id="download-sheet-btn">
                                 <span class="spinner-border spinner-border-sm me-1" id="download-spinner"
                                     style="display: none;"></span>
@@ -1111,6 +1114,34 @@
                     <ul class="list-group" id="responsiblesList">
                         <!-- Lista via JS -->
                     </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Mensagem Personalizada -->
+    <div class="modal fade" id="customMessageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title"><i class="bi bi-chat-text-fill"></i> Preparar Aviso Personalizado</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="bi bi-info-circle-fill"></i> <span id="custom-msg-count-text">Calculando
+                            clientes...</span>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customMessageInput" class="form-label fw-bold">Seu Texto Personalizado:</label>
+                        <textarea class="form-control" id="customMessageInput" rows="6"
+                            placeholder="Cole ou digite aqui o recado, promoção ou aviso que deseja enviar para todos..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" id="send-custom-msg-btn">Gerar Lista de
+                        Envio</button>
                 </div>
             </div>
         </div>

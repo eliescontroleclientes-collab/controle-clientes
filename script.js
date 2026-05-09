@@ -177,6 +177,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const addHolidayForm = document.getElementById('add-holiday-form');
     const holidayDateInput = document.getElementById('holidayDateInput');
 
+    // --- ELEMENTOS DO AVISO PERSONALIZADO ---
+    const customMessageBtn = document.getElementById('custom-message-btn');
+    const customMessageModalEl = document.getElementById('customMessageModal');
+    const customMsgCountText = document.getElementById('custom-msg-count-text');
+    const customMessageInput = document.getElementById('customMessageInput');
+    const sendCustomMsgBtn = document.getElementById('send-custom-msg-btn');
+    let clientsForCustomMsg = []; // Estado para guardar a lista filtrada
+
     // --- ESTADO DA APLICAÇÃO ---
     let clients = [];
     let selectedClientId = null;
@@ -1978,6 +1986,72 @@ document.addEventListener('DOMContentLoaded', () => {
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
         new bootstrap.Modal(reminderQueueModalEl).show();
     });
+
+    // =====================================================================
+    // LÓGICA DO AVISO PERSONALIZADO EM MASSA
+    // =====================================================================
+
+    // 1. Ao clicar no botão da lista de clientes
+    customMessageBtn.addEventListener('click', () => {
+        // Filtra todos os clientes da base, EXCETO os que já finalizaram o empréstimo
+        clientsForCustomMsg = allClientsForSearch.filter(client => {
+            const status = calculateClientStatus(client);
+            return !status.includes('Empréstimo Concluído');
+        });
+
+        if (clientsForCustomMsg.length === 0) {
+            alert('Nenhum cliente elegível encontrado (todos estão com empréstimo concluído).');
+            return;
+        }
+
+        // Prepara o modal
+        customMsgCountText.innerHTML = `O sistema irá preparar mensagens para <strong>${clientsForCustomMsg.length} cliente(s)</strong> ativos.`;
+        customMessageInput.value = ''; // Limpa a caixa de texto
+        new bootstrap.Modal(customMessageModalEl).show();
+    });
+
+    // 2. Ao clicar em "Gerar Lista de Envio" dentro do modal
+    sendCustomMsgBtn.addEventListener('click', () => {
+        const customText = customMessageInput.value.trim();
+
+        if (!customText) {
+            alert('Por favor, digite ou cole um texto para enviar.');
+            return;
+        }
+
+        // Limpa a fila existente (a mesma usada pelo lembrete de cobrança)
+        reminderQueueList.innerHTML = '';
+
+        clientsForCustomMsg.forEach((client) => {
+            // Cria o link limpo apenas com o número
+            const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}`;
+
+            const listItem = document.createElement('a');
+            listItem.href = whatsappUrl;
+            // Usa a mesma classe para aproveitar a sua lógica perfeita de cópia e abertura (Web/App)
+            listItem.className = 'list-group-item list-group-item-action reminder-link';
+
+            // Coloca o texto personalizado que você digitou como dado invisível para cópia
+            listItem.setAttribute('data-message', customText);
+
+            listItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-chat-dots-fill me-2 text-secondary"></i> 
+                        Enviar para <strong>${client.name}</strong>
+                    </div>
+                    <span class="badge bg-light text-dark border"><i class="bi bi-clipboard"></i> Copiar e Abrir</span>
+                </div>
+            `;
+
+            reminderQueueList.appendChild(listItem);
+        });
+
+        // Fecha o modal de digitação e abre o modal da Fila de Envio (o mesmo já usado no sistema)
+        bootstrap.Modal.getInstance(customMessageModalEl).hide();
+        new bootstrap.Modal(reminderQueueModalEl).show();
+    });
+    // =====================================================================
 
     // --- LÓGICA DE COPIAR E ABRIR WHATSAPP (HÍBRIDA WEB/APP) ---
 
