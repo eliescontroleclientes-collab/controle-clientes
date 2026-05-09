@@ -1911,48 +1911,48 @@ document.addEventListener('DOMContentLoaded', () => {
             const installmentValue = parseFloat(client.dailyValue);
             const installmentFormatted = formatCurrency(installmentValue);
 
+            // Identifica atrasadas e a parcela de hoje
             const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid');
             const lateCount = lateInstallments.length;
             const isPendingToday = (client.paymentDates || []).some(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
 
+            // --- 1. SOMA DE PARCELAS PENDENTES (Atrasadas + A de Hoje) ---
+            const totalPendingCount = lateCount + (isPendingToday ? 1 : 0);
+
+            // Calcula Juros (Apenas sobre as atrasadas)
             let totalInterest = 0;
             if (lateCount > 0) {
                 const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
                 totalInterest = lateCount * (installmentValue * clientInterestRate);
             }
 
-            let totalValue = (lateCount * installmentValue) + totalInterest;
-            if (isPendingToday) totalValue += installmentValue;
+            // --- 2. CÁLCULO DO VALOR TOTAL COM DESCONTO DE SALDO ---
+            let totalValue = (totalPendingCount * installmentValue) + totalInterest;
+
+            const clientBalance = parseFloat(client.saldo || 0);
+            if (clientBalance > 0) {
+                totalValue -= clientBalance; // Desconta o saldo (crédito) do cliente
+            }
+            if (totalValue < 0) totalValue = 0; // Previne ficar valor negativo
 
             // --- EXTRAÇÃO DO PRIMEIRO NOME ---
-            // Pega o nome completo e divide no primeiro espaço
             const firstName = client.name.split(' ')[0];
 
-            // --- MONTAGEM DA MENSAGEM ---
-            let message = `${i.bell} *LEMBRETE DE COBRANÇA* ${i.bell}\n\n`;
-
-            // MUDANÇA AQUI: Trocamos client.name por firstName
-            message += `${i.user} *Cliente:* ${firstName}\n`;
-
+            // --- 3. MONTAGEM DA NOVA MENSAGEM ENXUTA ---
+            let message = `${i.user} *Cliente:* ${firstName}\n`;
             message += `${i.calendar} *Data:* ${todayFormatted}\n`;
             message += `-----------------------------------\n`;
+            message += `${i.cross} *${totalPendingCount}x Parcela(s) Pendentes:* ${installmentFormatted}\n`;
 
-            if (lateCount > 0) {
-                message += `${i.cross} *${lateCount}x Parcela(s) em Atraso:* ${installmentFormatted}\n`;
-                if (isPendingToday) message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
+            if (totalInterest > 0) {
                 message += `${i.chart} *Juros calculados:* ${formatCurrency(totalInterest)}\n`;
             } else {
-                message += `${i.day} *Parcela de Hoje:* ${installmentFormatted}\n`;
-                message += `${i.check} *Juros:* R$ 0,00\n`;
+                message += `${i.chart} *Juros calculados:* R$ 0,00\n`;
             }
 
-            message += `\n${i.money} *VALOR TOTAL:* *${formatCurrency(totalValue)}*\n`;
-            message += `_(Para regularizar até hoje)_\n`;
-            message += `-----------------------------------\n\n`;
-            message += `${i.pix} *DADOS PARA PAGAMENTO*\n`;
-            message += `${i.key} *Pix:* ${pixKey}\n`;
-            message += `${i.build} *Nome:* On Comércio e Serviços\n`;
-            message += `${i.bank} *Banco:* C6 Bank`;
+            message += `${i.money} *VALOR TOTAL:* *${formatCurrency(totalValue)}*\n`;
+            message += `-----------------------------------\n`;
+            message += `${i.key} *Pix:* ${pixKey}`;
 
             if (message) {
                 // Link apenas com o telefone (sem texto)
