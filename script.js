@@ -1778,6 +1778,13 @@ document.addEventListener('DOMContentLoaded', () => {
             totalValue += parseFloat(client.dailyValue);
         }
 
+        // NOVO: Verifica se tem Saldo (Crédito) e abate do total
+        const clientBalance = parseFloat(client.saldo || 0);
+        if (clientBalance > 0) {
+            totalValue -= clientBalance;
+        }
+        if (totalValue < 0) totalValue = 0; // Evita mostrar valor negativo
+
         let message = `*Cliente:* ${client.name}\n`;
         message += `*Telefone:* ${client.phone ? formatPhone(client.phone) : 'N/A'}\n`;
         message += `*Profissão:* ${client.profissao || 'N/A'}\n`;
@@ -2515,7 +2522,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 4. Saldo Final (Principal Restante + Juros)
         const baseRemainingValue = remainingInstallments * installmentValue;
-        const finalSettlementValue = baseRemainingValue + totalInterest;
+        let finalSettlementValue = baseRemainingValue + totalInterest;
+
+        // NOVO: Verifica se tem Saldo (Crédito) e abate da quitação
+        const clientReportBalance = parseFloat(client.saldo || 0);
+        if (clientReportBalance > 0) {
+            finalSettlementValue -= clientReportBalance;
+        }
+        if (finalSettlementValue < 0) finalSettlementValue = 0; // Evita mostrar valor negativo
 
         // Calcula porcentagem concluída
         const progress = totalInstallments > 0 ? Math.round((paidInstallments / totalInstallments) * 100) : 0;
