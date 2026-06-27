@@ -1995,66 +1995,134 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =====================================================================
-    // LÓGICA DO AVISO PERSONALIZADO EM MASSA
+    // LÓGICA DE AVISOS EM MASSA (PERSONALIZADO E RENOVAÇÃO)
     // =====================================================================
 
-    // 1. Ao clicar no botão da lista de clientes
+    const sendRenewalMsgBtn = document.getElementById('send-renewal-msg-btn');
+    const renewalMsgCountText = document.getElementById('renewal-msg-count-text');
+    let clientsForRenewalMsg = []; // Lista para a aba de renovação
+
+    // 1. Ao clicar no botão principal (abre o modal e calcula as listas)
     customMessageBtn.addEventListener('click', () => {
-        // Filtra todos os clientes da base, EXCETO os que já finalizaram o empréstimo
+
+        // --- FILTRO PARA A ABA "PERSONALIZADA" ---
         clientsForCustomMsg = allClientsForSearch.filter(client => {
             const status = calculateClientStatus(client);
-            return !status.includes('Empréstimo Concluído');
+            return !status.includes('Empréstimo Concluído'); // Todos ativos
         });
 
-        if (clientsForCustomMsg.length === 0) {
-            alert('Nenhum cliente elegível encontrado (todos estão com empréstimo concluído).');
-            return;
-        }
+        // --- FILTRO PARA A ABA "RENOVAÇÃO" (Novas Regras) ---
+        clientsForRenewalMsg = allClientsForSearch.filter(client => {
+            const status = calculateClientStatus(client);
 
-        // Prepara o modal
-        customMsgCountText.innerHTML = `O sistema irá preparar mensagens para <strong>${clientsForCustomMsg.length} cliente(s)</strong> ativos.`;
-        customMessageInput.value = ''; // Limpa a caixa de texto
+            // Regra 1: Não pode ter atraso e não pode estar concluído
+            if (status.includes('Atrasado') || status.includes('Empréstimo Concluído')) return false;
+
+            // Pega quantidade de parcelas pagas
+            const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
+
+            // Regra 2: Frequência Diária (mínimo 10) ou Semanal (mínimo 2)
+            if (client.frequency === 'daily' && paidInstallments >= 10) return true;
+            if (client.frequency === 'weekly' && paidInstallments >= 2) return true;
+
+            return false;
+        });
+
+        // Preenche os contadores na tela
+        customMsgCountText.innerHTML = `O sistema preparará mensagens para <strong>${clientsForCustomMsg.length} cliente(s)</strong> ativos.`;
+        renewalMsgCountText.innerHTML = `O sistema encontrou <strong>${clientsForRenewalMsg.length} cliente(s)</strong> elegíveis para renovação.`;
+        customMessageInput.value = '';
+
+        // Garante que a primeira aba venha aberta
+        const firstTab = new bootstrap.Tab(document.getElementById('custom-tab'));
+        firstTab.show();
+
         new bootstrap.Modal(customMessageModalEl).show();
     });
 
-    // 2. Ao clicar em "Gerar Lista de Envio" dentro do modal
+    // 2. Gerar Lista: ABA AVISO PERSONALIZADO
     sendCustomMsgBtn.addEventListener('click', () => {
         const customText = customMessageInput.value.trim();
+        if (!customText) { alert('Por favor, digite ou cole um texto.'); return; }
+        if (clientsForCustomMsg.length === 0) { alert('Nenhum cliente disponível.'); return; }
 
-        if (!customText) {
-            alert('Por favor, digite ou cole um texto para enviar.');
+        reminderQueueList.innerHTML = '';
+        clientsForCustomMsg.forEach((client) => {
+            const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}`;
+            const listItem = document.createElement('a');
+            listItem.href = whatsappUrl;
+            listItem.className = 'list-group-item list-group-item-action reminder-link';
+            listItem.setAttribute('data-message', customText);
+            listItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div><i class="bi bi-chat-dots-fill me-2 text-secondary"></i> Enviar para <strong>${client.name}</strong></div>
+                    <span class="badge bg-light text-dark border"><i class="bi bi-clipboard"></i> Copiar e Abrir</span>
+                </div>`;
+            reminderQueueList.appendChild(listItem);
+        });
+
+        bootstrap.Modal.getInstance(customMessageModalEl).hide();
+        new bootstrap.Modal(reminderQueueModalEl).show();
+    });
+
+    // 3. Gerar Lista: ABA RENOVAÇÃO (Lógica Matemática)
+    sendRenewalMsgBtn.addEventListener('click', () => {
+        if (clientsForRenewalMsg.length === 0) {
+            alert('Nenhum cliente cumpre as regras de renovação no momento.');
             return;
         }
 
-        // Limpa a fila existente (a mesma usada pelo lembrete de cobrança)
         reminderQueueList.innerHTML = '';
 
-        clientsForCustomMsg.forEach((client) => {
-            // Cria o link limpo apenas com o número
-            const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}`;
+        clientsForRenewalMsg.forEach(client => {
+            // Cálculos da Dívida e do Recebimento
+            const totalInstallments = client.paymentDates ? client.paymentDates.length : 0;
+            const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
+            const remainingInstallments = totalInstallments - paidInstallments;
 
+            const installmentValue = parseFloat(client.dailyValue);
+            const currentLoanValue = parseFloat(client.loanValue); // O valor de "Y"
+
+            // Dívida atual = parcelas restantes X valor da parcela (sem juros pois está em dia)
+            let currentDebt = remainingInstallments * installmentValue;
+
+            // Desconta o saldo (se o cliente tiver crédito extra pago a mais)
+            const clientBalance = parseFloat(client.saldo || 0);
+            if (clientBalance > 0) { currentDebt -= clientBalance; }
+            if (currentDebt < 0) { currentDebt = 0; }
+
+            // O valor de "X" = Empréstimo Total - Dívida que falta pagar
+            let netReceiveValue = currentLoanValue - currentDebt;
+            if (netReceiveValue < 0) { netReceiveValue = 0; } // Por precaução
+
+            // Formatação
+            const formattedLoan = formatCurrency(currentLoanValue);
+            const formattedReceive = formatCurrency(netReceiveValue);
+
+            // Mensagem formatada conforme você pediu
+            let msg = `🎉 *Sua renovação está disponível!*\n\n`;
+            msg += `💵 Empréstimo: *${formattedLoan}*\n\n`;
+            msg += `💰 Você recebe: *${formattedReceive}*\n\n`;
+            msg += `✅ Renovamos seu contrato.\n`;
+            msg += `✅ Descontamos o saldo restante.\n`;
+            msg += `✅ Você recebe a diferença.\n\n`;
+            msg += `📲 Responda esta mensagem para renovar.`;
+
+            // Monta o link na fila
+            const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}`;
             const listItem = document.createElement('a');
             listItem.href = whatsappUrl;
-            // Usa a mesma classe para aproveitar a sua lógica perfeita de cópia e abertura (Web/App)
             listItem.className = 'list-group-item list-group-item-action reminder-link';
-
-            // Coloca o texto personalizado que você digitou como dado invisível para cópia
-            listItem.setAttribute('data-message', customText);
-
+            listItem.setAttribute('data-message', msg);
             listItem.innerHTML = `
                 <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-chat-dots-fill me-2 text-secondary"></i> 
-                        Enviar para <strong>${client.name}</strong>
-                    </div>
+                    <div><i class="bi bi-gift-fill me-2 text-success"></i> Oferta para <strong>${client.name.split(' ')[0]}</strong></div>
                     <span class="badge bg-light text-dark border"><i class="bi bi-clipboard"></i> Copiar e Abrir</span>
-                </div>
-            `;
+                </div>`;
 
             reminderQueueList.appendChild(listItem);
         });
 
-        // Fecha o modal de digitação e abre o modal da Fila de Envio (o mesmo já usado no sistema)
         bootstrap.Modal.getInstance(customMessageModalEl).hide();
         new bootstrap.Modal(reminderQueueModalEl).show();
     });

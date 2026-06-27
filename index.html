@@ -1119,29 +1119,80 @@
         </div>
     </div>
 
-    <!-- Modal de Mensagem Personalizada -->
+    <!-- Modal de Mensagem Personalizada / Renovação -->
     <div class="modal fade" id="customMessageModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-secondary text-white">
-                    <h5 class="modal-title"><i class="bi bi-chat-text-fill"></i> Preparar Aviso Personalizado</h5>
+                    <h5 class="modal-title"><i class="bi bi-chat-text-fill"></i> Preparar Avisos</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-info py-2 small mb-3">
-                        <i class="bi bi-info-circle-fill"></i> <span id="custom-msg-count-text">Calculando
-                            clientes...</span>
+                <div class="modal-body p-0">
+
+                    <!-- ABAS DE NAVEGAÇÃO -->
+                    <ul class="nav nav-tabs px-3 pt-3 bg-light" id="msgTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active text-secondary fw-bold" id="custom-tab" data-bs-toggle="tab"
+                                data-bs-target="#custom-pane" type="button" role="tab">Aviso Personalizado</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-success fw-bold" id="renewal-tab" data-bs-toggle="tab"
+                                data-bs-target="#renewal-pane" type="button" role="tab">Aviso de Renovação</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content p-3" id="msgTabsContent">
+
+                        <!-- ABA 1: AVISO PERSONALIZADO (Lógica Original) -->
+                        <div class="tab-pane fade show active" id="custom-pane" role="tabpanel">
+                            <div class="alert alert-info py-2 small mb-3">
+                                <i class="bi bi-info-circle-fill"></i> <span id="custom-msg-count-text">Calculando
+                                    clientes...</span>
+                            </div>
+                            <div class="mb-3">
+                                <label for="customMessageInput" class="form-label fw-bold">Seu Texto
+                                    Personalizado:</label>
+                                <textarea class="form-control" id="customMessageInput" rows="6"
+                                    placeholder="Cole ou digite aqui o recado, promoção ou aviso que deseja enviar..."></textarea>
+                            </div>
+                            <div class="text-end border-top pt-3">
+                                <button type="button" class="btn btn-outline-secondary me-2"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-secondary" id="send-custom-msg-btn">Gerar Lista de
+                                    Envio</button>
+                            </div>
+                        </div>
+
+                        <!-- ABA 2: AVISO DE RENOVAÇÃO (Nova Lógica) -->
+                        <div class="tab-pane fade" id="renewal-pane" role="tabpanel">
+                            <div class="alert alert-success py-2 small mb-3">
+                                <i class="bi bi-stars"></i> <span id="renewal-msg-count-text">Calculando clientes
+                                    elegíveis...</span>
+                            </div>
+                            <p class="text-muted small">
+                                O sistema filtrará apenas clientes <strong>Em Dia</strong> ou
+                                <strong>Adiantados</strong> que já pagaram pelo menos:
+                                <br>• <strong>10 parcelas</strong> (se for Diário)
+                                <br>• <strong>2 parcelas</strong> (se for Semanal)
+                            </p>
+
+                            <div class="p-3 bg-light border rounded mb-3 small">
+                                <strong>Modelo da mensagem que será gerada:</strong><br>
+                                <span class="text-muted">🎉 Sua renovação está disponível!<br>
+                                    💵 Empréstimo: <strong>[Valor]</strong><br>
+                                    💰 Você recebe: <strong>[Diferença]</strong><br>
+                                    ✅ Renovamos seu contrato...</span>
+                            </div>
+
+                            <div class="text-end border-top pt-3">
+                                <button type="button" class="btn btn-outline-secondary me-2"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-success" id="send-renewal-msg-btn"><i
+                                        class="bi bi-whatsapp"></i> Gerar Ofertas</button>
+                            </div>
+                        </div>
+
                     </div>
-                    <div class="mb-3">
-                        <label for="customMessageInput" class="form-label fw-bold">Seu Texto Personalizado:</label>
-                        <textarea class="form-control" id="customMessageInput" rows="6"
-                            placeholder="Cole ou digite aqui o recado, promoção ou aviso que deseja enviar para todos..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-secondary" id="send-custom-msg-btn">Gerar Lista de
-                        Envio</button>
                 </div>
             </div>
         </div>
