@@ -1124,7 +1124,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-secondary text-white">
-                    <h5 class="modal-title"><i class="bi bi-chat-text-fill"></i> Preparar Avisos</h5>
+                    <h5 class="modal-title"><i class="bi bi-chat-text-fill"></i> Preparar Avisos em Massa</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
@@ -1153,7 +1153,7 @@
                                 <label for="customMessageInput" class="form-label fw-bold">Seu Texto
                                     Personalizado:</label>
                                 <textarea class="form-control" id="customMessageInput" rows="6"
-                                    placeholder="Cole ou digite aqui o recado, promoção ou aviso que deseja enviar..."></textarea>
+                                    placeholder="Cole ou digite aqui o recado, promoção ou aviso que deseja enviar para todos..."></textarea>
                             </div>
                             <div class="text-end border-top pt-3">
                                 <button type="button" class="btn btn-outline-secondary me-2"
@@ -1163,7 +1163,7 @@
                             </div>
                         </div>
 
-                        <!-- ABA 2: AVISO DE RENOVAÇÃO (Nova Lógica) -->
+                        <!-- ABA 2: AVISO DE RENOVAÇÃO -->
                         <div class="tab-pane fade" id="renewal-pane" role="tabpanel">
                             <div class="alert alert-success py-2 small mb-3">
                                 <i class="bi bi-stars"></i> <span id="renewal-msg-count-text">Calculando clientes
@@ -1172,15 +1172,15 @@
                             <p class="text-muted small">
                                 O sistema filtrará apenas clientes <strong>Em Dia</strong> ou
                                 <strong>Adiantados</strong> que já pagaram pelo menos:
-                                <br>• <strong>10 parcelas</strong> (se for Diário)
-                                <br>• <strong>2 parcelas</strong> (se for Semanal)
+                                <br>• <strong>10 parcelas</strong> (Frequência Diária)
+                                <br>• <strong>2 parcelas</strong> (Frequência Semanal)
                             </p>
 
                             <div class="p-3 bg-light border rounded mb-3 small">
-                                <strong>Modelo da mensagem que será gerada:</strong><br>
+                                <strong>A mensagem gerada será:</strong><br>
                                 <span class="text-muted">🎉 Sua renovação está disponível!<br>
-                                    💵 Empréstimo: <strong>[Valor]</strong><br>
-                                    💰 Você recebe: <strong>[Diferença]</strong><br>
+                                    💵 Empréstimo: <strong>[Valor Atual]</strong><br>
+                                    💰 Você recebe: <strong>[Valor Líquido]</strong><br>
                                     ✅ Renovamos seu contrato...</span>
                             </div>
 
