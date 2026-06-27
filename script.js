@@ -2108,16 +2108,22 @@ document.addEventListener('DOMContentLoaded', () => {
             let netReceiveValue = currentLoanValue - currentDebt;
             if (netReceiveValue < 0) { netReceiveValue = 0; }
 
+            // Formatação dos valores
             const formattedLoan = formatCurrency(currentLoanValue);
+            const formattedDebt = formatCurrency(currentDebt); // O valor restante
             const formattedReceive = formatCurrency(netReceiveValue);
 
-            // MONTAGEM DO TEXTO (Conforme seu modelo)
-            let msg = `🎉 *Sua renovação está disponível!*\n\n`;
-            msg += `💵 Empréstimo: *${formattedLoan}*\n\n`;
+            // Pega apenas o primeiro nome do cliente
+            const firstName = client.name.split(' ')[0];
+
+            // MONTAGEM DO TEXTO ATUALIZADA
+            let msg = `🎉 *${firstName}*, você tem uma oportunidade de renovação!\n\n`;
+            msg += `💵 Empréstimo: *${formattedLoan}*\n`;
+            msg += `📋 Valor restante: *${formattedDebt}*\n`;
             msg += `💰 Você recebe: *${formattedReceive}*\n\n`;
             msg += `✅ Renovamos seu contrato.\n`;
-            msg += `✅ Descontamos o saldo restante.\n`;
-            msg += `✅ Você recebe a diferença.\n\n`;
+            msg += `✅ Descontamos o valor restante.\n`;
+            msg += `💰 Você recebe a diferença na hora.\n\n`;
             msg += `📲 Responda esta mensagem para renovar.`;
 
             // Criar o link na fila
