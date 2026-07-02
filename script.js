@@ -2016,23 +2016,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // Impede abrir se não tiver ninguém ativo
         }
 
-        // --- FILTRO 2: AVISO DE RENOVAÇÃO (Suas novas regras) ---
+        // --- FILTRO 2: AVISO DE RENOVAÇÃO (Atualizado com tolerância) ---
         clientsForRenewalMsg = allClientsForSearch.filter(client => {
             const status = calculateClientStatus(client);
 
-            // REGRA A: Tem que ser "Em Dia" ou "Adiantado". Se for qualquer outra coisa (Atrasado, Pendente), descarta.
-            if (!status.includes('Em Dia') && !status.includes('Adiantado')) {
+            // Se o empréstimo já acabou, descarta.
+            if (status.includes('Empréstimo Concluído')) return false;
+
+            // 1. Calcula exatamente quantas parcelas estão vencidas (menor que hoje) e não pagas
+            const timeZone = 'America/Cuiaba';
+            const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
+            const todayDateObj = new Date(todayInCuiaba + 'T00:00:00.000Z');
+
+            const lateCount = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid').length;
+
+            // REGRA A: Pode ter no MÁXIMO 2 parcelas em atraso. Se tiver 3 ou mais, descarta.
+            if (lateCount > 2) {
                 return false;
             }
 
-            // Conta quantas parcelas já foram pagas
+            // 2. Conta quantas parcelas já foram pagas
             const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
 
             // REGRA B: Frequência e mínimo de pagamentos
             if (client.frequency === 'daily' && paidInstallments >= 10) return true;
             if (client.frequency === 'weekly' && paidInstallments >= 2) return true;
 
-            return false; // Se não for diário nem semanal, ou não atingir o mínimo, descarta.
+            return false;
         });
 
         // Preenche os contadores na tela
