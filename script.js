@@ -257,14 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function togglePaymentFrequency() {
-        const installments = parseInt(installmentsInput.value, 10);
-        if (installments <= 9) {
-            freqWeeklyRadio.disabled = false;
-        } else {
-            freqWeeklyRadio.disabled = true;
-            freqWeeklyRadio.checked = false;
-            freqDailyRadio.checked = true;
-        }
+        freqWeeklyRadio.disabled = false;
     }
 
     function updateEditInstallmentValue() {
@@ -283,14 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function toggleEditPaymentFrequency() {
-        const installments = parseInt(editInstallmentsInput.value, 10);
-        if (installments <= 9) {
-            editFreqWeeklyRadio.disabled = false;
-        } else {
-            editFreqWeeklyRadio.disabled = true;
-            editFreqWeeklyRadio.checked = false;
-            document.getElementById('editFreqDaily').checked = true;
-        }
+        editFreqWeeklyRadio.disabled = false;
     }
 
     function generatePaymentDates(startDateStr, installments, frequency) {
