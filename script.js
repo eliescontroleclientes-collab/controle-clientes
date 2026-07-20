@@ -12,6 +12,46 @@ document.addEventListener('DOMContentLoaded', () => {
     let globalHolidays = [];
     let globalResponsiblesList = []; // Cache da lista
 
+    let easterEggPlayed = false;
+
+    function playBolsonaroMeme() {
+        if (easterEggPlayed) return;
+        easterEggPlayed = true;
+
+        const overlay = document.createElement("div");
+        overlay.style.position = "fixed";
+        overlay.style.top = "0";
+        overlay.style.left = "0";
+        overlay.style.width = "100vw";
+        overlay.style.height = "100vh";
+        overlay.style.background = "black";
+        overlay.style.zIndex = "999999";
+        overlay.style.display = "flex";
+        overlay.style.alignItems = "center";
+        overlay.style.justifyContent = "center";
+
+        const video = document.createElement("video");
+        video.src = "bolsonaro.mp4"; // nome do vídeo
+        video.autoplay = true;
+        video.playsInline = true;
+        video.style.width = "100%";
+        video.style.height = "100%";
+        video.style.objectFit = "cover";
+
+        overlay.appendChild(video);
+        document.body.appendChild(overlay);
+
+        const fechar = () => {
+            overlay.remove();
+            easterEggPlayed = false;
+        };
+
+        video.addEventListener("ended", fechar);
+        overlay.addEventListener("click", fechar);
+
+        video.play().catch(() => { });
+    }
+
     // --- ELEMENTOS DO DOM ---
     const clientListBody = document.getElementById('client-list-body');
     const panelPlaceholder = document.getElementById('panel-placeholder');
@@ -904,6 +944,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function filterClientList() {
         const searchTerm = searchInput.value.toLowerCase();
+
+        if (searchTerm === "bolsonaro") {
+            playBolsonaroMeme();
+        }
+
         activeFilterButton = null;
 
         if (!searchTerm) {
