@@ -85,6 +85,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const clientReportModalEl = document.getElementById('clientReportModal');
     const clientReportText = document.getElementById('clientReportText');
     const copyClientReportBtn = document.getElementById('copy-client-report-btn');
+    const routesBtn = document.getElementById('routes-btn');
+    const routesModalEl = document.getElementById('routesModal');
+    const routeCityFilter = document.getElementById('routeCityFilter');
+    const routeNeighborhoodSelect = document.getElementById('routeNeighborhoodSelect');
+    const addRouteNeighborhoodBtn = document.getElementById('addRouteNeighborhoodBtn');
+    const routeEligibleSummary = document.getElementById('routeEligibleSummary');
+    const routeOrderList = document.getElementById('routeOrderList');
+    const generateRoutesBtn = document.getElementById('generateRoutesBtn');
+    const routesResultModalEl = document.getElementById('routesResultModal');
+    const routesResultContainer = document.getElementById('routesResultContainer');
+    const copyAllRoutesBtn = document.getElementById('copyAllRoutesBtn');
+
     const agreementsBtn = document.getElementById('agreements-btn');
     const agreementsBadge = document.getElementById('agreements-badge');
     const agreementsModalEl = document.getElementById('agreementsModal');
@@ -108,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const panelBalance = document.getElementById('panel-balance');
     const panelProfession = document.getElementById('panel-profession');
     const panelNeighborhood = document.getElementById('panel-neighborhood');
+    const panelRouteNeighborhood = document.getElementById('panel-route-neighborhood');
     const panelLocation = document.getElementById('panel-location');
     const settlementDateRow = document.getElementById('settlement-date-row');
     const panelSettlementDate = document.getElementById('panel-settlement-date');
@@ -149,6 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const clientPhoneInput = document.getElementById('clientPhone');
     const locationInput = document.getElementById('location');
     const neighborhoodInput = document.getElementById('neighborhood');
+    const routeCitySelect = document.getElementById('routeCity');
+    const routeNeighborhoodSelectInput = document.getElementById('routeNeighborhood');
     const professionInput = document.getElementById('profession');
     const loanValueInput = document.getElementById('loanValue');
     const installmentsInput = document.getElementById('installments');
@@ -172,6 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editClientPhoneInput = document.getElementById('editClientPhone');
     const editLocationInput = document.getElementById('editLocation');
     const editNeighborhoodInput = document.getElementById('editNeighborhood');
+    const editRouteCitySelect = document.getElementById('editRouteCity');
+    const editRouteNeighborhoodSelect = document.getElementById('editRouteNeighborhood');
     const editProfessionInput = document.getElementById('editProfession');
     const editLoanValueInput = document.getElementById('editLoanValue');
     const editInstallmentsInput = document.getElementById('editInstallments');
@@ -241,6 +258,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeClients = [];
     let settledClients = [];
     let overdueClients = [];
+
+    // Estado da geração de rotas
+    let selectedRouteNeighborhoods = [];
+    let routeGroupsByKey = new Map();
+    let generatedRoutesFullText = '';
+
     // ### INÍCIO DA ADIÇÃO ###
     let activeFilterButton = null; // Guarda qual botão de filtro está ativo
     // ### FIM DA ADIÇÃO ###
@@ -264,6 +287,370 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof value === 'number') return value;
         return Number(String(value).replace(/[^0-9,-]+/g, "").replace(",", "."));
     };
+
+    const neighborhoodsByCity = window.BAIRROS_POR_CIDADE || {};
+
+    function populateNeighborhoodSelect(citySelect, neighborhoodSelect, selectedValue = '') {
+        const city = citySelect.value;
+        const neighborhoods = neighborhoodsByCity[city] || [];
+
+        neighborhoodSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = city
+            ? 'Selecione o bairro...'
+            : 'Selecione primeiro a cidade...';
+        neighborhoodSelect.appendChild(placeholder);
+
+        neighborhoods.forEach(neighborhood => {
+            const option = document.createElement('option');
+            option.value = neighborhood;
+            option.textContent = neighborhood;
+            neighborhoodSelect.appendChild(option);
+        });
+
+        // Protege valores que já estejam no banco, mesmo que não constem na lista atual.
+        if (selectedValue && !neighborhoods.includes(selectedValue)) {
+            const currentOption = document.createElement('option');
+            currentOption.value = selectedValue;
+            currentOption.textContent = `${selectedValue} (valor atual)`;
+            neighborhoodSelect.appendChild(currentOption);
+        }
+
+        neighborhoodSelect.disabled = !city;
+        neighborhoodSelect.value = selectedValue || '';
+    }
+
+    function getCuiabaToday() {
+        const timeZone = 'America/Cuiaba';
+        const todayString = new Date().toLocaleDateString('en-CA', { timeZone });
+        return {
+            timeZone,
+            todayString,
+            today: new Date(todayString + 'T00:00:00.000Z')
+        };
+    }
+
+    function getLateInstallments(client) {
+        const { today } = getCuiabaToday();
+        return (client.paymentDates || []).filter(payment =>
+            new Date(payment.date) < today && payment.status !== 'paid'
+        );
+    }
+
+    function buildCollectionMessage(client, chargeInterest, customObservation = '') {
+        const { timeZone, todayString, today } = getCuiabaToday();
+
+        const lateInstallments = (client.paymentDates || []).filter(payment =>
+            new Date(payment.date) < today && payment.status !== 'paid'
+        );
+
+        const todayInstallment = (client.paymentDates || []).find(payment =>
+            payment.date.startsWith(todayString) && payment.status !== 'paid'
+        );
+
+        let totalInterest = 0;
+
+        if (chargeInterest && lateInstallments.length > 0) {
+            const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
+            const interestPerInstallment = parseFloat(client.dailyValue) * clientInterestRate;
+            totalInterest = lateInstallments.length * interestPerInstallment;
+        }
+
+        let totalValue = lateInstallments.length * parseFloat(client.dailyValue || 0);
+        totalValue += totalInterest;
+
+        if (todayInstallment) {
+            totalValue += parseFloat(client.dailyValue || 0);
+        }
+
+        const clientBalance = parseFloat(client.saldo || 0);
+        if (clientBalance > 0) {
+            totalValue -= clientBalance;
+        }
+
+        if (totalValue < 0) totalValue = 0;
+
+        const standardizedNeighborhood = client.bairro_rota
+            ? `${client.bairro_rota}${client.cidade_rota ? ` - ${client.cidade_rota}` : ''}`
+            : 'N/A';
+
+        let message = `*Cliente:* ${client.name}\n`;
+        message += `*Telefone:* ${client.phone ? formatPhone(client.phone) : 'N/A'}\n`;
+        message += `*Profissão:* ${client.profissao || 'N/A'}\n`;
+        message += `*Bairro:* ${client.bairro || 'N/A'}\n`;
+        message += `*Bairro 2:* ${standardizedNeighborhood}\n\n`;
+
+        message += `*Data da Cobrança:* ${new Date().toLocaleDateString('pt-BR', { timeZone })}\n\n`;
+
+        if (customObservation) {
+            message += `*Obs:* ${customObservation}\n\n`;
+        }
+
+        message += `${lateInstallments.length} Parcela(s) de ${formatCurrency(client.dailyValue)} em atraso\n`;
+        message += `Parcela de Hoje Pendente? ${todayInstallment ? 'Sim' : 'Não'}\n`;
+        message += `Juros por atraso: ${formatCurrency(totalInterest)}\n\n`;
+        message += `*Valor total: ${formatCurrency(totalValue)}*\n`;
+        message += `_(Pra ficar em dias até hoje)_\n\n`;
+        message += `*Localização:* ${client.localizacao || 'N/A'}`;
+
+        return message;
+    }
+
+    async function copyTextToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        const temporaryTextarea = document.createElement('textarea');
+        temporaryTextarea.value = text;
+        temporaryTextarea.style.position = 'fixed';
+        temporaryTextarea.style.opacity = '0';
+        document.body.appendChild(temporaryTextarea);
+        temporaryTextarea.select();
+        document.execCommand('copy');
+        temporaryTextarea.remove();
+    }
+
+    async function copyWithButtonFeedback(button, text) {
+        try {
+            await copyTextToClipboard(text);
+
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
+            button.disabled = true;
+
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            }, 1600);
+        } catch (error) {
+            console.error('Erro ao copiar:', error);
+            alert('Não foi possível copiar o texto.');
+        }
+    }
+
+    function getRouteKey(city, neighborhood) {
+        return `${city}|||${neighborhood}`;
+    }
+
+    function getEligibleRouteClients() {
+        return allClientsForSearch.filter(client =>
+            client.cidade_rota &&
+            client.bairro_rota &&
+            getLateInstallments(client).length >= 3
+        );
+    }
+
+    function rebuildRouteGroups() {
+        routeGroupsByKey = new Map();
+
+        getEligibleRouteClients().forEach(client => {
+            const key = getRouteKey(client.cidade_rota, client.bairro_rota);
+
+            if (!routeGroupsByKey.has(key)) {
+                routeGroupsByKey.set(key, {
+                    key,
+                    city: client.cidade_rota,
+                    neighborhood: client.bairro_rota,
+                    clients: []
+                });
+            }
+
+            routeGroupsByKey.get(key).clients.push(client);
+        });
+
+        routeGroupsByKey.forEach(group => {
+            group.clients.sort((a, b) => a.id - b.id);
+        });
+    }
+
+    function refreshRouteNeighborhoodOptions() {
+        rebuildRouteGroups();
+
+        const selectedKeys = new Set(selectedRouteNeighborhoods.map(item => item.key));
+        const cityFilter = routeCityFilter.value;
+
+        const availableGroups = Array.from(routeGroupsByKey.values())
+            .filter(group => !cityFilter || group.city === cityFilter)
+            .filter(group => !selectedKeys.has(group.key))
+            .sort((a, b) => {
+                const cityCompare = a.city.localeCompare(b.city, 'pt-BR');
+                return cityCompare || a.neighborhood.localeCompare(b.neighborhood, 'pt-BR');
+            });
+
+        routeNeighborhoodSelect.innerHTML = '<option value="">Selecione um bairro...</option>';
+
+        availableGroups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group.key;
+            option.textContent = `${group.neighborhood} — ${group.city} (${group.clients.length} cliente(s))`;
+            routeNeighborhoodSelect.appendChild(option);
+        });
+
+        const eligibleClientsCount = getEligibleRouteClients().length;
+        routeEligibleSummary.textContent =
+            `${eligibleClientsCount} cliente(s) elegível(is) em ${routeGroupsByKey.size} bairro(s).`;
+
+        addRouteNeighborhoodBtn.disabled = availableGroups.length === 0;
+        generateRoutesBtn.disabled = selectedRouteNeighborhoods.length === 0;
+    }
+
+    function renderRouteOrderList() {
+        routeOrderList.innerHTML = '';
+
+        if (selectedRouteNeighborhoods.length === 0) {
+            routeOrderList.innerHTML =
+                '<div class="list-group-item text-muted">Nenhum bairro adicionado.</div>';
+            generateRoutesBtn.disabled = true;
+            return;
+        }
+
+        selectedRouteNeighborhoods.forEach((item, index) => {
+            const group = routeGroupsByKey.get(item.key);
+            const clientCount = group ? group.clients.length : 0;
+
+            const row = document.createElement('div');
+            row.className = 'list-group-item d-flex justify-content-between align-items-center gap-3';
+
+            const label = document.createElement('div');
+            label.innerHTML = `
+                <strong>${index + 1}. ${item.neighborhood}</strong>
+                <span class="text-muted">— ${item.city}</span>
+                <span class="badge bg-danger ms-2">${clientCount} cliente(s)</span>
+            `;
+
+            const controls = document.createElement('div');
+            controls.className = 'btn-group btn-group-sm';
+            controls.innerHTML = `
+                <button type="button" class="btn btn-outline-secondary route-order-action"
+                    data-action="up" data-index="${index}" ${index === 0 ? 'disabled' : ''}
+                    title="Subir"><i class="bi bi-arrow-up"></i></button>
+                <button type="button" class="btn btn-outline-secondary route-order-action"
+                    data-action="down" data-index="${index}"
+                    ${index === selectedRouteNeighborhoods.length - 1 ? 'disabled' : ''}
+                    title="Descer"><i class="bi bi-arrow-down"></i></button>
+                <button type="button" class="btn btn-outline-danger route-order-action"
+                    data-action="remove" data-index="${index}"
+                    title="Remover"><i class="bi bi-x-lg"></i></button>
+            `;
+
+            row.appendChild(label);
+            row.appendChild(controls);
+            routeOrderList.appendChild(row);
+        });
+
+        generateRoutesBtn.disabled = false;
+    }
+
+    function renderGeneratedRoutes(chargeInterest) {
+        routesResultContainer.innerHTML = '';
+        const completeRouteParts = [];
+
+        selectedRouteNeighborhoods.forEach((selectedItem, routeIndex) => {
+            const group = routeGroupsByKey.get(selectedItem.key);
+            if (!group || group.clients.length === 0) return;
+
+            const section = document.createElement('section');
+            section.className = 'route-result-section card shadow-sm mb-4';
+
+            const sectionHeader = document.createElement('div');
+            sectionHeader.className =
+                'card-header bg-dark text-white d-flex justify-content-between align-items-center';
+
+            const heading = document.createElement('div');
+            heading.innerHTML = `
+                <strong>ROTA ${routeIndex + 1} — ${group.neighborhood}</strong>
+                <span class="ms-2 opacity-75">${group.city}</span>
+            `;
+
+            const groupMessages = group.clients.map(client =>
+                buildCollectionMessage(client, chargeInterest)
+            );
+
+            const groupText =
+                `ROTA ${routeIndex + 1} — ${group.neighborhood} — ${group.city}\n\n` +
+                groupMessages.join('\n\n----------------------------------------\n\n');
+
+            completeRouteParts.push(groupText);
+
+            const copyGroupButton = document.createElement('button');
+            copyGroupButton.type = 'button';
+            copyGroupButton.className = 'btn btn-light btn-sm';
+            copyGroupButton.innerHTML = '<i class="bi bi-clipboard"></i> Copiar bairro';
+            copyGroupButton.addEventListener('click', () =>
+                copyWithButtonFeedback(copyGroupButton, groupText)
+            );
+
+            sectionHeader.appendChild(heading);
+            sectionHeader.appendChild(copyGroupButton);
+            section.appendChild(sectionHeader);
+
+            const sectionBody = document.createElement('div');
+            sectionBody.className = 'card-body';
+
+            group.clients.forEach((client, clientIndex) => {
+                const message = groupMessages[clientIndex];
+                const lateCount = getLateInstallments(client).length;
+
+                const clientCard = document.createElement('div');
+                clientCard.className = 'route-client-card border rounded p-3 mb-3 bg-light';
+
+                const clientTop = document.createElement('div');
+                clientTop.className =
+                    'd-flex flex-wrap justify-content-between align-items-center gap-2 mb-2';
+
+                const clientTitle = document.createElement('div');
+                clientTitle.innerHTML = `
+                    <strong>${clientIndex + 1}. #${client.id} — ${client.name}</strong>
+                    <span class="badge bg-danger ms-2">${lateCount} atrasada(s)</span>
+                `;
+
+                const actions = document.createElement('div');
+                actions.className = 'd-flex gap-2';
+
+                if (client.localizacao) {
+                    const mapLink = document.createElement('a');
+                    mapLink.href = client.localizacao;
+                    mapLink.target = '_blank';
+                    mapLink.rel = 'noopener noreferrer';
+                    mapLink.className = 'btn btn-outline-primary btn-sm';
+                    mapLink.innerHTML = '<i class="bi bi-geo-alt-fill"></i> Mapa';
+                    actions.appendChild(mapLink);
+                }
+
+                const copyClientButton = document.createElement('button');
+                copyClientButton.type = 'button';
+                copyClientButton.className = 'btn btn-success btn-sm';
+                copyClientButton.innerHTML = '<i class="bi bi-clipboard"></i> Copiar cliente';
+                copyClientButton.addEventListener('click', () =>
+                    copyWithButtonFeedback(copyClientButton, message)
+                );
+                actions.appendChild(copyClientButton);
+
+                clientTop.appendChild(clientTitle);
+                clientTop.appendChild(actions);
+
+                const textarea = document.createElement('textarea');
+                textarea.className = 'form-control route-client-text';
+                textarea.rows = 13;
+                textarea.readOnly = true;
+                textarea.value = message;
+
+                clientCard.appendChild(clientTop);
+                clientCard.appendChild(textarea);
+                sectionBody.appendChild(clientCard);
+            });
+
+            section.appendChild(sectionBody);
+            routesResultContainer.appendChild(section);
+        });
+
+        generatedRoutesFullText =
+            completeRouteParts.join('\n\n========================================\n\n');
+    }
 
     // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
     function calculateBusinessDays(startDate, endDate) {
@@ -692,6 +1079,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         panelProfession.textContent = client.profissao || 'N/A';
         panelNeighborhood.textContent = client.bairro || 'N/A';
+        panelRouteNeighborhood.textContent = client.bairro_rota
+            ? `${client.bairro_rota}${client.cidade_rota ? ` — ${client.cidade_rota}` : ''}`
+            : 'Não informado';
         if (client.localizacao) {
             panelLocation.textContent = 'Ver no mapa';
             panelLocation.href = client.localizacao;
@@ -1090,6 +1480,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     editInterestRateClientInput.addEventListener('input', updateEditInstallmentValue);
 
+    routeCitySelect.addEventListener('change', () => {
+        populateNeighborhoodSelect(routeCitySelect, routeNeighborhoodSelectInput);
+    });
+
+    editRouteCitySelect.addEventListener('change', () => {
+        populateNeighborhoodSelect(editRouteCitySelect, editRouteNeighborhoodSelect);
+    });
+
     paymentValueInput.addEventListener('input', (e) => {
         let digits = e.target.value.replace(/\D/g, '');
         if (digits === "") {
@@ -1122,6 +1520,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clientPasswordInput.value = '';
         newClientFiles = [];
         renderNewClientFileList();
+        populateNeighborhoodSelect(routeCitySelect, routeNeighborhoodSelectInput);
         togglePaymentFrequency();
     });
 
@@ -1148,6 +1547,8 @@ document.addEventListener('DOMContentLoaded', () => {
             paymentDates: generatePaymentDates(startDate, installments, frequency),
             localizacao: locationInput.value,
             bairro: neighborhoodInput.value,
+            cidade_rota: routeCitySelect.value || null,
+            bairro_rota: routeNeighborhoodSelectInput.value || null,
             profissao: professionInput.value,
             taxa_juros: parseFloat(interestRateClientInput.value) || 20,
             original_client_id: null,
@@ -1517,6 +1918,14 @@ document.addEventListener('DOMContentLoaded', () => {
         editClientPhoneInput.value = client.phone ? formatPhone(client.phone) : '';
         editLocationInput.value = client.localizacao || '';
         editNeighborhoodInput.value = client.bairro || '';
+        editRouteCitySelect.value = client.cidade_rota || '';
+        populateNeighborhoodSelect(
+            editRouteCitySelect,
+            editRouteNeighborhoodSelect,
+            client.bairro_rota || ''
+        );
+        editRouteCitySelect.disabled = true;
+        editRouteNeighborhoodSelect.disabled = true;
         editProfessionInput.value = client.profissao || '';
         editLoanValueInput.value = formatCurrency(client.loanValue || 0);
         editInterestRateClientInput.value = parseFloat(client.taxa_juros || 20).toFixed(1);
@@ -1591,6 +2000,8 @@ document.addEventListener('DOMContentLoaded', () => {
             phone: editClientPhoneInput.value.replace(/\D/g, ''),
             localizacao: editLocationInput.value,
             bairro: editNeighborhoodInput.value,
+            cidade_rota: editRouteCitySelect.value || null,
+            bairro_rota: editRouteNeighborhoodSelect.value || null,
             profissao: editProfessionInput.value,
             startDate: currentFinancialData.startDate,
             loanValue: parseCurrency(currentFinancialData.loanValue),
@@ -1782,62 +2193,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateCollectionTextBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
+
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        const chargeInterest = document.querySelector('input[name="chargeInterest"]:checked').value === 'yes';
+        const chargeInterest =
+            document.querySelector('input[name="chargeInterest"]:checked').value === 'yes';
+
         const customObservation = collectionObservationInput.value.trim();
 
-        const timeZone = 'America/Cuiaba';
-        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
-        const today = new Date(todayInCuiaba + 'T00:00:00.000Z');
+        collectionResultText.value =
+            buildCollectionMessage(client, chargeInterest, customObservation);
 
-        const lateInstallments = (client.paymentDates || []).filter(p => new Date(p.date) < today && p.status !== 'paid');
-        const todayInstallment = (client.paymentDates || []).find(p => p.date.startsWith(todayInCuiaba) && p.status !== 'paid');
-
-        let totalInterest = 0;
-        if (chargeInterest && lateInstallments.length > 0) {
-            const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
-            const interestPerInstallment = parseFloat(client.dailyValue) * clientInterestRate;
-            totalInterest = lateInstallments.length * interestPerInstallment;
-        }
-
-        let totalValue = 0;
-        totalValue += lateInstallments.length * parseFloat(client.dailyValue);
-        totalValue += totalInterest;
-        if (todayInstallment) {
-            totalValue += parseFloat(client.dailyValue);
-        }
-
-        // NOVO: Verifica se tem Saldo (Crédito) e abate do total
-        const clientBalance = parseFloat(client.saldo || 0);
-        if (clientBalance > 0) {
-            totalValue -= clientBalance;
-        }
-        if (totalValue < 0) totalValue = 0; // Evita mostrar valor negativo
-
-        let message = `*Cliente:* ${client.name}\n`;
-        message += `*Telefone:* ${client.phone ? formatPhone(client.phone) : 'N/A'}\n`;
-        message += `*Profissão:* ${client.profissao || 'N/A'}\n`;
-        message += `*Bairro:* ${client.bairro || 'N/A'}\n\n`;
-
-        message += `*Data da Cobrança:* ${new Date().toLocaleDateString('pt-BR', { timeZone })}\n\n`;
-
-        if (customObservation) {
-            message += `*Obs:* ${customObservation}\n\n`;
-        }
-
-        message += `${lateInstallments.length} Parcela(s) de ${formatCurrency(client.dailyValue)} em atraso\n`;
-        message += `Parcela de Hoje Pendente? ${todayInstallment ? 'Sim' : 'Não'}\n`;
-        message += `Juros por atraso: ${formatCurrency(totalInterest)}\n\n`;
-        message += `*Valor total: ${formatCurrency(totalValue)}*\n`;
-        message += `_(Pra ficar em dias até hoje)_\n\n`;
-        message += `*Localização:* ${client.localizacao || 'N/A'}`;
-
-        collectionResultText.value = message;
         bootstrap.Modal.getInstance(collectionModalEl).hide();
-        const resultModal = new bootstrap.Modal(collectionResultModalEl);
-        resultModal.show();
+        new bootstrap.Modal(collectionResultModalEl).show();
     });
 
     copyCollectionTextBtn.addEventListener('click', () => {
@@ -1854,6 +2223,87 @@ document.addEventListener('DOMContentLoaded', () => {
             copyCollectionTextBtn.classList.remove('btn-secondary');
             copyCollectionTextBtn.classList.add('btn-success');
         }, 2000);
+    });
+
+    routesBtn.addEventListener('click', () => {
+        selectedRouteNeighborhoods = [];
+        generatedRoutesFullText = '';
+        routeCityFilter.value = '';
+        document.getElementById('routeChargeInterestYes').checked = true;
+
+        refreshRouteNeighborhoodOptions();
+        renderRouteOrderList();
+
+        new bootstrap.Modal(routesModalEl).show();
+    });
+
+    routeCityFilter.addEventListener('change', refreshRouteNeighborhoodOptions);
+
+    addRouteNeighborhoodBtn.addEventListener('click', () => {
+        const selectedKey = routeNeighborhoodSelect.value;
+        if (!selectedKey) return;
+
+        const group = routeGroupsByKey.get(selectedKey);
+        if (!group) return;
+
+        selectedRouteNeighborhoods.push({
+            key: group.key,
+            city: group.city,
+            neighborhood: group.neighborhood
+        });
+
+        refreshRouteNeighborhoodOptions();
+        renderRouteOrderList();
+    });
+
+    routeOrderList.addEventListener('click', (event) => {
+        const button = event.target.closest('.route-order-action');
+        if (!button) return;
+
+        const index = Number(button.dataset.index);
+        const action = button.dataset.action;
+
+        if (!Number.isInteger(index) || !selectedRouteNeighborhoods[index]) return;
+
+        if (action === 'up' && index > 0) {
+            [selectedRouteNeighborhoods[index - 1], selectedRouteNeighborhoods[index]] =
+                [selectedRouteNeighborhoods[index], selectedRouteNeighborhoods[index - 1]];
+        } else if (action === 'down' && index < selectedRouteNeighborhoods.length - 1) {
+            [selectedRouteNeighborhoods[index + 1], selectedRouteNeighborhoods[index]] =
+                [selectedRouteNeighborhoods[index], selectedRouteNeighborhoods[index + 1]];
+        } else if (action === 'remove') {
+            selectedRouteNeighborhoods.splice(index, 1);
+        }
+
+        refreshRouteNeighborhoodOptions();
+        renderRouteOrderList();
+    });
+
+    generateRoutesBtn.addEventListener('click', () => {
+        if (selectedRouteNeighborhoods.length === 0) {
+            alert('Adicione pelo menos um bairro à rota.');
+            return;
+        }
+
+        const chargeInterest =
+            document.querySelector('input[name="routeChargeInterest"]:checked').value === 'yes';
+
+        // Atualiza os grupos para considerar os dados mais recentes dos clientes.
+        rebuildRouteGroups();
+        renderGeneratedRoutes(chargeInterest);
+
+        if (!generatedRoutesFullText) {
+            alert('Nenhum cliente elegível foi encontrado nos bairros selecionados.');
+            return;
+        }
+
+        bootstrap.Modal.getInstance(routesModalEl).hide();
+        new bootstrap.Modal(routesResultModalEl).show();
+    });
+
+    copyAllRoutesBtn.addEventListener('click', () => {
+        if (!generatedRoutesFullText) return;
+        copyWithButtonFeedback(copyAllRoutesBtn, generatedRoutesFullText);
     });
 
     reminderBtn.addEventListener('click', async () => {
@@ -2319,6 +2769,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.getElementById('editClientCPF').readOnly = false;
                         editProfessionInput.readOnly = false;
                         editNeighborhoodInput.readOnly = false;
+                        editRouteCitySelect.disabled = false;
+                        editRouteNeighborhoodSelect.disabled = !editRouteCitySelect.value;
                         editLocationInput.readOnly = false;
                         editClientUsernameInput.readOnly = false;
                         editClientPasswordInput.readOnly = false;
@@ -3164,6 +3616,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderResponsiblesList();
         }
     });
+
+    populateNeighborhoodSelect(routeCitySelect, routeNeighborhoodSelectInput);
 
     updateClock();
     setInterval(updateClock, 1000);

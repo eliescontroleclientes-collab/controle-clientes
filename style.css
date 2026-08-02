@@ -199,3 +199,39 @@
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+/* --- ROTAS DE COBRANÇA --- */
+#routeOrderList .list-group-item {
+    cursor: default;
+}
+
+.route-result-section {
+    overflow: hidden;
+}
+
+.route-client-card:last-child {
+    margin-bottom: 0 !important;
+}
+
+.route-client-text {
+    min-height: 270px;
+    resize: vertical;
+    white-space: pre-wrap;
+    font-family: Arial, sans-serif;
+    font-size: 0.95rem;
+}
+
+#routesResultContainer .card-header {
+    gap: 12px;
+}
+
+@media (max-width: 767.98px) {
+    #routesResultContainer .card-header {
+        align-items: flex-start !important;
+        flex-direction: column;
+    }
+
+    .route-client-text {
+        min-height: 330px;
+    }
+}
