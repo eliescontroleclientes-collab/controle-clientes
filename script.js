@@ -829,6 +829,159 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    const routeImageClipboardCache = new Map();
+
+    function isRoutePreviewImage(file) {
+        const source = `${file?.name || ''} ${file?.url || ''}`.toLowerCase();
+        return /\.(png|jpe?g|webp|gif|bmp|avif)(?:$|[?#\s])/.test(source);
+    }
+
+    function getRouteFileExtension(file) {
+        const fileName = String(file?.name || '').split('?')[0];
+        const parts = fileName.split('.');
+        return parts.length > 1 ? parts.pop().toUpperCase() : 'ARQUIVO';
+    }
+
+    function convertImageBlobToPng(blob) {
+        if (blob.type === 'image/png') return Promise.resolve(blob);
+
+        return new Promise((resolve, reject) => {
+            const imageUrl = URL.createObjectURL(blob);
+            const image = new Image();
+
+            image.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = image.naturalWidth;
+                    canvas.height = image.naturalHeight;
+
+                    const context = canvas.getContext('2d');
+                    if (!context) {
+                        throw new Error('Não foi possível preparar a imagem para cópia.');
+                    }
+
+                    context.drawImage(image, 0, 0);
+                    canvas.toBlob(pngBlob => {
+                        URL.revokeObjectURL(imageUrl);
+
+                        if (!pngBlob) {
+                            reject(new Error('Não foi possível converter a imagem para PNG.'));
+                            return;
+                        }
+
+                        resolve(pngBlob);
+                    }, 'image/png');
+                } catch (error) {
+                    URL.revokeObjectURL(imageUrl);
+                    reject(error);
+                }
+            };
+
+            image.onerror = () => {
+                URL.revokeObjectURL(imageUrl);
+                reject(new Error('Não foi possível carregar a imagem para cópia.'));
+            };
+
+            image.src = imageUrl;
+        });
+    }
+
+    async function prepareRouteImageForClipboard(client, file) {
+        if (!file?.key) {
+            throw new Error('Este arquivo antigo não possui a chave necessária para cópia direta.');
+        }
+
+        const cacheKey = `${client.id}|||${file.key}`;
+        if (routeImageClipboardCache.has(cacheKey)) {
+            return routeImageClipboardCache.get(cacheKey);
+        }
+
+        const response = await fetch(
+            `/api/file-content?clientId=${encodeURIComponent(client.id)}&key=${encodeURIComponent(file.key)}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            let message = 'Não foi possível carregar a imagem.';
+            try {
+                const errorData = await response.json();
+                message = errorData.error || message;
+            } catch (_) {
+                // Mantém a mensagem padrão quando a resposta não for JSON.
+            }
+            throw new Error(message);
+        }
+
+        const originalBlob = await response.blob();
+        if (!originalBlob.type.startsWith('image/')) {
+            throw new Error('O arquivo selecionado não é uma imagem.');
+        }
+
+        const pngBlob = await convertImageBlobToPng(originalBlob);
+        routeImageClipboardCache.set(cacheKey, pngBlob);
+        return pngBlob;
+    }
+
+    async function copyRouteImageToClipboard(button, client, file) {
+        const originalHTML = button.dataset.originalHtml || button.innerHTML;
+        button.dataset.originalHtml = originalHTML;
+
+        try {
+            if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined' || !window.isSecureContext) {
+                throw new Error('O navegador não permite copiar imagens diretamente. Use o botão Abrir e copie a imagem pela nova aba.');
+            }
+
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Preparando';
+
+            const pngBlob = await prepareRouteImageForClipboard(client, file);
+
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': pngBlob })
+            ]);
+
+            button.innerHTML = '<i class="bi bi-check-lg"></i> Copiada';
+            button.classList.remove('btn-outline-success');
+            button.classList.add('btn-success');
+
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-success');
+                button.disabled = false;
+            }, 1800);
+        } catch (error) {
+            console.error('Erro ao copiar imagem:', error);
+
+            const cacheKey = file?.key ? `${client.id}|||${file.key}` : null;
+            const imageIsPrepared = cacheKey && routeImageClipboardCache.has(cacheKey);
+
+            button.disabled = false;
+            button.innerHTML = imageIsPrepared
+                ? '<i class="bi bi-clipboard"></i> Clique novamente'
+                : originalHTML;
+
+            if (imageIsPrepared && error?.name === 'NotAllowedError') {
+                button.title = 'A imagem já foi preparada. Clique novamente para copiar.';
+                return;
+            }
+
+            alert(error.message || 'Não foi possível copiar a imagem.');
+        }
+    }
+
+    function toggleRouteClientDetails(summary, body, chevron) {
+        const willExpand = body.classList.contains('d-none');
+        body.classList.toggle('d-none', !willExpand);
+        summary.setAttribute('aria-expanded', String(willExpand));
+        chevron.classList.toggle('bi-chevron-down', !willExpand);
+        chevron.classList.toggle('bi-chevron-up', willExpand);
+    }
+
     function getRouteKey(city, neighborhood) {
         return `${city}|||${neighborhood}`;
     }
@@ -1008,22 +1161,43 @@ document.addEventListener('DOMContentLoaded', () => {
             group.clients.forEach((client, clientIndex) => {
                 const message = groupMessages[clientIndex];
                 const lateCount = getLateInstallments(client).length;
+                const clientFiles = Array.isArray(client.files) ? client.files : [];
 
                 const clientCard = document.createElement('div');
-                clientCard.className = 'route-client-card border rounded p-3 mb-3 bg-light';
+                clientCard.className = 'route-client-card border rounded mb-3 bg-light overflow-hidden';
 
                 const clientTop = document.createElement('div');
                 clientTop.className =
-                    'd-flex flex-wrap justify-content-between align-items-center gap-2 mb-2';
+                    'route-client-summary d-flex flex-wrap justify-content-between align-items-center gap-2 p-3';
+                clientTop.setAttribute('role', 'button');
+                clientTop.setAttribute('tabindex', '0');
+                clientTop.setAttribute('aria-expanded', 'false');
+                clientTop.title = 'Clique para expandir ou recolher os dados do cliente';
 
                 const clientTitle = document.createElement('div');
-                clientTitle.innerHTML = `
-                    <strong>${clientIndex + 1}. #${client.id} — ${client.name}</strong>
-                    <span class="badge bg-danger ms-2">${lateCount} atrasada(s)</span>
-                `;
+                clientTitle.className = 'd-flex align-items-center flex-wrap gap-2';
+
+                const chevron = document.createElement('i');
+                chevron.className = 'bi bi-chevron-down route-client-chevron';
+
+                const titleText = document.createElement('strong');
+                titleText.textContent = `${clientIndex + 1}. #${client.id} — ${client.name}`;
+
+                const lateBadge = document.createElement('span');
+                lateBadge.className = 'badge bg-danger';
+                lateBadge.textContent = `${lateCount} atrasada(s)`;
+
+                const expandHint = document.createElement('small');
+                expandHint.className = 'text-muted route-client-expand-hint';
+                expandHint.textContent = 'Clique para ver os dados';
+
+                clientTitle.appendChild(chevron);
+                clientTitle.appendChild(titleText);
+                clientTitle.appendChild(lateBadge);
+                clientTitle.appendChild(expandHint);
 
                 const actions = document.createElement('div');
-                actions.className = 'd-flex gap-2';
+                actions.className = 'd-flex gap-2 route-client-actions';
 
                 if (client.localizacao) {
                     const mapLink = document.createElement('a');
@@ -1032,6 +1206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     mapLink.rel = 'noopener noreferrer';
                     mapLink.className = 'btn btn-outline-primary btn-sm';
                     mapLink.innerHTML = '<i class="bi bi-geo-alt-fill"></i> Mapa';
+                    mapLink.addEventListener('click', event => event.stopPropagation());
                     actions.appendChild(mapLink);
                 }
 
@@ -1039,22 +1214,137 @@ document.addEventListener('DOMContentLoaded', () => {
                 copyClientButton.type = 'button';
                 copyClientButton.className = 'btn btn-success btn-sm';
                 copyClientButton.innerHTML = '<i class="bi bi-clipboard"></i> Copiar cliente';
-                copyClientButton.addEventListener('click', () =>
-                    copyWithButtonFeedback(copyClientButton, message)
-                );
+                copyClientButton.addEventListener('click', event => {
+                    event.stopPropagation();
+                    copyWithButtonFeedback(copyClientButton, message);
+                });
                 actions.appendChild(copyClientButton);
 
                 clientTop.appendChild(clientTitle);
                 clientTop.appendChild(actions);
+
+                const clientDetails = document.createElement('div');
+                clientDetails.className = 'route-client-details d-none px-3 pb-3';
 
                 const textarea = document.createElement('textarea');
                 textarea.className = 'form-control route-client-text';
                 textarea.rows = 13;
                 textarea.readOnly = true;
                 textarea.value = message;
+                textarea.addEventListener('click', event => event.stopPropagation());
+
+                clientDetails.appendChild(textarea);
+
+                const toggleDetails = () =>
+                    toggleRouteClientDetails(clientTop, clientDetails, chevron);
+
+                clientTop.addEventListener('click', event => {
+                    if (event.target.closest('button, a, textarea')) return;
+                    toggleDetails();
+                });
+
+                clientTop.addEventListener('keydown', event => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    if (event.target.closest('button, a')) return;
+                    event.preventDefault();
+                    toggleDetails();
+                });
 
                 clientCard.appendChild(clientTop);
-                clientCard.appendChild(textarea);
+                clientCard.appendChild(clientDetails);
+
+                const filesFooter = document.createElement('div');
+                filesFooter.className = 'route-client-files border-top bg-white p-3';
+
+                const filesHeading = document.createElement('div');
+                filesHeading.className = 'd-flex justify-content-between align-items-center mb-2';
+
+                const filesTitle = document.createElement('small');
+                filesTitle.className = 'fw-bold text-secondary';
+                filesTitle.innerHTML = '<i class="bi bi-images me-1"></i> Documentos anexados';
+
+                const filesCount = document.createElement('small');
+                filesCount.className = 'text-muted';
+                filesCount.textContent = `${clientFiles.length} arquivo(s)`;
+
+                filesHeading.appendChild(filesTitle);
+                filesHeading.appendChild(filesCount);
+                filesFooter.appendChild(filesHeading);
+
+                if (clientFiles.length === 0) {
+                    const emptyFiles = document.createElement('small');
+                    emptyFiles.className = 'text-muted';
+                    emptyFiles.textContent = 'Nenhum documento anexado.';
+                    filesFooter.appendChild(emptyFiles);
+                } else {
+                    const filesGrid = document.createElement('div');
+                    filesGrid.className = 'route-file-grid';
+
+                    clientFiles.forEach(file => {
+                        const fileTile = document.createElement('div');
+                        fileTile.className = 'route-file-tile';
+                        fileTile.title = file.name || 'Arquivo anexado';
+
+                        if (isRoutePreviewImage(file)) {
+                            const imageLink = document.createElement('a');
+                            imageLink.href = file.url;
+                            imageLink.target = '_blank';
+                            imageLink.rel = 'noopener noreferrer';
+                            imageLink.className = 'route-file-preview-link';
+                            imageLink.title = 'Clique para abrir a imagem em tamanho completo';
+
+                            const image = document.createElement('img');
+                            image.src = file.url;
+                            image.alt = file.name || 'Imagem anexada';
+                            image.loading = 'lazy';
+                            image.className = 'route-file-thumbnail';
+
+                            imageLink.appendChild(image);
+                            fileTile.appendChild(imageLink);
+
+                            const copyImageButton = document.createElement('button');
+                            copyImageButton.type = 'button';
+                            copyImageButton.className = 'btn btn-outline-success btn-sm route-copy-image-btn';
+                            copyImageButton.innerHTML = '<i class="bi bi-clipboard"></i> Copiar';
+                            copyImageButton.title = 'Copiar imagem para colar no WhatsApp com Ctrl + V';
+                            copyImageButton.addEventListener('click', event => {
+                                event.stopPropagation();
+                                copyRouteImageToClipboard(copyImageButton, client, file);
+                            });
+
+                            fileTile.appendChild(copyImageButton);
+                        } else {
+                            const fileLink = document.createElement('a');
+                            fileLink.href = file.url;
+                            fileLink.target = '_blank';
+                            fileLink.rel = 'noopener noreferrer';
+                            fileLink.className = 'route-non-image-file';
+                            fileLink.title = 'Abrir documento';
+
+                            const fileIcon = document.createElement('i');
+                            fileIcon.className = 'bi bi-file-earmark-text route-file-icon';
+
+                            const extension = document.createElement('span');
+                            extension.className = 'route-file-extension';
+                            extension.textContent = getRouteFileExtension(file);
+
+                            fileLink.appendChild(fileIcon);
+                            fileLink.appendChild(extension);
+                            fileTile.appendChild(fileLink);
+                        }
+
+                        const fileName = document.createElement('div');
+                        fileName.className = 'route-file-name';
+                        fileName.textContent = file.name || 'Arquivo';
+                        fileTile.appendChild(fileName);
+
+                        filesGrid.appendChild(fileTile);
+                    });
+
+                    filesFooter.appendChild(filesGrid);
+                }
+
+                clientCard.appendChild(filesFooter);
                 sectionBody.appendChild(clientCard);
             });
 
