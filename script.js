@@ -897,7 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const response = await fetch(
-            `/api/file-content?clientId=${encodeURIComponent(client.id)}&key=${encodeURIComponent(file.key)}`,
+            `/api/upload?clientId=${encodeURIComponent(client.id)}&key=${encodeURIComponent(file.key)}`,
             {
                 headers: {
                     'Authorization': `Bearer ${token}`
