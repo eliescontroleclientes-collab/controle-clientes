@@ -430,10 +430,37 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="routeNeighborhood" class="form-label">Bairro 2</label>
-                                <select class="form-select" id="routeNeighborhood" disabled>
-                                    <option value="">Selecione primeiro a cidade...</option>
-                                </select>
-                                <div class="form-text">Campo padronizado usado na geração das rotas.</div>
+                                <div class="neighborhood-combobox">
+                                    <input type="text" class="form-control" id="routeNeighborhood"
+                                        placeholder="Pesquise pelo nome do bairro..." autocomplete="off" disabled>
+                                    <div class="list-group neighborhood-suggestions d-none"
+                                        id="routeNeighborhoodSuggestions"></div>
+                                </div>
+                                <div class="form-text">
+                                    A pesquisa encontra o nome mesmo quando o texto estiver no meio, ignorando acentos.
+                                </div>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label for="routeNewNeighborhood" class="form-label">Adicionar novo bairro</label>
+                                <div class="input-group neighborhood-manager">
+                                    <input type="text" class="form-control" id="routeNewNeighborhood"
+                                        placeholder="Digite o nome novo ou o novo nome para editar" disabled>
+                                    <button type="button" class="btn btn-outline-success"
+                                        id="addNeighborhoodBtn" disabled>
+                                        <i class="bi bi-plus-lg"></i> Adicionar
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary"
+                                        id="editNeighborhoodBtn" disabled>
+                                        <i class="bi bi-pencil"></i> Editar selecionado
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger"
+                                        id="removeNeighborhoodBtn" disabled>
+                                        <i class="bi bi-trash"></i> Remover selecionado
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    Selecione a cidade. Para editar ou remover, selecione também o Bairro 2.
+                                </div>
                             </div>
                             <div class="col-12 mb-3">
                                 <label for="location" class="form-label">Localização (Link do Maps)</label>
@@ -579,10 +606,38 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="editRouteNeighborhood" class="form-label">Bairro 2</label>
-                                <select class="form-select" id="editRouteNeighborhood" disabled>
-                                    <option value="">Selecione primeiro a cidade...</option>
-                                </select>
-                                <div class="form-text">Campo padronizado usado na geração das rotas.</div>
+                                <div class="neighborhood-combobox">
+                                    <input type="text" class="form-control" id="editRouteNeighborhood"
+                                        placeholder="Pesquise pelo nome do bairro..." autocomplete="off" disabled>
+                                    <div class="list-group neighborhood-suggestions d-none"
+                                        id="editRouteNeighborhoodSuggestions"></div>
+                                </div>
+                                <div class="form-text">
+                                    A pesquisa encontra o nome mesmo quando o texto estiver no meio, ignorando acentos.
+                                </div>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label for="editRouteNewNeighborhood" class="form-label">Adicionar novo bairro</label>
+                                <div class="input-group neighborhood-manager">
+                                    <input type="text" class="form-control" id="editRouteNewNeighborhood"
+                                        placeholder="Digite o nome novo ou o novo nome para editar" disabled>
+                                    <button type="button" class="btn btn-outline-success"
+                                        id="editAddNeighborhoodBtn" disabled>
+                                        <i class="bi bi-plus-lg"></i> Adicionar
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary"
+                                        id="editEditNeighborhoodBtn" disabled>
+                                        <i class="bi bi-pencil"></i> Editar selecionado
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger"
+                                        id="editRemoveNeighborhoodBtn" disabled>
+                                        <i class="bi bi-trash"></i> Remover selecionado
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    Primeiro libere a edição e selecione a cidade. Para editar ou remover,
+                                    selecione também o Bairro 2.
+                                </div>
                             </div>
                             <div class="col-12 mb-3">
                                 <label for="editLocation" class="form-label">Localização (Link do Maps)</label>
@@ -1114,8 +1169,10 @@
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info py-2">
-                        Serão considerados somente clientes com <strong>3 ou mais parcelas vencidas</strong>
-                        e com <strong>Cidade da rota</strong> e <strong>Bairro 2</strong> preenchidos.
+                        Clientes com frequência <strong>diária</strong> entram com <strong>3 ou mais parcelas vencidas</strong>.
+                        Clientes <strong>semanais, quinzenais ou mensais</strong> entram com
+                        <strong>1 ou mais parcelas vencidas</strong>. Clientes que estiverem em
+                        <strong>Próximos Acordos</strong> não serão incluídos.
                     </div>
 
                     <div class="mb-4">

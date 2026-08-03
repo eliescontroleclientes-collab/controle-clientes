@@ -164,6 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const neighborhoodInput = document.getElementById('neighborhood');
     const routeCitySelect = document.getElementById('routeCity');
     const routeNeighborhoodSelectInput = document.getElementById('routeNeighborhood');
+    const routeNeighborhoodSuggestions = document.getElementById('routeNeighborhoodSuggestions');
+    const routeNewNeighborhoodInput = document.getElementById('routeNewNeighborhood');
+    const addNeighborhoodBtn = document.getElementById('addNeighborhoodBtn');
+    const editNeighborhoodBtn = document.getElementById('editNeighborhoodBtn');
+    const removeNeighborhoodBtn = document.getElementById('removeNeighborhoodBtn');
     const professionInput = document.getElementById('profession');
     const loanValueInput = document.getElementById('loanValue');
     const installmentsInput = document.getElementById('installments');
@@ -189,6 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const editNeighborhoodInput = document.getElementById('editNeighborhood');
     const editRouteCitySelect = document.getElementById('editRouteCity');
     const editRouteNeighborhoodSelect = document.getElementById('editRouteNeighborhood');
+    const editRouteNeighborhoodSuggestions = document.getElementById('editRouteNeighborhoodSuggestions');
+    const editRouteNewNeighborhoodInput = document.getElementById('editRouteNewNeighborhood');
+    const editAddNeighborhoodBtn = document.getElementById('editAddNeighborhoodBtn');
+    const editEditNeighborhoodBtn = document.getElementById('editEditNeighborhoodBtn');
+    const editRemoveNeighborhoodBtn = document.getElementById('editRemoveNeighborhoodBtn');
     const editProfessionInput = document.getElementById('editProfession');
     const editLoanValueInput = document.getElementById('editLoanValue');
     const editInstallmentsInput = document.getElementById('editInstallments');
@@ -288,39 +298,426 @@ document.addEventListener('DOMContentLoaded', () => {
         return Number(String(value).replace(/[^0-9,-]+/g, "").replace(",", "."));
     };
 
-    const neighborhoodsByCity = window.BAIRROS_POR_CIDADE || {};
+    const baseNeighborhoodsByCity = window.BAIRROS_POR_CIDADE || {};
+    let neighborhoodsByCity = {
+        "Cuiabá": [...(baseNeighborhoodsByCity["Cuiabá"] || [])],
+        "Várzea Grande": [...(baseNeighborhoodsByCity["Várzea Grande"] || [])]
+    };
+    let neighborhoodCatalogRecords = [];
 
-    function populateNeighborhoodSelect(citySelect, neighborhoodSelect, selectedValue = '') {
+    function normalizeNeighborhoodText(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLocaleLowerCase('pt-BR')
+            .trim();
+    }
+
+    function getNeighborhoodsForCity(city) {
+        return [...(neighborhoodsByCity[city] || [])]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+
+    function getNeighborhoodRecord(city, name) {
+        const normalizedName = normalizeNeighborhoodText(name);
+        return neighborhoodCatalogRecords.find(record =>
+            record.city === city &&
+            normalizeNeighborhoodText(record.name) === normalizedName
+        ) || null;
+    }
+
+    function closeNeighborhoodSuggestions(suggestionsElement) {
+        suggestionsElement.innerHTML = '';
+        suggestionsElement.classList.add('d-none');
+    }
+
+    function renderNeighborhoodSuggestions(config) {
+        const {
+            citySelect,
+            neighborhoodInput,
+            suggestionsElement
+        } = config;
+
         const city = citySelect.value;
-        const neighborhoods = neighborhoodsByCity[city] || [];
-
-        neighborhoodSelect.innerHTML = '';
-
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = city
-            ? 'Selecione o bairro...'
-            : 'Selecione primeiro a cidade...';
-        neighborhoodSelect.appendChild(placeholder);
-
-        neighborhoods.forEach(neighborhood => {
-            const option = document.createElement('option');
-            option.value = neighborhood;
-            option.textContent = neighborhood;
-            neighborhoodSelect.appendChild(option);
-        });
-
-        // Protege valores que já estejam no banco, mesmo que não constem na lista atual.
-        if (selectedValue && !neighborhoods.includes(selectedValue)) {
-            const currentOption = document.createElement('option');
-            currentOption.value = selectedValue;
-            currentOption.textContent = `${selectedValue} (valor atual)`;
-            neighborhoodSelect.appendChild(currentOption);
+        if (!city || neighborhoodInput.disabled) {
+            closeNeighborhoodSuggestions(suggestionsElement);
+            return;
         }
 
-        neighborhoodSelect.disabled = !city;
-        neighborhoodSelect.value = selectedValue || '';
+        const term = normalizeNeighborhoodText(neighborhoodInput.value);
+        const matches = getNeighborhoodsForCity(city)
+            .filter(name => !term || normalizeNeighborhoodText(name).includes(term))
+            .slice(0, 60);
+
+        suggestionsElement.innerHTML = '';
+
+        if (matches.length === 0) {
+            const emptyItem = document.createElement('div');
+            emptyItem.className = 'list-group-item text-muted small';
+            emptyItem.textContent = 'Nenhum bairro encontrado.';
+            suggestionsElement.appendChild(emptyItem);
+        } else {
+            matches.forEach(name => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'list-group-item list-group-item-action neighborhood-suggestion';
+                button.dataset.neighborhood = name;
+                button.textContent = name;
+                suggestionsElement.appendChild(button);
+            });
+        }
+
+        suggestionsElement.classList.remove('d-none');
     }
+
+    function updateNeighborhoodManagerState(config) {
+        const {
+            citySelect,
+            neighborhoodInput,
+            newNeighborhoodInput,
+            addButton,
+            editButton,
+            removeButton,
+            requiresUnlock = false
+        } = config;
+
+        const citySelected = Boolean(citySelect.value);
+        const managerUnlocked = !requiresUnlock || !newNeighborhoodInput.readOnly;
+        const selectedRecord = citySelected
+            ? getNeighborhoodRecord(citySelect.value, neighborhoodInput.value)
+            : null;
+        const hasNewName = Boolean(newNeighborhoodInput.value.trim());
+
+        newNeighborhoodInput.disabled = !citySelected || !managerUnlocked;
+        addButton.disabled = !citySelected || !managerUnlocked || !hasNewName;
+        editButton.disabled = !citySelected || !managerUnlocked || !selectedRecord || !hasNewName;
+        removeButton.disabled = !citySelected || !managerUnlocked || !selectedRecord;
+    }
+
+    function configureNeighborhoodInput(config, selectedValue = '') {
+        const {
+            citySelect,
+            neighborhoodInput,
+            suggestionsElement
+        } = config;
+
+        const citySelected = Boolean(citySelect.value);
+        neighborhoodInput.disabled = !citySelected;
+        neighborhoodInput.value = selectedValue || '';
+
+        if (!citySelected) {
+            neighborhoodInput.placeholder = 'Selecione primeiro a cidade...';
+        } else {
+            neighborhoodInput.placeholder = 'Pesquise pelo nome do bairro...';
+        }
+
+        closeNeighborhoodSuggestions(suggestionsElement);
+        updateNeighborhoodManagerState(config);
+    }
+
+    function rebuildNeighborhoodsByCity() {
+        const rebuilt = {
+            "Cuiabá": [],
+            "Várzea Grande": []
+        };
+
+        neighborhoodCatalogRecords.forEach(record => {
+            if (!rebuilt[record.city]) rebuilt[record.city] = [];
+            rebuilt[record.city].push(record.name);
+        });
+
+        Object.keys(rebuilt).forEach(city => {
+            rebuilt[city] = [...new Set(rebuilt[city])]
+                .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        });
+
+        neighborhoodsByCity = rebuilt;
+    }
+
+    async function loadNeighborhoodCatalog() {
+        try {
+            const response = await fetch('/api/neighborhoods', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Falha ao carregar bairros.');
+            }
+
+            const data = await response.json();
+            neighborhoodCatalogRecords = Array.isArray(data)
+                ? data
+                : (data.neighborhoods || []);
+
+            rebuildNeighborhoodsByCity();
+        } catch (error) {
+            console.error('Erro ao carregar catálogo de bairros:', error);
+
+            // Fallback: mantém a lista fixa atual caso a nova API ainda não esteja disponível.
+            neighborhoodCatalogRecords = [];
+            neighborhoodsByCity = {
+                "Cuiabá": [...(baseNeighborhoodsByCity["Cuiabá"] || [])],
+                "Várzea Grande": [...(baseNeighborhoodsByCity["Várzea Grande"] || [])]
+            };
+        }
+
+        configureNeighborhoodInput(addNeighborhoodConfig, routeNeighborhoodSelectInput.value);
+        configureNeighborhoodInput(editNeighborhoodConfig, editRouteNeighborhoodSelect.value);
+    }
+
+    async function requestNeighborhoodCatalog(method, payload = null, id = null) {
+        const url = id
+            ? `/api/neighborhoods?id=${encodeURIComponent(id)}`
+            : '/api/neighborhoods';
+
+        const options = {
+            method,
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        };
+
+        if (payload) {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(payload);
+        }
+
+        const response = await fetch(url, options);
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Não foi possível atualizar o bairro.');
+        }
+
+        return data;
+    }
+
+    function updateClientsAfterNeighborhoodRename(city, oldName, newName) {
+        const arrays = [
+            allClientsForSearch,
+            clients,
+            activeClients,
+            settledClients,
+            overdueClients
+        ];
+
+        arrays.forEach(list => {
+            (list || []).forEach(client => {
+                if (
+                    client.cidade_rota === city &&
+                    normalizeNeighborhoodText(client.bairro_rota) === normalizeNeighborhoodText(oldName)
+                ) {
+                    client.bairro_rota = newName;
+                }
+            });
+        });
+
+        updateFilterPanel();
+
+        if (selectedClientId !== null) {
+            renderClientPanel(selectedClientId);
+        }
+
+        if (searchInput.value) {
+            filterClientList();
+        } else if (activeFilterButton) {
+            activeFilterButton.click();
+        } else {
+            renderClientList();
+        }
+    }
+
+    async function addNeighborhoodFromConfig(config) {
+        const city = config.citySelect.value;
+        const name = config.newNeighborhoodInput.value.trim();
+
+        if (!city || !name) {
+            alert('Selecione a cidade e digite o nome do novo bairro.');
+            return;
+        }
+
+        config.addButton.disabled = true;
+
+        try {
+            const created = await requestNeighborhoodCatalog('POST', { city, name });
+            await loadNeighborhoodCatalog();
+
+            config.neighborhoodInput.value = created.name || name;
+            config.newNeighborhoodInput.value = '';
+            closeNeighborhoodSuggestions(config.suggestionsElement);
+            updateNeighborhoodManagerState(config);
+
+            alert(`Bairro "${created.name || name}" adicionado com sucesso.`);
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            updateNeighborhoodManagerState(config);
+        }
+    }
+
+    async function editNeighborhoodFromConfig(config) {
+        const city = config.citySelect.value;
+        const selectedName = config.neighborhoodInput.value.trim();
+        const newName = config.newNeighborhoodInput.value.trim();
+        const record = getNeighborhoodRecord(city, selectedName);
+
+        if (!record) {
+            alert('Selecione um Bairro 2 válido para editar.');
+            return;
+        }
+
+        if (!newName) {
+            alert('Digite o novo nome do bairro no campo "Adicionar novo bairro".');
+            return;
+        }
+
+        if (!confirm(`Alterar "${record.name}" para "${newName}"? Os clientes desse bairro também serão atualizados.`)) {
+            return;
+        }
+
+        config.editButton.disabled = true;
+
+        try {
+            const updated = await requestNeighborhoodCatalog('PUT', {
+                id: record.id,
+                city,
+                name: newName
+            });
+
+            updateClientsAfterNeighborhoodRename(city, record.name, updated.name || newName);
+            await loadNeighborhoodCatalog();
+
+            config.neighborhoodInput.value = updated.name || newName;
+            config.newNeighborhoodInput.value = '';
+            closeNeighborhoodSuggestions(config.suggestionsElement);
+            updateNeighborhoodManagerState(config);
+
+            alert(`Bairro atualizado para "${updated.name || newName}".`);
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            updateNeighborhoodManagerState(config);
+        }
+    }
+
+    async function removeNeighborhoodFromConfig(config) {
+        const city = config.citySelect.value;
+        const selectedName = config.neighborhoodInput.value.trim();
+        const record = getNeighborhoodRecord(city, selectedName);
+
+        if (!record) {
+            alert('Selecione um Bairro 2 válido para remover.');
+            return;
+        }
+
+        if (!confirm(`Remover "${record.name}" da lista de bairros de ${city}?`)) {
+            return;
+        }
+
+        config.removeButton.disabled = true;
+
+        try {
+            await requestNeighborhoodCatalog('DELETE', null, record.id);
+            await loadNeighborhoodCatalog();
+
+            config.neighborhoodInput.value = '';
+            config.newNeighborhoodInput.value = '';
+            closeNeighborhoodSuggestions(config.suggestionsElement);
+            updateNeighborhoodManagerState(config);
+
+            alert(`Bairro "${record.name}" removido da lista.`);
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            updateNeighborhoodManagerState(config);
+        }
+    }
+
+    function setupNeighborhoodCombobox(config) {
+        config.citySelect.addEventListener('change', () => {
+            config.neighborhoodInput.value = '';
+            config.newNeighborhoodInput.value = '';
+            configureNeighborhoodInput(config);
+        });
+
+        config.neighborhoodInput.addEventListener('focus', () => {
+            renderNeighborhoodSuggestions(config);
+        });
+
+        config.neighborhoodInput.addEventListener('input', () => {
+            renderNeighborhoodSuggestions(config);
+            updateNeighborhoodManagerState(config);
+        });
+
+        config.neighborhoodInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeNeighborhoodSuggestions(config.suggestionsElement);
+                return;
+            }
+
+            if (event.key === 'Enter') {
+                const firstSuggestion = config.suggestionsElement
+                    .querySelector('.neighborhood-suggestion');
+
+                if (firstSuggestion) {
+                    event.preventDefault();
+                    config.neighborhoodInput.value = firstSuggestion.dataset.neighborhood;
+                    closeNeighborhoodSuggestions(config.suggestionsElement);
+                    updateNeighborhoodManagerState(config);
+                }
+            }
+        });
+
+        config.suggestionsElement.addEventListener('click', (event) => {
+            const selectedButton = event.target.closest('.neighborhood-suggestion');
+            if (!selectedButton) return;
+
+            config.neighborhoodInput.value = selectedButton.dataset.neighborhood;
+            closeNeighborhoodSuggestions(config.suggestionsElement);
+            updateNeighborhoodManagerState(config);
+        });
+
+        config.newNeighborhoodInput.addEventListener('input', () => {
+            updateNeighborhoodManagerState(config);
+        });
+
+        config.addButton.addEventListener('click', () => addNeighborhoodFromConfig(config));
+        config.editButton.addEventListener('click', () => editNeighborhoodFromConfig(config));
+        config.removeButton.addEventListener('click', () => removeNeighborhoodFromConfig(config));
+    }
+
+    const addNeighborhoodConfig = {
+        citySelect: routeCitySelect,
+        neighborhoodInput: routeNeighborhoodSelectInput,
+        suggestionsElement: routeNeighborhoodSuggestions,
+        newNeighborhoodInput: routeNewNeighborhoodInput,
+        addButton: addNeighborhoodBtn,
+        editButton: editNeighborhoodBtn,
+        removeButton: removeNeighborhoodBtn,
+        requiresUnlock: false
+    };
+
+    const editNeighborhoodConfig = {
+        citySelect: editRouteCitySelect,
+        neighborhoodInput: editRouteNeighborhoodSelect,
+        suggestionsElement: editRouteNeighborhoodSuggestions,
+        newNeighborhoodInput: editRouteNewNeighborhoodInput,
+        addButton: editAddNeighborhoodBtn,
+        editButton: editEditNeighborhoodBtn,
+        removeButton: editRemoveNeighborhoodBtn,
+        requiresUnlock: true
+    };
+
+    setupNeighborhoodCombobox(addNeighborhoodConfig);
+    setupNeighborhoodCombobox(editNeighborhoodConfig);
+
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.neighborhood-combobox')) {
+            closeNeighborhoodSuggestions(routeNeighborhoodSuggestions);
+            closeNeighborhoodSuggestions(editRouteNeighborhoodSuggestions);
+        }
+    });
 
     function getCuiabaToday() {
         const timeZone = 'America/Cuiaba';
@@ -436,12 +833,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${city}|||${neighborhood}`;
     }
 
+    function isUpcomingAgreement(client) {
+        const { todayString } = getCuiabaToday();
+        const pauseDate = client.reminder_paused_until
+            ? client.reminder_paused_until.split('T')[0]
+            : null;
+
+        return Boolean(pauseDate && pauseDate > todayString);
+    }
+
+    function getRequiredLateCountForRoute(client) {
+        return ['weekly', 'biweekly', 'monthly'].includes(client.frequency)
+            ? 1
+            : 3;
+    }
+
     function getEligibleRouteClients() {
-        return allClientsForSearch.filter(client =>
-            client.cidade_rota &&
-            client.bairro_rota &&
-            getLateInstallments(client).length >= 3
-        );
+        return allClientsForSearch.filter(client => {
+            if (!client.cidade_rota || !client.bairro_rota) return false;
+            if (isUpcomingAgreement(client)) return false;
+
+            const lateCount = getLateInstallments(client).length;
+            return lateCount >= getRequiredLateCountForRoute(client);
+        });
     }
 
     function rebuildRouteGroups() {
@@ -1480,14 +1894,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     editInterestRateClientInput.addEventListener('input', updateEditInstallmentValue);
 
-    routeCitySelect.addEventListener('change', () => {
-        populateNeighborhoodSelect(routeCitySelect, routeNeighborhoodSelectInput);
-    });
-
-    editRouteCitySelect.addEventListener('change', () => {
-        populateNeighborhoodSelect(editRouteCitySelect, editRouteNeighborhoodSelect);
-    });
-
     paymentValueInput.addEventListener('input', (e) => {
         let digits = e.target.value.replace(/\D/g, '');
         if (digits === "") {
@@ -1520,7 +1926,8 @@ document.addEventListener('DOMContentLoaded', () => {
         clientPasswordInput.value = '';
         newClientFiles = [];
         renderNewClientFileList();
-        populateNeighborhoodSelect(routeCitySelect, routeNeighborhoodSelectInput);
+        routeNewNeighborhoodInput.value = '';
+        configureNeighborhoodInput(addNeighborhoodConfig);
         togglePaymentFrequency();
     });
 
@@ -1919,13 +2326,18 @@ document.addEventListener('DOMContentLoaded', () => {
         editLocationInput.value = client.localizacao || '';
         editNeighborhoodInput.value = client.bairro || '';
         editRouteCitySelect.value = client.cidade_rota || '';
-        populateNeighborhoodSelect(
-            editRouteCitySelect,
-            editRouteNeighborhoodSelect,
+        editRouteNewNeighborhoodInput.value = '';
+        editRouteNewNeighborhoodInput.readOnly = true;
+        configureNeighborhoodInput(
+            editNeighborhoodConfig,
             client.bairro_rota || ''
         );
         editRouteCitySelect.disabled = true;
         editRouteNeighborhoodSelect.disabled = true;
+        editRouteNewNeighborhoodInput.disabled = true;
+        editAddNeighborhoodBtn.disabled = true;
+        editEditNeighborhoodBtn.disabled = true;
+        editRemoveNeighborhoodBtn.disabled = true;
         editProfessionInput.value = client.profissao || '';
         editLoanValueInput.value = formatCurrency(client.loanValue || 0);
         editInterestRateClientInput.value = parseFloat(client.taxa_juros || 20).toFixed(1);
@@ -2771,6 +3183,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         editNeighborhoodInput.readOnly = false;
                         editRouteCitySelect.disabled = false;
                         editRouteNeighborhoodSelect.disabled = !editRouteCitySelect.value;
+                        editRouteNewNeighborhoodInput.readOnly = false;
+                        editRouteNewNeighborhoodInput.disabled = !editRouteCitySelect.value;
+                        updateNeighborhoodManagerState(editNeighborhoodConfig);
                         editLocationInput.readOnly = false;
                         editClientUsernameInput.readOnly = false;
                         editClientPasswordInput.readOnly = false;
@@ -3617,7 +4032,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    populateNeighborhoodSelect(routeCitySelect, routeNeighborhoodSelectInput);
+    configureNeighborhoodInput(addNeighborhoodConfig);
+    configureNeighborhoodInput(editNeighborhoodConfig);
+    loadNeighborhoodCatalog();
 
     updateClock();
     setInterval(updateClock, 1000);

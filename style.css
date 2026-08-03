@@ -235,3 +235,45 @@
         min-height: 330px;
     }
 }
+
+/* --- PESQUISA E GERENCIAMENTO DE BAIRROS --- */
+.neighborhood-combobox {
+    position: relative;
+}
+
+.neighborhood-suggestions {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 1085;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.neighborhood-suggestions .list-group-item {
+    text-align: left;
+}
+
+.neighborhood-manager .btn {
+    white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    .neighborhood-manager {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .neighborhood-manager .form-control {
+        flex: 1 0 100%;
+        width: 100%;
+        border-radius: var(--bs-border-radius) !important;
+        margin-bottom: 8px;
+    }
+
+    .neighborhood-manager .btn {
+        flex: 1 1 auto;
+    }
+}
