@@ -346,8 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const term = normalizeNeighborhoodText(neighborhoodInput.value);
         const matches = getNeighborhoodsForCity(city)
-            .filter(name => !term || normalizeNeighborhoodText(name).includes(term))
-            .slice(0, 60);
+            .filter(name => !term || normalizeNeighborhoodText(name).includes(term));
 
         suggestionsElement.innerHTML = '';
 
@@ -3472,6 +3471,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         editProfessionInput.readOnly = false;
                         editNeighborhoodInput.readOnly = false;
                         editRouteCitySelect.disabled = false;
+                        editRouteNeighborhoodSelect.readOnly = false;
                         editRouteNeighborhoodSelect.disabled = !editRouteCitySelect.value;
                         editRouteNewNeighborhoodInput.readOnly = false;
                         editRouteNewNeighborhoodInput.disabled = !editRouteCitySelect.value;
