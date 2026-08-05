@@ -96,6 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const routesResultModalEl = document.getElementById('routesResultModal');
     const routesResultContainer = document.getElementById('routesResultContainer');
     const copyAllRoutesBtn = document.getElementById('copyAllRoutesBtn');
+    const routePatternSelect = document.getElementById('routePatternSelect');
+    const applyRoutePatternBtn = document.getElementById('applyRoutePatternBtn');
+    const deleteRoutePatternBtn = document.getElementById('deleteRoutePatternBtn');
+    const routePatternNameInput = document.getElementById('routePatternNameInput');
+    const saveRoutePatternBtn = document.getElementById('saveRoutePatternBtn');
+    const updateRoutePatternBtn = document.getElementById('updateRoutePatternBtn');
+    const routePatternFeedback = document.getElementById('routePatternFeedback');
 
     const agreementsBtn = document.getElementById('agreements-btn');
     const agreementsBadge = document.getElementById('agreements-badge');
@@ -273,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedRouteNeighborhoods = [];
     let routeGroupsByKey = new Map();
     let generatedRoutesFullText = '';
+    let savedRoutePatterns = [];
 
     // ### INÍCIO DA ADIÇÃO ###
     let activeFilterButton = null; // Guarda qual botão de filtro está ativo
@@ -979,6 +987,232 @@ document.addEventListener('DOMContentLoaded', () => {
         summary.setAttribute('aria-expanded', String(willExpand));
         chevron.classList.toggle('bi-chevron-down', !willExpand);
         chevron.classList.toggle('bi-chevron-up', willExpand);
+    }
+
+    function setRoutePatternFeedback(message = '', type = 'muted') {
+        routePatternFeedback.textContent = message;
+        routePatternFeedback.className = `small mt-2 text-${type}`;
+    }
+
+    function getSelectedRoutePattern() {
+        const selectedId = Number(routePatternSelect.value);
+        if (!Number.isInteger(selectedId) || selectedId <= 0) return null;
+        return savedRoutePatterns.find(pattern => pattern.id === selectedId) || null;
+    }
+
+    function updateRoutePatternControls() {
+        const selectedPattern = getSelectedRoutePattern();
+        const hasSelectedPattern = Boolean(selectedPattern);
+
+        applyRoutePatternBtn.disabled = !hasSelectedPattern;
+        deleteRoutePatternBtn.disabled = !hasSelectedPattern;
+        updateRoutePatternBtn.disabled = !hasSelectedPattern;
+
+        if (selectedPattern) {
+            routePatternNameInput.value = selectedPattern.name;
+        }
+    }
+
+    function renderRoutePatternOptions(preferredId = null) {
+        const currentValue = preferredId ?? (Number(routePatternSelect.value) || '');
+
+        routePatternSelect.innerHTML =
+            '<option value="">Montagem manual / selecione um padrão...</option>';
+
+        savedRoutePatterns
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+            .forEach(pattern => {
+                const option = document.createElement('option');
+                option.value = String(pattern.id);
+                option.textContent = `${pattern.name} (${pattern.neighborhoods.length} bairro(s))`;
+                routePatternSelect.appendChild(option);
+            });
+
+        if (currentValue && savedRoutePatterns.some(pattern => pattern.id === Number(currentValue))) {
+            routePatternSelect.value = String(currentValue);
+        } else {
+            routePatternSelect.value = '';
+        }
+
+        updateRoutePatternControls();
+    }
+
+    async function loadRoutePatterns(preferredId = null) {
+        try {
+            const response = await fetch('/api/neighborhoods?resource=patterns', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Não foi possível carregar os padrões.');
+            }
+
+            const data = await response.json();
+            savedRoutePatterns = Array.isArray(data.patterns) ? data.patterns : [];
+            renderRoutePatternOptions(preferredId);
+        } catch (error) {
+            console.error('Erro ao carregar padrões de rota:', error);
+            savedRoutePatterns = [];
+            renderRoutePatternOptions();
+            setRoutePatternFeedback(error.message, 'danger');
+        }
+    }
+
+    function getCurrentRoutePatternPayload() {
+        return selectedRouteNeighborhoods.map(item => ({
+            city: item.city,
+            neighborhood: item.neighborhood
+        }));
+    }
+
+    function applyRoutePattern(pattern) {
+        if (!pattern || !Array.isArray(pattern.neighborhoods)) return;
+
+        rebuildRouteGroups();
+
+        const applied = [];
+        let ignoredCount = 0;
+
+        pattern.neighborhoods.forEach(item => {
+            const key = getRouteKey(item.city, item.neighborhood);
+            const group = routeGroupsByKey.get(key);
+
+            if (!group || group.clients.length === 0) {
+                ignoredCount++;
+                return;
+            }
+
+            if (!applied.some(selected => selected.key === key)) {
+                applied.push({
+                    key,
+                    city: group.city,
+                    neighborhood: group.neighborhood
+                });
+            }
+        });
+
+        selectedRouteNeighborhoods = applied;
+        refreshRouteNeighborhoodOptions();
+        renderRouteOrderList();
+
+        if (applied.length === 0) {
+            setRoutePatternFeedback(
+                'O padrão foi carregado, mas nenhum dos bairros possui clientes elegíveis agora.',
+                'warning'
+            );
+            return;
+        }
+
+        const ignoredMessage = ignoredCount > 0
+            ? ` ${ignoredCount} bairro(s) sem clientes elegíveis foram ignorados.`
+            : '';
+
+        setRoutePatternFeedback(
+            `Padrão "${pattern.name}" aplicado com ${applied.length} bairro(s).${ignoredMessage}`,
+            'success'
+        );
+    }
+
+    async function saveRoutePattern(isUpdate = false) {
+        const name = routePatternNameInput.value.trim();
+        const neighborhoods = getCurrentRoutePatternPayload();
+        const selectedPattern = getSelectedRoutePattern();
+
+        if (!name) {
+            setRoutePatternFeedback('Digite um nome para o padrão.', 'danger');
+            routePatternNameInput.focus();
+            return;
+        }
+
+        if (neighborhoods.length === 0) {
+            setRoutePatternFeedback(
+                'Adicione pelo menos um bairro em "Ordem da rota" antes de salvar.',
+                'danger'
+            );
+            return;
+        }
+
+        if (isUpdate && !selectedPattern) {
+            setRoutePatternFeedback('Selecione um padrão salvo para atualizar.', 'danger');
+            return;
+        }
+
+        const button = isUpdate ? updateRoutePatternBtn : saveRoutePatternBtn;
+        const originalHTML = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+
+        try {
+            const response = await fetch('/api/neighborhoods', {
+                method: isUpdate ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    resource: 'pattern',
+                    ...(isUpdate ? { id: selectedPattern.id } : {}),
+                    name,
+                    neighborhoods
+                })
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || 'Não foi possível salvar o padrão.');
+            }
+
+            await loadRoutePatterns(data.id);
+            setRoutePatternFeedback(
+                isUpdate ? 'Padrão atualizado com sucesso.' : 'Padrão criado com sucesso.',
+                'success'
+            );
+        } catch (error) {
+            console.error('Erro ao salvar padrão de rota:', error);
+            setRoutePatternFeedback(error.message, 'danger');
+        } finally {
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+            updateRoutePatternControls();
+        }
+    }
+
+    async function deleteSelectedRoutePattern() {
+        const selectedPattern = getSelectedRoutePattern();
+        if (!selectedPattern) return;
+
+        if (!confirm(`Excluir o padrão "${selectedPattern.name}"?`)) return;
+
+        const originalHTML = deleteRoutePatternBtn.innerHTML;
+        deleteRoutePatternBtn.disabled = true;
+        deleteRoutePatternBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            const response = await fetch(
+                `/api/neighborhoods?resource=pattern&id=${encodeURIComponent(selectedPattern.id)}`,
+                {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || 'Não foi possível excluir o padrão.');
+            }
+
+            routePatternNameInput.value = '';
+            await loadRoutePatterns();
+            setRoutePatternFeedback('Padrão excluído com sucesso.', 'success');
+        } catch (error) {
+            console.error('Erro ao excluir padrão de rota:', error);
+            setRoutePatternFeedback(error.message, 'danger');
+        } finally {
+            deleteRoutePatternBtn.innerHTML = originalHTML;
+            updateRoutePatternControls();
+        }
     }
 
     function getRouteKey(city, neighborhood) {
@@ -2926,17 +3160,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
     });
 
-    routesBtn.addEventListener('click', () => {
+    routesBtn.addEventListener('click', async () => {
         selectedRouteNeighborhoods = [];
         generatedRoutesFullText = '';
         routeCityFilter.value = '';
+        routePatternSelect.value = '';
+        routePatternNameInput.value = '';
+        setRoutePatternFeedback();
         document.getElementById('routeChargeInterestYes').checked = true;
 
         refreshRouteNeighborhoodOptions();
         renderRouteOrderList();
+        await loadRoutePatterns();
 
         new bootstrap.Modal(routesModalEl).show();
     });
+
+    routePatternSelect.addEventListener('change', () => {
+        if (!routePatternSelect.value) {
+            routePatternNameInput.value = '';
+        }
+        updateRoutePatternControls();
+        setRoutePatternFeedback();
+    });
+
+    applyRoutePatternBtn.addEventListener('click', () => {
+        const selectedPattern = getSelectedRoutePattern();
+        if (selectedPattern) applyRoutePattern(selectedPattern);
+    });
+
+    saveRoutePatternBtn.addEventListener('click', () => saveRoutePattern(false));
+    updateRoutePatternBtn.addEventListener('click', () => saveRoutePattern(true));
+    deleteRoutePatternBtn.addEventListener('click', deleteSelectedRoutePattern);
 
     routeCityFilter.addEventListener('change', refreshRouteNeighborhoodOptions);
 

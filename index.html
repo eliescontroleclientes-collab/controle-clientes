@@ -1175,6 +1175,60 @@
                         <strong>Próximos Acordos</strong> não serão incluídos.
                     </div>
 
+                    <div class="card border-primary mb-4">
+                        <div class="card-header bg-primary-subtle fw-bold">
+                            <i class="bi bi-bookmark-star-fill"></i> Padrões de rota salvos
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-lg-7">
+                                    <label for="routePatternSelect" class="form-label">Selecionar padrão salvo</label>
+                                    <select class="form-select" id="routePatternSelect">
+                                        <option value="">Montagem manual / selecione um padrão...</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-5">
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-primary flex-fill"
+                                            id="applyRoutePatternBtn" disabled>
+                                            <i class="bi bi-check2-square"></i> Aplicar padrão
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger"
+                                            id="deleteRoutePatternBtn" disabled title="Excluir padrão selecionado">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="row g-2 align-items-end">
+                                <div class="col-lg-7">
+                                    <label for="routePatternNameInput" class="form-label">Nome do padrão</label>
+                                    <input type="text" class="form-control" id="routePatternNameInput"
+                                        maxlength="120" placeholder="Ex: Rota Várzea Grande — terça-feira">
+                                </div>
+                                <div class="col-lg-5">
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-primary flex-fill"
+                                            id="saveRoutePatternBtn">
+                                            <i class="bi bi-plus-circle"></i> Salvar como novo
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary flex-fill"
+                                            id="updateRoutePatternBtn" disabled>
+                                            <i class="bi bi-floppy"></i> Atualizar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="routePatternFeedback" class="small mt-2"></div>
+                            <div class="form-text mt-2">
+                                Monte a ordem normalmente abaixo e salve como padrão. Ao aplicar um padrão, bairros sem clientes elegíveis naquele momento são ignorados.
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-4">
                         <label class="form-label d-block fw-bold">Cobrar juros sobre atrasos?</label>
                         <div class="form-check form-check-inline">
