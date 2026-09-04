@@ -1073,22 +1073,16 @@ document.addEventListener('DOMContentLoaded', () => {
         rebuildRouteGroups();
 
         const applied = [];
-        let ignoredCount = 0;
 
         pattern.neighborhoods.forEach(item => {
             const key = getRouteKey(item.city, item.neighborhood);
-            const group = routeGroupsByKey.get(key);
 
-            if (!group || group.clients.length === 0) {
-                ignoredCount++;
-                return;
-            }
-
+            // Adiciona o bairro à lista visual INCONDICIONALMENTE (mesmo se tiver 0 clientes em atraso hoje)
             if (!applied.some(selected => selected.key === key)) {
                 applied.push({
                     key,
-                    city: group.city,
-                    neighborhood: group.neighborhood
+                    city: item.city,
+                    neighborhood: item.neighborhood
                 });
             }
         });
@@ -1098,21 +1092,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderRouteOrderList();
 
         if (applied.length === 0) {
-            setRoutePatternFeedback(
-                'O padrão foi carregado, mas nenhum dos bairros possui clientes elegíveis agora.',
-                'warning'
-            );
+            setRoutePatternFeedback('O padrão está vazio ou inválido.', 'warning');
             return;
         }
 
-        const ignoredMessage = ignoredCount > 0
-            ? ` ${ignoredCount} bairro(s) sem clientes elegíveis foram ignorados.`
-            : '';
-
-        setRoutePatternFeedback(
-            `Padrão "${pattern.name}" aplicado com ${applied.length} bairro(s).${ignoredMessage}`,
-            'success'
-        );
+        setRoutePatternFeedback(`Padrão "${pattern.name}" aplicado com ${applied.length} bairro(s).`, 'success');
     }
 
     async function saveRoutePattern(isUpdate = false) {
@@ -1247,7 +1231,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function rebuildRouteGroups() {
         routeGroupsByKey = new Map();
 
-        getEligibleRouteClients().forEach(client => {
+        // 1. PRIMEIRO PASSO: Mapeia TODOS os bairros que possuem clientes cadastrados, independente de atraso
+        allClientsForSearch.forEach(client => {
+            if (!client.cidade_rota || !client.bairro_rota) return;
+
             const key = getRouteKey(client.cidade_rota, client.bairro_rota);
 
             if (!routeGroupsByKey.has(key)) {
@@ -1255,13 +1242,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     key,
                     city: client.cidade_rota,
                     neighborhood: client.bairro_rota,
-                    clients: []
+                    clients: [] // Começa com zero clientes elegíveis
                 });
             }
-
-            routeGroupsByKey.get(key).clients.push(client);
         });
 
+        // 2. SEGUNDO PASSO: Preenche os bairros APENAS com os clientes que estão elegíveis (em atraso)
+        getEligibleRouteClients().forEach(client => {
+            const key = getRouteKey(client.cidade_rota, client.bairro_rota);
+
+            // Como já criamos todos os bairros acima, o grupo com certeza existe
+            if (routeGroupsByKey.has(key)) {
+                routeGroupsByKey.get(key).clients.push(client);
+            }
+        });
+
+        // 3. TERCEIRO PASSO: Ordena os clientes atrasados dentro de cada grupo pelo ID
         routeGroupsByKey.forEach(group => {
             group.clients.sort((a, b) => a.id - b.id);
         });
