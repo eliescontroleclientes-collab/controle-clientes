@@ -338,6 +338,52 @@ document.addEventListener('DOMContentLoaded', () => {
         ) || null;
     }
 
+    // Proteção do Bairro 2:
+    // permite digitar "mapim", "MAPIM", "Mapím" etc., mas salva sempre
+    // exatamente o nome oficial já existente no catálogo (ex.: "Mapim").
+    // Se o texto não corresponder exatamente a nenhum bairro cadastrado,
+    // impede o salvamento para evitar bairros soltos/duplicados.
+    function validateAndCanonicalizeRouteNeighborhood(citySelect, neighborhoodInput, suggestionsElement) {
+        const city = citySelect.value;
+        const typedName = neighborhoodInput.value.trim();
+
+        // Bairro 2 continua opcional.
+        if (!typedName) {
+            return { valid: true, value: null };
+        }
+
+        if (!city) {
+            alert('Selecione a cidade da rota antes de informar o Bairro 2.');
+            citySelect.focus();
+            return { valid: false, value: null };
+        }
+
+        const normalizedTypedName = normalizeNeighborhoodText(typedName);
+        const canonicalName = getNeighborhoodsForCity(city).find(name =>
+            normalizeNeighborhoodText(name) === normalizedTypedName
+        );
+
+        if (!canonicalName) {
+            alert(
+                `O Bairro 2 "${typedName}" não está cadastrado em ${city}.\n\n` +
+                'Selecione um bairro existente na lista ou use "Adicionar novo bairro" antes de salvar.'
+            );
+            neighborhoodInput.focus();
+            renderNeighborhoodSuggestions({
+                citySelect,
+                neighborhoodInput,
+                suggestionsElement
+            });
+            return { valid: false, value: null };
+        }
+
+        // Corrige automaticamente caixa, acentos e grafia para o padrão salvo.
+        neighborhoodInput.value = canonicalName;
+        closeNeighborhoodSuggestions(suggestionsElement);
+
+        return { valid: true, value: canonicalName };
+    }
+
     function closeNeighborhoodSuggestions(suggestionsElement) {
         suggestionsElement.innerHTML = '';
         suggestionsElement.classList.add('d-none');
@@ -2494,6 +2540,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     addClientForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        const routeNeighborhoodValidation = validateAndCanonicalizeRouteNeighborhood(
+            routeCitySelect,
+            routeNeighborhoodSelectInput,
+            routeNeighborhoodSuggestions
+        );
+
+        if (!routeNeighborhoodValidation.valid) return;
+
         const saveBtnSpinner = saveClientBtn.querySelector('.spinner-border');
         saveClientBtn.disabled = true;
         saveBtnSpinner.style.display = 'inline-block';
@@ -2516,7 +2571,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localizacao: locationInput.value,
             bairro: neighborhoodInput.value,
             cidade_rota: routeCitySelect.value || null,
-            bairro_rota: routeNeighborhoodSelectInput.value || null,
+            bairro_rota: routeNeighborhoodValidation.value,
             profissao: professionInput.value,
             taxa_juros: parseFloat(interestRateClientInput.value) || 20,
             original_client_id: null,
@@ -2939,6 +2994,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientIndex = allClientsForSearch.findIndex(c => c.id === clientId);
         if (clientIndex === -1) return;
 
+        const routeNeighborhoodValidation = validateAndCanonicalizeRouteNeighborhood(
+            editRouteCitySelect,
+            editRouteNeighborhoodSelect,
+            editRouteNeighborhoodSuggestions
+        );
+
+        if (!routeNeighborhoodValidation.valid) return;
+
         const currentFinancialData = {
             startDate: document.getElementById('editStartDate').value,
             loanValue: editLoanValueInput.value,
@@ -2974,7 +3037,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localizacao: editLocationInput.value,
             bairro: editNeighborhoodInput.value,
             cidade_rota: editRouteCitySelect.value || null,
-            bairro_rota: editRouteNeighborhoodSelect.value || null,
+            bairro_rota: routeNeighborhoodValidation.value,
             profissao: editProfessionInput.value,
             startDate: currentFinancialData.startDate,
             loanValue: parseCurrency(currentFinancialData.loanValue),
