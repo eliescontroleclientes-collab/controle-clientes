@@ -81,6 +81,11 @@
                                         <i class="bi bi-exclamation-triangle-fill"></i>
                                     </button>
 
+                                    <!-- BOTÃO PREJUÍZO -->
+                                    <button id="loss-btn" class="btn btn-outline-danger" title="Marcar como Prejuízo">
+                                        <i class="bi bi-graph-down-arrow"></i>
+                                    </button>
+
                                     <!-- BOTÃO EXCLUIR -->
                                     <button id="delete-client-btn" class="btn btn-outline-danger"
                                         title="Excluir Cliente">
@@ -113,7 +118,8 @@
                             <div id="panel-personal-details">
                                 <p class="mb-1"><strong>Profissão:</strong> <span id="panel-profession"></span></p>
                                 <p class="mb-1"><strong>Bairro:</strong> <span id="panel-neighborhood"></span></p>
-                                <p class="mb-1"><strong>Bairro 2:</strong> <span id="panel-route-neighborhood"></span></p>
+                                <p class="mb-1"><strong>Bairro 2:</strong> <span id="panel-route-neighborhood"></span>
+                                </p>
                                 <p class="mb-1"><strong>Localização:</strong> <a href="#" id="panel-location"
                                         target="_blank" rel="noopener noreferrer"></a></p>
                                 <p class="mb-1 mt-2"><i class="bi bi-person-badge"></i> <strong>Responsável:</strong>
@@ -280,6 +286,11 @@
                             <span id="overdue-count"
                                 class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
                         </button>
+                        <button id="filter-loss-btn" class="btn btn-outline-danger position-relative">
+                            Prejuízo
+                            <span id="loss-count"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">0</span>
+                        </button>
                         <button id="filter-clear-btn" class="btn btn-outline-secondary d-none">
                             Mostrar Todos
                         </button>
@@ -337,6 +348,17 @@
                                         title="Soma de todas as parcelas com data de vencimento anterior a hoje que ainda não foram pagas."></i>
                                 </span>
                                 <strong id="summary-total-overdue" class="text-danger">
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                </strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="bi bi-graph-down-arrow me-2 text-danger"></i>Prejuízo
+                                    <i class="bi bi-question-circle ms-1" data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="Soma do principal ainda não recuperado dos clientes marcados como Prejuízo. Esses clientes ficam fora das demais métricas financeiras."></i>
+                                </span>
+                                <strong id="summary-total-loss" class="text-danger">
                                     <span class="spinner-border spinner-border-sm" role="status"></span>
                                 </strong>
                             </li>
@@ -445,16 +467,16 @@
                                 <div class="input-group neighborhood-manager">
                                     <input type="text" class="form-control" id="routeNewNeighborhood"
                                         placeholder="Digite o nome novo ou o novo nome para editar" disabled>
-                                    <button type="button" class="btn btn-outline-success"
-                                        id="addNeighborhoodBtn" disabled>
+                                    <button type="button" class="btn btn-outline-success" id="addNeighborhoodBtn"
+                                        disabled>
                                         <i class="bi bi-plus-lg"></i> Adicionar
                                     </button>
-                                    <button type="button" class="btn btn-outline-primary"
-                                        id="editNeighborhoodBtn" disabled>
+                                    <button type="button" class="btn btn-outline-primary" id="editNeighborhoodBtn"
+                                        disabled>
                                         <i class="bi bi-pencil"></i> Editar selecionado
                                     </button>
-                                    <button type="button" class="btn btn-outline-danger"
-                                        id="removeNeighborhoodBtn" disabled>
+                                    <button type="button" class="btn btn-outline-danger" id="removeNeighborhoodBtn"
+                                        disabled>
                                         <i class="bi bi-trash"></i> Remover selecionado
                                     </button>
                                 </div>
@@ -621,16 +643,16 @@
                                 <div class="input-group neighborhood-manager">
                                     <input type="text" class="form-control" id="editRouteNewNeighborhood"
                                         placeholder="Digite o nome novo ou o novo nome para editar" disabled>
-                                    <button type="button" class="btn btn-outline-success"
-                                        id="editAddNeighborhoodBtn" disabled>
+                                    <button type="button" class="btn btn-outline-success" id="editAddNeighborhoodBtn"
+                                        disabled>
                                         <i class="bi bi-plus-lg"></i> Adicionar
                                     </button>
-                                    <button type="button" class="btn btn-outline-primary"
-                                        id="editEditNeighborhoodBtn" disabled>
+                                    <button type="button" class="btn btn-outline-primary" id="editEditNeighborhoodBtn"
+                                        disabled>
                                         <i class="bi bi-pencil"></i> Editar selecionado
                                     </button>
-                                    <button type="button" class="btn btn-outline-danger"
-                                        id="editRemoveNeighborhoodBtn" disabled>
+                                    <button type="button" class="btn btn-outline-danger" id="editRemoveNeighborhoodBtn"
+                                        disabled>
                                         <i class="bi bi-trash"></i> Remover selecionado
                                     </button>
                                 </div>
@@ -1169,7 +1191,8 @@
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info py-2">
-                        Clientes com frequência <strong>diária</strong> entram com <strong>3 ou mais parcelas vencidas</strong>.
+                        Clientes com frequência <strong>diária</strong> entram com <strong>3 ou mais parcelas
+                            vencidas</strong>.
                         Clientes <strong>semanais, quinzenais ou mensais</strong> entram com
                         <strong>1 ou mais parcelas vencidas</strong>. Clientes que estiverem em
                         <strong>Próximos Acordos</strong> não serão incluídos.
@@ -1193,8 +1216,8 @@
                                             id="applyRoutePatternBtn" disabled>
                                             <i class="bi bi-check2-square"></i> Aplicar padrão
                                         </button>
-                                        <button type="button" class="btn btn-outline-danger"
-                                            id="deleteRoutePatternBtn" disabled title="Excluir padrão selecionado">
+                                        <button type="button" class="btn btn-outline-danger" id="deleteRoutePatternBtn"
+                                            disabled title="Excluir padrão selecionado">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
@@ -1206,8 +1229,8 @@
                             <div class="row g-2 align-items-end">
                                 <div class="col-lg-7">
                                     <label for="routePatternNameInput" class="form-label">Nome do padrão</label>
-                                    <input type="text" class="form-control" id="routePatternNameInput"
-                                        maxlength="120" placeholder="Ex: Rota Várzea Grande — terça-feira">
+                                    <input type="text" class="form-control" id="routePatternNameInput" maxlength="120"
+                                        placeholder="Ex: Rota Várzea Grande — terça-feira">
                                 </div>
                                 <div class="col-lg-5">
                                     <div class="d-flex gap-2">
@@ -1224,7 +1247,8 @@
                             </div>
                             <div id="routePatternFeedback" class="small mt-2"></div>
                             <div class="form-text mt-2">
-                                Monte a ordem normalmente abaixo e salve como padrão. Ao aplicar um padrão, bairros sem clientes elegíveis naquele momento são ignorados.
+                                Monte a ordem normalmente abaixo e salve como padrão. Ao aplicar um padrão, bairros sem
+                                clientes elegíveis naquele momento são ignorados.
                             </div>
                         </div>
                     </div>

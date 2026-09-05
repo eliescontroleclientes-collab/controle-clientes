@@ -126,7 +126,7 @@ export default async function handler(req, res) {
                 name, startDate, cpf, phone, loanValue, dailyValue, paymentDates,
                 installments, frequency, files, saldo, localizacao, bairro,
                 cidade_rota, bairro_rota, profissao, observacoes, taxa_juros,
-                reminder_paused_until, is_risk, reminder_pause_note, responsible_id
+                reminder_paused_until, is_risk, is_loss, reminder_pause_note, responsible_id
             } = clientData;
 
             const query = `
@@ -152,7 +152,8 @@ export default async function handler(req, res) {
                     reminder_pause_note = $20,
                     responsible_id = $21,
                     cidade_rota = $22,
-                    bairro_rota = $23
+                    bairro_rota = $23,
+                    is_loss = $24
                 WHERE id = $16
                 RETURNING *
             `;
@@ -180,7 +181,8 @@ export default async function handler(req, res) {
                 reminder_pause_note || '',
                 responsible_id || null,
                 cidade_rota || null,
-                bairro_rota || null
+                bairro_rota || null,
+                is_loss === true
             ];
 
             const result = await db.query(query, values);

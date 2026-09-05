@@ -67,10 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterActiveBtn = document.getElementById('filter-active-btn');
     const filterSettledBtn = document.getElementById('filter-settled-btn');
     const filterOverdueBtn = document.getElementById('filter-overdue-btn');
+    const filterLossBtn = document.getElementById('filter-loss-btn');
     const filterClearBtn = document.getElementById('filter-clear-btn');
     const activeCountSpan = document.getElementById('active-count');
     const settledCountSpan = document.getElementById('settled-count');
     const overdueCountSpan = document.getElementById('overdue-count');
+    const lossCountSpan = document.getElementById('loss-count');
     const openReportBtn = document.getElementById('open-report-btn');
     const reportModalEl = document.getElementById('reportModal');
     const reportStartDate = document.getElementById('reportStartDate');
@@ -156,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const renewalTextResult = document.getElementById('renewalTextResult');
     const copyRenewalBtn = document.getElementById('copy-renewal-btn');
     const riskBtn = document.getElementById('risk-btn');
+    const lossBtn = document.getElementById('loss-btn');
     const vipOfferBtn = document.getElementById('vip-offer-btn');
     const vipStrategyModalEl = document.getElementById('vipStrategyModal');
     const vipResgateBtn = document.getElementById('vip-resgate-btn');
@@ -275,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeClients = [];
     let settledClients = [];
     let overdueClients = [];
+    let lossClients = [];
 
     // Estado da geração de rotas
     let selectedRouteNeighborhoods = [];
@@ -1220,6 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getEligibleRouteClients() {
         return allClientsForSearch.filter(client => {
+            if (client.is_loss) return false;
             if (!client.cidade_rota || !client.bairro_rota) return false;
             if (isUpcomingAgreement(client)) return false;
 
@@ -1743,6 +1748,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function calculateClientStatus(client) {
+        if (client.is_loss) {
+            return '<span class="badge bg-danger">Prejuízo</span>';
+        }
+
         if (!client.paymentDates || client.paymentDates.length === 0) {
             return '<span class="badge bg-secondary">Sem dados</span>';
         }
@@ -1809,6 +1818,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 2. Filtra apenas os atrasados/pendentes
                 let allCobradorClients = data.clients.filter(client => {
+                    if (client.is_loss) return false;
                     const status = calculateClientStatus(client);
                     return status.includes('Atrasado');
                 });
@@ -1954,7 +1964,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Condição: Nenhuma parcela paga (significa que é novo ou recém renovado/resetado)
         const paidInstallmentsCount = (client.paymentDates || []).filter(p => p.status === 'paid').length;
 
-        if (paidInstallmentsCount === 0) {
+        if (paidInstallmentsCount === 0 && !client.is_loss) {
             renewalBtn.classList.remove('d-none');
         } else {
             renewalBtn.classList.add('d-none');
@@ -1989,6 +1999,12 @@ document.addEventListener('DOMContentLoaded', () => {
             pauseReminderBtn.classList.remove('d-none');
         }
 
+        // Cliente marcado como prejuízo não participa de lembretes/acordos de cobrança.
+        if (client.is_loss) {
+            reminderStatusContainer.classList.add('d-none');
+            pauseReminderBtn.classList.add('d-none');
+        }
+
         // LÓGICA DO BOTÃO DE RISCO
         if (client.is_risk) {
             riskBtn.classList.remove('btn-outline-secondary');
@@ -2000,11 +2016,22 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('panel-name').classList.remove('text-danger');
         }
 
+        // LÓGICA DO BOTÃO PREJUÍZO
+        if (client.is_loss) {
+            lossBtn.classList.remove('btn-outline-danger');
+            lossBtn.classList.add('btn-danger');
+            lossBtn.title = 'Remover status Prejuízo';
+        } else {
+            lossBtn.classList.remove('btn-danger');
+            lossBtn.classList.add('btn-outline-danger');
+            lossBtn.title = 'Marcar como Prejuízo';
+        }
+
         // LÓGICA DO BOTÃO OFERTA VIP
         // Regra: Empréstimo Concluído (Tudo Pago) E NÃO é Risco
         const isCompleted = client.paymentDates && client.paymentDates.every(p => p.status === 'paid');
 
-        if (isCompleted && !client.is_risk) {
+        if (isCompleted && !client.is_risk && !client.is_loss) {
             vipOfferBtn.classList.remove('d-none');
         } else {
             vipOfferBtn.classList.add('d-none');
@@ -2152,7 +2179,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const cuiabaTodayUTCMidnight = new Date(todayInCuiaba + 'T00:00:00.000Z').getTime();
         const lateCount = (client.paymentDates || []).filter(p => new Date(p.date).getTime() < cuiabaTodayUTCMidnight && p.status !== 'paid').length;
 
-        if (lateCount >= 1) {
+        if (client.is_loss) {
+            generateCollectionBtn.disabled = true;
+            generateCollectionBtn.title = "Cliente marcado como Prejuízo.";
+        } else if (lateCount >= 1) {
             generateCollectionBtn.disabled = false;
             generateCollectionBtn.title = "Gerar Aviso de Cobrança";
         } else {
@@ -2310,8 +2340,14 @@ document.addEventListener('DOMContentLoaded', () => {
         activeClients = [];
         settledClients = [];
         overdueClients = [];
+        lossClients = [];
 
         allClientsForSearch.forEach(client => {
+            if (client.is_loss) {
+                lossClients.push(client);
+                return;
+            }
+
             const status = calculateClientStatus(client);
             if (status.includes('Empréstimo Concluído')) {
                 settledClients.push(client);
@@ -2326,6 +2362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeCountSpan.textContent = activeClients.length;
         settledCountSpan.textContent = settledClients.length;
         overdueCountSpan.textContent = overdueClients.length;
+        lossCountSpan.textContent = lossClients.length;
     }
 
     function handleFilterClick(clientsToShow, buttonEl) {
@@ -2351,6 +2388,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return lateCountB - lateCountA;
         });
         handleFilterClick(sortedOverdue, filterOverdueBtn);
+    });
+
+    filterLossBtn.addEventListener('click', () => {
+        const sortedLoss = [...lossClients].sort((a, b) => a.id - b.id);
+        handleFilterClick(sortedLoss, filterLossBtn);
     });
 
     filterClearBtn.addEventListener('click', () => {
@@ -3117,6 +3159,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     generateCollectionBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client || client.is_loss) return;
+
         document.getElementById('collection-form').reset();
         const modal = new bootstrap.Modal(collectionModalEl);
         modal.show();
@@ -3126,7 +3171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedClientId === null) return;
 
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
-        if (!client) return;
+        if (!client || client.is_loss) return;
 
         const chargeInterest =
             document.querySelector('input[name="chargeInterest"]:checked').value === 'yes';
@@ -3262,6 +3307,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Cuiaba' }); // Data de hoje YYYY-MM-DD
 
         clientsToRemind = allClientsForSearch.filter(client => {
+            if (client.is_loss) return false;
+
             const status = calculateClientStatus(client);
             const isLateOrPending = status.includes('Pendente') || status.includes('Atrasado');
 
@@ -3440,6 +3487,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- FILTRO 1: AVISO PERSONALIZADO (Idêntico ao seu original) ---
         clientsForCustomMsg = allClientsForSearch.filter(client => {
+            if (client.is_loss) return false;
             const status = calculateClientStatus(client);
             return !status.includes('Empréstimo Concluído');
         });
@@ -3451,6 +3499,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- FILTRO 2: AVISO DE RENOVAÇÃO (Atualizado com tolerância) ---
         clientsForRenewalMsg = allClientsForSearch.filter(client => {
+            if (client.is_loss) return false;
+
             const status = calculateClientStatus(client);
 
             // Se o empréstimo já acabou, descarta.
@@ -4137,6 +4187,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // BOTÃO PREJUÍZO (Toggle)
+    lossBtn.addEventListener('click', async () => {
+        if (!selectedClientId) return;
+
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        const newLossStatus = !client.is_loss;
+
+        const confirmationMessage = newLossStatus
+            ? `Marcar ${client.name} como PREJUÍZO?\n\nO cliente será removido das estatísticas financeiras normais e das listas de cobrança, rotas, acordos e avisos em massa.`
+            : `Remover o status PREJUÍZO de ${client.name}?\n\nO cliente voltará a participar normalmente das estatísticas e dos fluxos correspondentes ao status financeiro atual.`;
+
+        if (!confirm(confirmationMessage)) return;
+
+        lossBtn.disabled = true;
+
+        try {
+            const updatedClient = await updateClient({
+                ...client,
+                is_loss: newLossStatus
+            });
+
+            if (updatedClient) {
+                updateClientData(updatedClient);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao alterar status de prejuízo.');
+        } finally {
+            lossBtn.disabled = false;
+        }
+    });
+
     // Função auxiliar para enviar mensagem VIP
     const sendVipMessage = (msgType) => {
         if (!selectedClientId) return;
@@ -4223,6 +4307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalReceivedEl = document.getElementById('summary-total-received');
         const totalPendingEl = document.getElementById('summary-total-pending');
         const totalOverdueEl = document.getElementById('summary-total-overdue');
+        const totalLossEl = document.getElementById('summary-total-loss');
         const defaultRateEl = document.getElementById('summary-default-rate');
 
         try {
@@ -4242,6 +4327,7 @@ document.addEventListener('DOMContentLoaded', () => {
             totalReceivedEl.textContent = formatCurrency(data.totalReceived);
             totalPendingEl.textContent = formatCurrency(data.totalPendingToReceive);
             totalOverdueEl.textContent = formatCurrency(data.totalOverduePrincipal);
+            totalLossEl.textContent = formatCurrency(data.totalLoss);
             defaultRateEl.textContent = `${data.defaultRate.toFixed(2)}%`;
 
         } catch (error) {
@@ -4251,6 +4337,7 @@ document.addEventListener('DOMContentLoaded', () => {
             totalReceivedEl.textContent = errorMessage;
             totalPendingEl.textContent = errorMessage;
             totalOverdueEl.textContent = errorMessage;
+            totalLossEl.textContent = errorMessage;
             defaultRateEl.textContent = errorMessage;
         }
     }
@@ -4290,6 +4377,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'renewal-btn',          // Renovação
             'vip-offer-btn',        // Oferta VIP
             'risk-btn',             // Botão Risco
+            'loss-btn',             // Botão Prejuízo
             'summary-total-loaned',
             'financial-summary-card',
             'upload-file-form', // <--- NOVO: ESCONDE O INPUT DE ARQUIVOS
@@ -4311,6 +4399,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Filtra clientes cujo acordo vence EXATAMENTE hoje
         let dueToday = allClientsForSearch.filter(client => {
+            if (client.is_loss) return false;
             const pauseDate = client.reminder_paused_until ? client.reminder_paused_until.split('T')[0] : null;
             return pauseDate === todayStr;
         });
@@ -4343,7 +4432,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. Filtra clientes com pausas ativas
         let activeAgreements = allClientsForSearch.filter(client =>
-            client.reminder_paused_until && client.reminder_paused_until.split('T')[0] >= todayStr
+            !client.is_loss &&
+            client.reminder_paused_until &&
+            client.reminder_paused_until.split('T')[0] >= todayStr
         );
 
         // 2. FILTRO DO COBRADOR (Mantido)
