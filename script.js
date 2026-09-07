@@ -1361,24 +1361,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const row = document.createElement('div');
             row.className = 'list-group-item d-flex justify-content-between align-items-center gap-3';
+            row.dataset.routeIndex = String(index);
 
             const label = document.createElement('div');
+            label.className = 'd-flex align-items-center flex-wrap gap-2 flex-grow-1';
             label.innerHTML = `
+                <span class="route-drag-handle text-secondary"
+                    data-index="${index}"
+                    title="Arraste para alterar a ordem"
+                    aria-label="Arraste para alterar a ordem"
+                    style="cursor: grab; touch-action: none; font-size: 1.25rem; line-height: 1;">
+                    <i class="bi bi-grip-vertical"></i>
+                </span>
                 <strong>${index + 1}. ${item.neighborhood}</strong>
                 <span class="text-muted">— ${item.city}</span>
-                <span class="badge bg-danger ms-2">${clientCount} cliente(s)</span>
+                <span class="badge bg-danger ms-1">${clientCount} cliente(s)</span>
             `;
 
             const controls = document.createElement('div');
             controls.className = 'btn-group btn-group-sm';
             controls.innerHTML = `
-                <button type="button" class="btn btn-outline-secondary route-order-action"
-                    data-action="up" data-index="${index}" ${index === 0 ? 'disabled' : ''}
-                    title="Subir"><i class="bi bi-arrow-up"></i></button>
-                <button type="button" class="btn btn-outline-secondary route-order-action"
-                    data-action="down" data-index="${index}"
-                    ${index === selectedRouteNeighborhoods.length - 1 ? 'disabled' : ''}
-                    title="Descer"><i class="bi bi-arrow-down"></i></button>
                 <button type="button" class="btn btn-outline-danger route-order-action"
                     data-action="remove" data-index="${index}"
                     title="Remover"><i class="bi bi-x-lg"></i></button>
@@ -3321,22 +3323,142 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!button) return;
 
         const index = Number(button.dataset.index);
-        const action = button.dataset.action;
-
         if (!Number.isInteger(index) || !selectedRouteNeighborhoods[index]) return;
 
-        if (action === 'up' && index > 0) {
-            [selectedRouteNeighborhoods[index - 1], selectedRouteNeighborhoods[index]] =
-                [selectedRouteNeighborhoods[index], selectedRouteNeighborhoods[index - 1]];
-        } else if (action === 'down' && index < selectedRouteNeighborhoods.length - 1) {
-            [selectedRouteNeighborhoods[index + 1], selectedRouteNeighborhoods[index]] =
-                [selectedRouteNeighborhoods[index], selectedRouteNeighborhoods[index + 1]];
-        } else if (action === 'remove') {
+        if (button.dataset.action === 'remove') {
             selectedRouteNeighborhoods.splice(index, 1);
+            refreshRouteNeighborhoodOptions();
+            renderRouteOrderList();
         }
+    });
+
+    // Reordenação da rota por arrastar.
+    // Usa Pointer Events para funcionar tanto com mouse quanto com toque.
+    let routeDragState = null;
+
+    function clearRouteDragVisuals() {
+        routeOrderList.querySelectorAll('[data-route-index]').forEach(row => {
+            row.style.opacity = '';
+            row.style.boxShadow = '';
+        });
+
+        routeOrderList.querySelectorAll('.route-drag-handle').forEach(handle => {
+            handle.style.cursor = 'grab';
+        });
+    }
+
+    routeOrderList.addEventListener('pointerdown', (event) => {
+        const handle = event.target.closest('.route-drag-handle');
+        if (!handle) return;
+
+        // No mouse, permite apenas o botão esquerdo.
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+        const sourceIndex = Number(handle.dataset.index);
+        if (!Number.isInteger(sourceIndex) || !selectedRouteNeighborhoods[sourceIndex]) return;
+
+        event.preventDefault();
+
+        routeDragState = {
+            sourceIndex,
+            targetIndex: sourceIndex,
+            position: 'before',
+            pointerId: event.pointerId,
+            previousUserSelect: document.body.style.userSelect
+        };
+
+        if (handle.setPointerCapture) {
+            handle.setPointerCapture(event.pointerId);
+        }
+
+        document.body.style.userSelect = 'none';
+        handle.style.cursor = 'grabbing';
+
+        const sourceRow = handle.closest('[data-route-index]');
+        if (sourceRow) sourceRow.style.opacity = '0.55';
+    });
+
+    routeOrderList.addEventListener('pointermove', (event) => {
+        if (!routeDragState || event.pointerId !== routeDragState.pointerId) return;
+
+        event.preventDefault();
+
+        const elementUnderPointer = document.elementFromPoint(event.clientX, event.clientY);
+        const targetRow = elementUnderPointer
+            ? elementUnderPointer.closest('[data-route-index]')
+            : null;
+
+        routeOrderList.querySelectorAll('[data-route-index]').forEach(row => {
+            row.style.boxShadow = '';
+        });
+
+        if (!targetRow || !routeOrderList.contains(targetRow)) return;
+
+        const targetIndex = Number(targetRow.dataset.routeIndex);
+        if (!Number.isInteger(targetIndex)) return;
+
+        const rect = targetRow.getBoundingClientRect();
+        const position = event.clientY >= rect.top + (rect.height / 2)
+            ? 'after'
+            : 'before';
+
+        routeDragState.targetIndex = targetIndex;
+        routeDragState.position = position;
+
+        targetRow.style.boxShadow = position === 'after'
+            ? 'inset 0 -3px 0 var(--bs-primary)'
+            : 'inset 0 3px 0 var(--bs-primary)';
+    });
+
+    function finishRouteDrag(event) {
+        if (!routeDragState || event.pointerId !== routeDragState.pointerId) return;
+
+        const {
+            sourceIndex,
+            targetIndex,
+            position,
+            previousUserSelect
+        } = routeDragState;
+
+        routeDragState = null;
+        document.body.style.userSelect = previousUserSelect || '';
+
+        clearRouteDragVisuals();
+
+        if (
+            !Number.isInteger(sourceIndex) ||
+            !Number.isInteger(targetIndex) ||
+            !selectedRouteNeighborhoods[sourceIndex]
+        ) {
+            return;
+        }
+
+        const [movedItem] = selectedRouteNeighborhoods.splice(sourceIndex, 1);
+
+        let insertIndex = position === 'after'
+            ? targetIndex + 1
+            : targetIndex;
+
+        // Depois de remover o item original, os índices à frente diminuem em 1.
+        if (sourceIndex < insertIndex) {
+            insertIndex -= 1;
+        }
+
+        insertIndex = Math.max(0, Math.min(insertIndex, selectedRouteNeighborhoods.length));
+        selectedRouteNeighborhoods.splice(insertIndex, 0, movedItem);
 
         refreshRouteNeighborhoodOptions();
         renderRouteOrderList();
+    }
+
+    routeOrderList.addEventListener('pointerup', finishRouteDrag);
+
+    routeOrderList.addEventListener('pointercancel', (event) => {
+        if (!routeDragState || event.pointerId !== routeDragState.pointerId) return;
+
+        document.body.style.userSelect = routeDragState.previousUserSelect || '';
+        routeDragState = null;
+        clearRouteDragVisuals();
     });
 
     generateRoutesBtn.addEventListener('click', () => {
