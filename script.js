@@ -3646,12 +3646,18 @@ document.addEventListener('DOMContentLoaded', () => {
             let message = `${i.user} *Cliente:* ${firstName}\n`;
             message += `${i.calendar} *Data:* ${todayFormatted}\n`;
             message += `-----------------------------------\n`;
-            message += `${i.cross} *${totalPendingCount}x Parcela(s) Pendentes:* ${installmentFormatted}\n`;
-
-            if (totalInterest > 0) {
-                message += `${i.chart} *Juros calculados:* ${formatCurrency(totalInterest)}\n`;
+            if (lateCount > 0) {
+                message += `${i.cross} *Parcelas atrasadas:* ${lateCount}x de ${installmentFormatted}\n`;
             } else {
-                message += `${i.chart} *Juros calculados:* R$ 0,00\n`;
+                message += `${i.check} *Parcelas atrasadas:* Nenhuma\n`;
+            }
+
+            if (isPendingToday) {
+                message += `${i.calendar} *Parcela que vence hoje:* ${installmentFormatted}\n`;
+            }
+
+            if (lateCount > 0) {
+                message += `${i.chart} *Juros dos atrasos:* ${totalInterest > 0 ? formatCurrency(totalInterest) : 'R$ 0,00'}\n`;
             }
 
             message += `${i.money} *VALOR TOTAL:* *${formatCurrency(totalValue)}*\n`;
