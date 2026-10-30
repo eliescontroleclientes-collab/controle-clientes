@@ -2700,7 +2700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         paymentValueInput.value = formatCurrency(client.dailyValue);
         paymentDateInput.value = new Date().toLocaleDateString('en-CA');
         paymentListContainer.innerHTML = '<p class="text-muted">Nenhum dia selecionado no calendário.</p>';
-        new bootstrap.Modal(paymentModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(paymentModalEl).show();
     });
 
     registerPaymentBtn.addEventListener('click', async () => {
@@ -2780,7 +2780,7 @@ document.addEventListener('DOMContentLoaded', () => {
             paymentListContainer.innerHTML = '<p class="text-muted">Nenhum pagamento registrado para esta data.</p>';
         }
 
-        new bootstrap.Modal(paymentModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(paymentModalEl).show();
     });
 
     paymentListContainer.addEventListener('click', async (e) => {
@@ -2896,7 +2896,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openReportBtn.addEventListener('click', () => {
         setDateRange(30); // Padrão: Últimos 30 dias
         reportResultDiv.classList.add('d-none');
-        new bootstrap.Modal(reportModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(reportModalEl).show();
         // Dispara a consulta automaticamente ao abrir
         generateReportBtn.click();
     });
@@ -2960,7 +2960,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
 
-        const modal = new bootstrap.Modal(editClientModalEl);
+        const modal = bootstrap.Modal.getOrCreateInstance(editClientModalEl);
 
         saveEditBtn.classList.add('d-none');
         unlockEditBtn.classList.remove('d-none');
@@ -3260,7 +3260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!client || client.is_loss) return;
 
         document.getElementById('collection-form').reset();
-        const modal = new bootstrap.Modal(collectionModalEl);
+        const modal = bootstrap.Modal.getOrCreateInstance(collectionModalEl);
         modal.show();
     });
 
@@ -3279,7 +3279,7 @@ document.addEventListener('DOMContentLoaded', () => {
             buildCollectionMessage(client, chargeInterest, customObservation);
 
         bootstrap.Modal.getInstance(collectionModalEl).hide();
-        new bootstrap.Modal(collectionResultModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(collectionResultModalEl).show();
     });
 
     copyCollectionTextBtn.addEventListener('click', () => {
@@ -3311,7 +3311,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderRouteOrderList();
         await loadRoutePatterns();
 
-        new bootstrap.Modal(routesModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(routesModalEl).show();
     });
 
     routePatternSelect.addEventListener('change', () => {
@@ -3512,7 +3512,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         bootstrap.Modal.getInstance(routesModalEl).hide();
-        new bootstrap.Modal(routesResultModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(routesResultModalEl).show();
     });
 
     copyAllRoutesBtn.addEventListener('click', () => {
@@ -3553,9 +3553,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.value) {
                 reminderCountText.textContent = `O sistema irá preparar mensagens para ${clientsToRemind.length} cliente(s).`;
                 pixKeyDisplay.value = data.value;
-                new bootstrap.Modal(reminderConfirmationModalEl).show();
+                bootstrap.Modal.getOrCreateInstance(reminderConfirmationModalEl).show();
             } else {
-                new bootstrap.Modal(pixKeySetupModalEl).show();
+                bootstrap.Modal.getOrCreateInstance(pixKeySetupModalEl).show();
             }
         } catch (error) {
             console.error("Erro ao buscar chave PIX:", error);
@@ -3580,7 +3580,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bootstrap.Modal.getInstance(pixKeySetupModalEl).hide();
             reminderCountText.textContent = `O sistema irá preparar mensagens para ${clientsToRemind.length} cliente(s).`;
             pixKeyDisplay.value = newPixKey;
-            new bootstrap.Modal(reminderConfirmationModalEl).show();
+            bootstrap.Modal.getOrCreateInstance(reminderConfirmationModalEl).show();
         } catch (error) {
             console.error("Erro ao salvar chave PIX:", error);
             alert("Não foi possível salvar a nova chave PIX.");
@@ -3589,7 +3589,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     changePixKeyBtn.addEventListener('click', () => {
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
-        const setupModal = new bootstrap.Modal(pixKeySetupModalEl);
+        const setupModal = bootstrap.Modal.getOrCreateInstance(pixKeySetupModalEl);
         pixKeyInput.value = pixKeyDisplay.value;
         setupModal.show();
     });
@@ -3688,7 +3688,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         bootstrap.Modal.getInstance(reminderConfirmationModalEl).hide();
-        new bootstrap.Modal(reminderQueueModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(reminderQueueModalEl).show();
     });
 
     // =====================================================================
@@ -3800,7 +3800,7 @@ document.addEventListener('DOMContentLoaded', () => {
         customMessageInput.value = ''; // Limpa a caixa
 
         // Abre o Modal
-        new bootstrap.Modal(customMessageModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(customMessageModalEl).show();
     });
 
     // 2. Ação do Botão: GERAR AVISO PERSONALIZADO
@@ -3834,7 +3834,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         bootstrap.Modal.getInstance(customMessageModalEl).hide();
-        new bootstrap.Modal(reminderQueueModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(reminderQueueModalEl).show();
     });
 
     // 3. Ação do Botão: GERAR OFERTAS DE RENOVAÇÃO
@@ -3870,7 +3870,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         bootstrap.Modal.getInstance(customMessageModalEl).hide();
-        new bootstrap.Modal(reminderQueueModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(reminderQueueModalEl).show();
     });
     // =====================================================================
 
@@ -3964,14 +3964,14 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteClientBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         pendingSecureAction = 'delete';
-        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        const passwordModal = bootstrap.Modal.getOrCreateInstance(passwordModalEl);
         passwordModal.show();
     });
 
     resetPaymentsBtn.addEventListener('click', () => {
         if (selectedClientId === null) return;
         pendingSecureAction = 'reset';
-        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        const passwordModal = bootstrap.Modal.getOrCreateInstance(passwordModalEl);
         passwordModal.show();
     });
 
@@ -4022,12 +4022,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         actionToConfirm = executeDelete;
                         confirmationModalTitle.textContent = 'Confirmar Exclusão';
                         confirmationModalBody.textContent = `Tem certeza que deseja excluir o cliente selecionado? Esta ação não pode ser desfeita.`;
-                        new bootstrap.Modal(confirmationModalEl).show();
+                        bootstrap.Modal.getOrCreateInstance(confirmationModalEl).show();
                     } else if (pendingSecureAction === 'reset') {
                         actionToConfirm = executeResetPayments;
                         confirmationModalTitle.textContent = 'Confirmar Reset';
                         confirmationModalBody.textContent = `Tem certeza que deseja resetar TODOS os pagamentos e o saldo deste cliente?`;
-                        new bootstrap.Modal(confirmationModalEl).show();
+                        bootstrap.Modal.getOrCreateInstance(confirmationModalEl).show();
                     }
                     pendingSecureAction = null;
                 }, { once: true });
@@ -4095,14 +4095,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     unlockEditBtn.addEventListener('click', () => {
         pendingSecureAction = 'unlockEdit';
-        const passwordModal = new bootstrap.Modal(passwordModalEl);
+        const passwordModal = bootstrap.Modal.getOrCreateInstance(passwordModalEl);
         passwordModal.show();
     });
 
     // 1. Abrir modal
     holidayBtn.addEventListener('click', () => {
         loadHolidays();
-        new bootstrap.Modal(holidayModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(holidayModalEl).show();
     });
 
     // 2. Carregar lista de feriados
@@ -4186,7 +4186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedClientId) return;
         pauseDateInput.value = '';
         pauseNoteInput.value = ''; // <--- LIMPA A NOTA ANTERIOR
-        new bootstrap.Modal(pauseReminderModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(pauseReminderModalEl).show();
     });
 
     // 2. Salvar a pausa
@@ -4477,7 +4477,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 6. Exibir
         clientReportText.value = msg;
-        new bootstrap.Modal(clientReportModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(clientReportModalEl).show();
     });
 
     copyClientReportBtn.addEventListener('click', () => {
@@ -4610,7 +4610,7 @@ document.addEventListener('DOMContentLoaded', () => {
     vipOfferBtn.addEventListener('click', () => {
         if (!selectedClientId) return;
         // Apenas abre o modal de escolha
-        new bootstrap.Modal(vipStrategyModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(vipStrategyModalEl).show();
     });
 
     // 3. Botões do Modal (Chamam a função acima)
@@ -4843,7 +4843,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     agreementsBtn.addEventListener('click', () => {
         renderAgreementsModal();
-        new bootstrap.Modal(agreementsModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(agreementsModalEl).show();
     });
 
     // --- LÓGICA UNIFICADA: CLICAR NO NOME (ABRIR) OU NO X (EXCLUIR) ---
@@ -4923,7 +4923,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     manageResponsiblesBtn.addEventListener('click', () => {
         renderResponsiblesList();
-        new bootstrap.Modal(responsiblesModalEl).show();
+        bootstrap.Modal.getOrCreateInstance(responsiblesModalEl).show();
     });
 
     saveNewRespBtn.addEventListener('click', async () => {
