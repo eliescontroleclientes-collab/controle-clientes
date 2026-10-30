@@ -328,6 +328,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return Number(String(value).replace(/[^0-9,-]+/g, "").replace(",", "."));
     };
 
+    // Zero é uma taxa válida; usa 20% apenas quando não há uma taxa numérica.
+    function parseInterestRate(value) {
+        const rate = parseFloat(value);
+        return Number.isNaN(rate) ? 20 : rate;
+    }
+
     const baseNeighborhoodsByCity = window.BAIRROS_POR_CIDADE || {};
     let neighborhoodsByCity = {
         "Cuiabá": [...(baseNeighborhoodsByCity["Cuiabá"] || [])],
@@ -825,7 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalInterest = 0;
 
         if (chargeInterest && lateInstallments.length > 0) {
-            const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
+            const clientInterestRate = parseInterestRate(client.taxa_juros) / 100;
             const interestPerInstallment = parseFloat(client.dailyValue) * clientInterestRate;
             totalInterest = lateInstallments.length * interestPerInstallment;
         }
@@ -1676,7 +1682,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateInstallmentValue() {
         const loanValue = parseCurrency(loanValueInput.value);
         const installments = parseInt(installmentsInput.value, 10);
-        const interestRatePercent = parseFloat(interestRateClientInput.value) || 20;
+        const interestRatePercent = parseInterestRate(interestRateClientInput.value);
 
         if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
             const interestMultiplier = 1 + (interestRatePercent / 100);
@@ -1695,7 +1701,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateEditInstallmentValue() {
         const loanValue = parseCurrency(editLoanValueInput.value);
         const installments = parseInt(editInstallmentsInput.value, 10);
-        const interestRatePercent = parseFloat(editInterestRateClientInput.value) || 20;
+        const interestRatePercent = parseInterestRate(editInterestRateClientInput.value);
 
         if (!isNaN(loanValue) && !isNaN(installments) && installments > 0) {
             const interestMultiplier = 1 + (interestRatePercent / 100);
@@ -2143,7 +2149,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('panel-loan-value').textContent = formatCurrency(client.loanValue || 0);
         document.getElementById('panel-daily-value').textContent = formatCurrency(client.dailyValue || 0);
-        document.getElementById('panel-interest-rate').textContent = `${parseFloat(client.taxa_juros || 20).toFixed(2)}%`;
+        document.getElementById('panel-interest-rate').textContent = `${parseInterestRate(client.taxa_juros).toFixed(2)}%`;
         document.getElementById('panel-start-date').textContent = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
         if (client.paymentDates && client.paymentDates.length > 0) {
             const firstInstallment = new Date(client.paymentDates[0].date);
@@ -2598,7 +2604,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cidade_rota: routeCitySelect.value || null,
             bairro_rota: routeNeighborhoodValidation.value,
             profissao: professionInput.value,
-            taxa_juros: parseFloat(interestRateClientInput.value) || 20,
+            taxa_juros: parseInterestRate(interestRateClientInput.value),
             original_client_id: null,
             responsible_id: document.getElementById('responsibleSelect').value || null, // <--- PEGA O ID
         };
@@ -2990,7 +2996,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editRemoveNeighborhoodBtn.disabled = true;
         editProfessionInput.value = client.profissao || '';
         editLoanValueInput.value = formatCurrency(client.loanValue || 0);
-        editInterestRateClientInput.value = parseFloat(client.taxa_juros || 20).toFixed(1);
+        editInterestRateClientInput.value = parseInterestRate(client.taxa_juros).toFixed(1);
         editInstallmentsInput.value = client.installments || 20;
         editInstallmentValueInput.value = formatCurrency(client.dailyValue || 0);
 
@@ -3626,7 +3632,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Calcula Juros (Apenas sobre as atrasadas)
             let totalInterest = 0;
             if (lateCount > 0) {
-                const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
+                const clientInterestRate = parseInterestRate(client.taxa_juros) / 100;
                 totalInterest = lateCount * (installmentValue * clientInterestRate);
             }
 
@@ -4441,7 +4447,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let totalInterest = 0;
         if (lateCount > 0) {
-            const clientInterestRate = parseFloat(client.taxa_juros || 20) / 100;
+            const clientInterestRate = parseInterestRate(client.taxa_juros) / 100;
             const interestPerInstallment = installmentValue * clientInterestRate;
             totalInterest = lateCount * interestPerInstallment;
         }
