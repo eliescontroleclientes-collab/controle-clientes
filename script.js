@@ -4,6 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Evita fechar os modais por clique fora ou pela tecla Esc.
+    bootstrap.Modal.Default.backdrop = 'static';
+    bootstrap.Modal.Default.keyboard = false;
+
     // ADICIONE ESSA LINHA AQUI:
     const token = sessionStorage.getItem('authToken');
     const userRole = sessionStorage.getItem('userRole'); // Pega o cargo (admin ou cobrador)
