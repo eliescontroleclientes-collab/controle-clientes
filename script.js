@@ -1273,7 +1273,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ? client.reminder_paused_until.split('T')[0]
             : null;
 
-        return Boolean(pauseDate && pauseDate > todayString);
+        // O acordo vale até a data combinada, inclusive.
+        return Boolean(pauseDate && pauseDate >= todayString);
     }
 
     function getRequiredLateCountForRoute(client) {
