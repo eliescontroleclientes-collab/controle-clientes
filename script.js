@@ -58,6 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const panelDetails = document.getElementById('panel-details');
     const markPaidBtn = document.getElementById('mark-paid-btn');
     const calendar = document.getElementById('payment-calendar');
+    const calendarTitle = document.getElementById('payment-calendar-title');
+    const paidInstallmentsBadge = document.getElementById('paid-installments-badge');
+    const copyPaidInstallmentsBtn = document.getElementById('copy-paid-installments-btn');
     const editClientBtn = document.getElementById('edit-client-btn');
     const deleteClientBtn = document.getElementById('delete-client-btn');
     const searchInput = document.getElementById('searchInput');
@@ -1994,6 +1997,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function getPaidInstallmentProgress(client) {
+        const paymentDates = client.paymentDates || [];
+        const paidCount = paymentDates.filter(payment => payment.status === 'paid').length;
+        const totalCount = paymentDates.length || Number(client.installments) || 0;
+        return `${paidCount}/${totalCount}`;
+    }
+
     function renderClientPanel(clientId) {
         const client = allClientsForSearch.find(c => c.id === clientId);
         if (!client) {
@@ -2134,7 +2144,6 @@ document.addEventListener('DOMContentLoaded', () => {
         panelBalance.textContent = formatCurrency(client.saldo || 0);
         panelBalance.className = (client.saldo > 0) ? 'text-success fw-bold' : 'fw-bold';
 
-        const calendarTitle = document.querySelector('#panel-details h6:nth-of-type(3)');
         // Cria um mapa de nomes para ficar bonito
         const freqNames = {
             'daily': 'Diário',
@@ -2144,6 +2153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const freqLabel = freqNames[client.frequency] || 'Diário'; // Padrão se não achar
         calendarTitle.textContent = `Calendário de Pagamentos (${client.installments || ''}x ${freqLabel})`;
+        paidInstallmentsBadge.textContent = getPaidInstallmentProgress(client);
 
         calendar.innerHTML = '';
         if (!client.startDate || !client.paymentDates || client.paymentDates.length === 0) {
@@ -2658,6 +2668,15 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedClientId = clientId;
             renderClientPanel(clientId);
         }
+    });
+
+    copyPaidInstallmentsBtn.addEventListener('click', () => {
+        if (selectedClientId === null) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client) return;
+
+        const message = `*✅ Muito obrigado ✅*\n*${getPaidInstallmentProgress(client)} 📲✅ Já Paga*`;
+        copyWithButtonFeedback(copyPaidInstallmentsBtn, message);
     });
 
     markPaidBtn.addEventListener('click', () => {
