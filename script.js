@@ -1992,12 +1992,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const nameClass = client.is_risk ? 'text-danger fw-bold' : '';
             // Ícone visual ao lado do nome (opcional, mas ajuda)
             const riskIcon = client.is_risk ? '<i class="bi bi-exclamation-triangle-fill me-1"></i>' : '';
+            const agreementBadge = !client.is_loss && isUpcomingAgreement(client)
+                ? '<span class="badge bg-warning text-dark ms-2">Acordo</span>'
+                : '';
 
             const status = calculateClientStatus(client);
             const startDateDisplay = client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
 
             // ATUALIZE ESSA LINHA:
-            tr.innerHTML = `<td>#${client.id}</td><td class="${nameClass}">${riskIcon}${client.name}</td><td>${status}</td><td>${startDateDisplay}</td>`;
+            tr.innerHTML = `<td>#${client.id}</td><td class="${nameClass}">${riskIcon}${client.name}${agreementBadge}</td><td>${status}</td><td>${startDateDisplay}</td>`;
 
             clientListBody.appendChild(tr);
         });
