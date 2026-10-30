@@ -160,6 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const renewalOptionsModalEl = document.getElementById('renewalOptionsModal');
     const renewalMessageBtn = document.getElementById('renewal-message-btn');
     const renewalOfferBtn = document.getElementById('renewal-offer-btn');
+    const loanConfirmationOption = document.getElementById('loan-confirmation-option');
+    const loanConfirmationBtn = document.getElementById('loan-confirmation-btn');
+    const loanConfirmationModalEl = document.getElementById('loanConfirmationModal');
+    const loanConfirmationTextResult = document.getElementById('loanConfirmationTextResult');
+    const copyLoanConfirmationBtn = document.getElementById('copy-loan-confirmation-btn');
     const renewalOfferModalEl = document.getElementById('renewalOfferModal');
     const renewalOfferTextResult = document.getElementById('renewalOfferTextResult');
     const copyRenewalOfferBtn = document.getElementById('copy-renewal-offer-btn');
@@ -4238,6 +4243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showRenewalResultModal(modalEl) {
         renewalMessageBtn.disabled = true;
         renewalOfferBtn.disabled = true;
+        loanConfirmationBtn.disabled = true;
         renewalOptionsModalEl.addEventListener('hidden.bs.modal', () => {
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
         }, { once: true });
@@ -4251,6 +4257,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renewalMessageBtn.disabled = !isClientEligibleForRenewalMessage(client);
         renewalOfferBtn.disabled = !isClientEligibleForRenewalOffer(client);
+        const canShowLoanConfirmation = isClientEligibleForRenewalMessage(client);
+        loanConfirmationOption.classList.toggle('d-none', !canShowLoanConfirmation);
+        loanConfirmationBtn.disabled = !canShowLoanConfirmation;
         bootstrap.Modal.getOrCreateInstance(renewalOptionsModalEl).show();
     });
 
@@ -4277,6 +4286,57 @@ document.addEventListener('DOMContentLoaded', () => {
             copyRenewalOfferBtn.classList.remove('btn-dark');
             copyRenewalOfferBtn.classList.add('btn-success');
         }, 2000);
+    });
+
+    loanConfirmationBtn.addEventListener('click', () => {
+        if (!selectedClientId) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client || !isClientEligibleForRenewalMessage(client)) return;
+
+        // Formatação de datas
+        const startDate = new Date(client.startDate);
+        const startDay = startDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
+        let firstPayment = 'N/A';
+        if (client.paymentDates && client.paymentDates.length > 0) {
+            const fpDate = new Date(client.paymentDates[0].date);
+            firstPayment = fpDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        }
+
+        // Formatação de valores
+        const loanVal = formatCurrency(client.loanValue);
+        const installVal = formatCurrency(client.dailyValue);
+
+        // Mapeamento de frequência para texto bonito
+        const freqMap = {
+            'daily': 'Diário',
+            'weekly': 'Semanal',
+            'biweekly': 'Quinzenal',
+            'monthly': 'Mensal'
+        };
+        const freqText = freqMap[client.frequency] || 'Diário';
+
+        // MONTAGEM DO TEXTO
+        let msg = `✨ *EMPRÉSTIMO CONFIRMADO* ✨\n\n`;
+        msg += `Olá, *${client.name.split(' ')[0]}*! Seja bem-vindo(a)! 🤝\n`;
+        msg += `Seu empréstimo está confirmado! Confira os detalhes da contratação:\n\n`;
+
+        msg += `📅 *Data:* ${startDay}\n`;
+        msg += `💰 *Valor:* ${loanVal}\n`;
+        msg += `🔢 *Parcelas:* ${client.installments}x de ${installVal}\n`;
+        msg += `🔄 *Frequência:* ${freqText}\n`;
+        msg += `🚀 *1ª Parcela:* ${firstPayment}\n\n`;
+
+        msg += `⚠️ _Lembrete Importante: Manter o pagamento em dia evita a cobrança de juros adicionais e garante renovações futuras._\n\n`;
+
+        msg += `Obrigado pela confiança! Qualquer dúvida, estou à disposição. 👊`;
+
+        loanConfirmationTextResult.value = msg;
+        showRenewalResultModal(loanConfirmationModalEl);
+    });
+
+    copyLoanConfirmationBtn.addEventListener('click', () => {
+        copyWithButtonFeedback(copyLoanConfirmationBtn, loanConfirmationTextResult.value);
     });
 
     renewalMessageBtn.addEventListener('click', () => {

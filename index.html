@@ -1052,6 +1052,11 @@
                                 <i class="bi bi-gift"></i> Aviso de Renovação
                             </button>
                         </div>
+                        <div class="col-12 d-none" id="loan-confirmation-option">
+                            <button type="button" class="btn btn-outline-primary w-100" id="loan-confirmation-btn" disabled>
+                                <i class="bi bi-hand-thumbs-up"></i> Boas-vindas e Confirmação
+                            </button>
+                        </div>
                     </div>
                     <p class="text-muted small mt-3 mb-0">As opções ficam disponíveis conforme as regras de cada cliente.</p>
                 </div>
@@ -1077,6 +1082,28 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
                     <button type="button" class="btn btn-success" id="copy-renewal-offer-btn">
+                        <i class="bi bi-clipboard"></i> Copiar Texto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Boas-vindas e Confirmação do Empréstimo -->
+    <div class="modal fade" id="loanConfirmationModal" tabindex="-1" aria-labelledby="loanConfirmationTitle">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="loanConfirmationTitle"><i class="bi bi-hand-thumbs-up"></i> Boas-vindas e Confirmação</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Copie a mensagem de boas-vindas e confirmação do empréstimo e envie para o cliente.</p>
+                    <textarea class="form-control" id="loanConfirmationTextResult" rows="12" readonly aria-label="Texto de boas-vindas e confirmação do empréstimo"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-success" id="copy-loan-confirmation-btn">
                         <i class="bi bi-clipboard"></i> Copiar Texto
                     </button>
                 </div>
