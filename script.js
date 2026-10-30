@@ -154,6 +154,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const pauseDateInput = document.getElementById('pauseDateInput');
     const savePauseBtn = document.getElementById('save-pause-btn');
     const renewalBtn = document.getElementById('renewal-btn');
+    const renewalOptionsModalEl = document.getElementById('renewalOptionsModal');
+    const renewalMessageBtn = document.getElementById('renewal-message-btn');
+    const renewalOfferBtn = document.getElementById('renewal-offer-btn');
+    const renewalOfferModalEl = document.getElementById('renewalOfferModal');
+    const renewalOfferTextResult = document.getElementById('renewalOfferTextResult');
+    const copyRenewalOfferBtn = document.getElementById('copy-renewal-offer-btn');
     const renewalModalEl = document.getElementById('renewalModal');
     const renewalTextResult = document.getElementById('renewalTextResult');
     const copyRenewalBtn = document.getElementById('copy-renewal-btn');
@@ -2008,15 +2014,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedPhone = client.phone ? formatPhone(client.phone) : 'N/A';
         document.getElementById('panel-cpf-phone').textContent = `CPF: ${formattedCPF} | Tel: ${formattedPhone}`;
         document.getElementById('panel-status').innerHTML = calculateClientStatus(client);
-        // Lógica do Botão de Renovação (R)
-        // Condição: Nenhuma parcela paga (significa que é novo ou recém renovado/resetado)
-        const paidInstallmentsCount = (client.paymentDates || []).filter(p => p.status === 'paid').length;
-
-        if (paidInstallmentsCount === 0 && !client.is_loss) {
-            renewalBtn.classList.remove('d-none');
-        } else {
-            renewalBtn.classList.add('d-none');
-        }
+        // O botão abre as opções para todos os clientes; cada opção mantém sua regra.
+        // As restrições do cobrador continuam aplicadas ao final deste painel.
+        renewalBtn.classList.remove('d-none');
         // Lógica de Visualização da Pausa (ATUALIZADA)
         const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Cuiaba' });
         // Garante que pegamos só a parte YYYY-MM-DD da data do banco
@@ -3667,6 +3667,83 @@ document.addEventListener('DOMContentLoaded', () => {
     const renewalMsgCountText = document.getElementById('renewal-msg-count-text');
     let clientsForRenewalMsg = [];
 
+    // Regras e mensagem compartilhadas pelos avisos em massa e individuais.
+    function isClientEligibleForRenewalMessage(client) {
+        const paidInstallmentsCount = (client.paymentDates || []).filter(p => p.status === 'paid').length;
+        return paidInstallmentsCount === 0 && !client.is_loss;
+    }
+
+    function isClientEligibleForRenewalOffer(client) {
+        if (client.is_loss) return false;
+
+        const status = calculateClientStatus(client);
+
+        // Se o empréstimo já acabou, descarta.
+        if (status.includes('Empréstimo Concluído')) return false;
+
+        // 1. Calcula exatamente quantas parcelas estão vencidas (menor que hoje) e não pagas
+        const timeZone = 'America/Cuiaba';
+        const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
+        const todayDateObj = new Date(todayInCuiaba + 'T00:00:00.000Z');
+
+        const lateCount = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid').length;
+
+        // REGRA A: Pode ter no MÁXIMO 2 parcelas em atraso. Se tiver 3 ou mais, descarta.
+        if (lateCount > 2) {
+            return false;
+        }
+
+        // 2. Conta quantas parcelas já foram pagas
+        const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
+
+        // REGRA B: Frequência e mínimo de pagamentos
+        if (client.frequency === 'daily' && paidInstallments >= 10) return true;
+        if (client.frequency === 'weekly' && paidInstallments >= 2) return true;
+
+        return false;
+    }
+
+    function buildRenewalOfferMessage(client) {
+        // Cálculos da Dívida e do Valor a Receber
+        const totalInstallments = client.paymentDates ? client.paymentDates.length : 0;
+        const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
+        const remainingInstallments = totalInstallments - paidInstallments;
+
+        const installmentValue = parseFloat(client.dailyValue);
+        const currentLoanValue = parseFloat(client.loanValue); // Variável Y
+
+        // Dívida que falta = Quantas parcelas faltam vezes o valor da parcela
+        let currentDebt = remainingInstallments * installmentValue;
+
+        // Desconta se o cliente tiver crédito (saldo a mais)
+        const clientBalance = parseFloat(client.saldo || 0);
+        if (clientBalance > 0) { currentDebt -= clientBalance; }
+        if (currentDebt < 0) { currentDebt = 0; }
+
+        // Variável X = Valor do novo empréstimo menos a dívida velha
+        let netReceiveValue = currentLoanValue - currentDebt;
+        if (netReceiveValue < 0) { netReceiveValue = 0; }
+
+        // Formatação dos valores
+        const formattedLoan = formatCurrency(currentLoanValue);
+        const formattedDebt = formatCurrency(currentDebt); // O valor restante
+        const formattedReceive = formatCurrency(netReceiveValue);
+
+        // Pega apenas o primeiro nome do cliente
+        const firstName = client.name.split(' ')[0];
+
+        // MONTAGEM DO TEXTO ATUALIZADA
+        let msg = `🎉 *${firstName}*, você tem uma oportunidade de renovação!\n\n`;
+        msg += `💵 Empréstimo: *${formattedLoan}*\n`;
+        msg += `📋 Valor restante: *${formattedDebt}*\n`;
+        msg += `💰 Você recebe: *${formattedReceive}*\n\n`;
+        msg += `✅ Renovamos seu contrato.\n`;
+        msg += `✅ Descontamos o valor restante.\n`;
+        msg += `💰 Você recebe a diferença na hora.\n\n`;
+        msg += `📲 Responda esta mensagem para renovar.`;
+        return msg;
+    }
+
     // 1. Ao clicar no botão principal (abre o modal e calcula tudo)
     customMessageBtn.addEventListener('click', () => {
 
@@ -3683,35 +3760,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- FILTRO 2: AVISO DE RENOVAÇÃO (Atualizado com tolerância) ---
-        clientsForRenewalMsg = allClientsForSearch.filter(client => {
-            if (client.is_loss) return false;
-
-            const status = calculateClientStatus(client);
-
-            // Se o empréstimo já acabou, descarta.
-            if (status.includes('Empréstimo Concluído')) return false;
-
-            // 1. Calcula exatamente quantas parcelas estão vencidas (menor que hoje) e não pagas
-            const timeZone = 'America/Cuiaba';
-            const todayInCuiaba = new Date().toLocaleDateString('en-CA', { timeZone });
-            const todayDateObj = new Date(todayInCuiaba + 'T00:00:00.000Z');
-
-            const lateCount = (client.paymentDates || []).filter(p => new Date(p.date) < todayDateObj && p.status !== 'paid').length;
-
-            // REGRA A: Pode ter no MÁXIMO 2 parcelas em atraso. Se tiver 3 ou mais, descarta.
-            if (lateCount > 2) {
-                return false;
-            }
-
-            // 2. Conta quantas parcelas já foram pagas
-            const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
-
-            // REGRA B: Frequência e mínimo de pagamentos
-            if (client.frequency === 'daily' && paidInstallments >= 10) return true;
-            if (client.frequency === 'weekly' && paidInstallments >= 2) return true;
-
-            return false;
-        });
+        clientsForRenewalMsg = allClientsForSearch.filter(isClientEligibleForRenewalOffer);
 
         // Preenche os contadores na tela
         customMsgCountText.innerHTML = `O sistema preparará mensagens para <strong>${clientsForCustomMsg.length} cliente(s)</strong> ativos.`;
@@ -3766,43 +3815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reminderQueueList.innerHTML = ''; // Limpa a fila
 
         clientsForRenewalMsg.forEach(client => {
-            // Cálculos da Dívida e do Valor a Receber
-            const totalInstallments = client.paymentDates ? client.paymentDates.length : 0;
-            const paidInstallments = client.paymentDates ? client.paymentDates.filter(p => p.status === 'paid').length : 0;
-            const remainingInstallments = totalInstallments - paidInstallments;
-
-            const installmentValue = parseFloat(client.dailyValue);
-            const currentLoanValue = parseFloat(client.loanValue); // Variável Y
-
-            // Dívida que falta = Quantas parcelas faltam vezes o valor da parcela
-            let currentDebt = remainingInstallments * installmentValue;
-
-            // Desconta se o cliente tiver crédito (saldo a mais)
-            const clientBalance = parseFloat(client.saldo || 0);
-            if (clientBalance > 0) { currentDebt -= clientBalance; }
-            if (currentDebt < 0) { currentDebt = 0; }
-
-            // Variável X = Valor do novo empréstimo menos a dívida velha
-            let netReceiveValue = currentLoanValue - currentDebt;
-            if (netReceiveValue < 0) { netReceiveValue = 0; }
-
-            // Formatação dos valores
-            const formattedLoan = formatCurrency(currentLoanValue);
-            const formattedDebt = formatCurrency(currentDebt); // O valor restante
-            const formattedReceive = formatCurrency(netReceiveValue);
-
-            // Pega apenas o primeiro nome do cliente
-            const firstName = client.name.split(' ')[0];
-
-            // MONTAGEM DO TEXTO ATUALIZADA
-            let msg = `🎉 *${firstName}*, você tem uma oportunidade de renovação!\n\n`;
-            msg += `💵 Empréstimo: *${formattedLoan}*\n`;
-            msg += `📋 Valor restante: *${formattedDebt}*\n`;
-            msg += `💰 Você recebe: *${formattedReceive}*\n\n`;
-            msg += `✅ Renovamos seu contrato.\n`;
-            msg += `✅ Descontamos o valor restante.\n`;
-            msg += `💰 Você recebe a diferença na hora.\n\n`;
-            msg += `📲 Responda esta mensagem para renovar.`;
+            const msg = buildRenewalOfferMessage(client);
 
             // Criar o link na fila
             const whatsappUrl = `https://wa.me/55${client.phone.replace(/\D/g, '')}`;
@@ -4202,10 +4215,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Aguarda o fechamento da escolha antes de abrir a mensagem, evitando modais sobrepostos.
+    function showRenewalResultModal(modalEl) {
+        renewalMessageBtn.disabled = true;
+        renewalOfferBtn.disabled = true;
+        renewalOptionsModalEl.addEventListener('hidden.bs.modal', () => {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }, { once: true });
+        bootstrap.Modal.getInstance(renewalOptionsModalEl).hide();
+    }
+
     renewalBtn.addEventListener('click', () => {
         if (!selectedClientId) return;
         const client = allClientsForSearch.find(c => c.id === selectedClientId);
         if (!client) return;
+
+        renewalMessageBtn.disabled = !isClientEligibleForRenewalMessage(client);
+        renewalOfferBtn.disabled = !isClientEligibleForRenewalOffer(client);
+        bootstrap.Modal.getOrCreateInstance(renewalOptionsModalEl).show();
+    });
+
+    renewalOfferBtn.addEventListener('click', () => {
+        if (!selectedClientId) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client || !isClientEligibleForRenewalOffer(client)) return;
+
+        renewalOfferTextResult.value = buildRenewalOfferMessage(client);
+        showRenewalResultModal(renewalOfferModalEl);
+    });
+
+    copyRenewalOfferBtn.addEventListener('click', () => {
+        renewalOfferTextResult.select();
+        document.execCommand('copy');
+
+        const originalText = copyRenewalOfferBtn.innerHTML;
+        copyRenewalOfferBtn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
+        copyRenewalOfferBtn.classList.remove('btn-success');
+        copyRenewalOfferBtn.classList.add('btn-dark');
+
+        setTimeout(() => {
+            copyRenewalOfferBtn.innerHTML = originalText;
+            copyRenewalOfferBtn.classList.remove('btn-dark');
+            copyRenewalOfferBtn.classList.add('btn-success');
+        }, 2000);
+    });
+
+    renewalMessageBtn.addEventListener('click', () => {
+        if (!selectedClientId) return;
+        const client = allClientsForSearch.find(c => c.id === selectedClientId);
+        if (!client || !isClientEligibleForRenewalMessage(client)) return;
 
         // Formatação de datas
         const startDate = new Date(client.startDate);
@@ -4246,7 +4304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msg += `Conta comigo! Qualquer dúvida, estou à disposição. 👊`;
 
         renewalTextResult.value = msg;
-        new bootstrap.Modal(renewalModalEl).show();
+        showRenewalResultModal(renewalModalEl);
     });
 
     copyRenewalBtn.addEventListener('click', () => {

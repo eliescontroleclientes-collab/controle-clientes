@@ -41,7 +41,7 @@
                                 <h5 id="panel-name" class="me-2 text-wrap"></h5>
                                 <div class="btn-group">
                                     <!-- BOTÃO DE RENOVAÇÃO (R) -->
-                                    <button id="renewal-btn" class="btn btn-dark d-none"
+                                    <button id="renewal-btn" class="btn btn-dark"
                                         title="Gerar Mensagem de Renovação">
                                         <strong>R</strong>
                                     </button>
@@ -1018,6 +1018,59 @@
                     <div class="d-grid">
                         <button id="save-pause-btn" class="btn btn-primary btn-sm">Confirmar Pausa</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Escolha da Mensagem de Renovação -->
+    <div class="modal fade" id="renewalOptionsModal" tabindex="-1" aria-labelledby="renewalOptionsTitle">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="renewalOptionsTitle">Gerar Mensagem de Renovação</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Escolha a mensagem para o cliente selecionado:</p>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button type="button" class="btn btn-success w-100 h-100" id="renewal-message-btn" disabled>
+                                <i class="bi bi-chat-text"></i> Mensagem de Renovação
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-success w-100 h-100" id="renewal-offer-btn" disabled>
+                                <i class="bi bi-gift"></i> Aviso de Renovação
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-muted small mt-3 mb-0">As opções ficam disponíveis conforme as regras de cada cliente.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Aviso de Renovação Individual -->
+    <div class="modal fade" id="renewalOfferModal" tabindex="-1" aria-labelledby="renewalOfferTitle">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="renewalOfferTitle"><i class="bi bi-gift"></i> Aviso de Renovação</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Copie a oferta abaixo e envie para o cliente.</p>
+                    <textarea class="form-control" id="renewalOfferTextResult" rows="12" readonly aria-label="Texto do aviso de renovação"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-success" id="copy-renewal-offer-btn">
+                        <i class="bi bi-clipboard"></i> Copiar Texto
+                    </button>
                 </div>
             </div>
         </div>
